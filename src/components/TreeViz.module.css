@@ -1,0 +1,71 @@
+.modeRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.modeBtn {
+  font: inherit;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.82rem;
+  padding: 7px 12px;
+  background: var(--im-surface);
+  border: 1px solid var(--im-border);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--im-fg-2);
+  transition: border-color 0.15s ease;
+}
+
+.modeBtn:hover { border-color: var(--im-accent); }
+
+.modeBtn.active {
+  background: var(--im-accent-soft);
+  color: var(--im-accent-fg);
+  border-color: var(--im-accent);
+}
+
+.svg {
+  width: 100%;
+  height: auto;
+  max-height: 260px;
+  background: var(--im-surface-2);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.edge {
+  stroke: var(--im-border);
+  stroke-width: 2;
+  transition: stroke 0.3s ease;
+}
+.edgeActive {
+  stroke: var(--im-accent);
+  stroke-width: 2.6;
+}
+
+.node {
+  fill: var(--im-surface);
+  stroke: var(--im-border);
+  stroke-width: 2;
+  transition: fill 0.3s ease, stroke 0.3s ease;
+}
+.nodeVisited {
+  fill: rgba(217, 119, 6, 0.18);
+  stroke: var(--im-accent);
+  stroke-width: 2;
+}
+.nodeCurrent {
+  fill: var(--im-accent);
+  stroke: var(--im-accent);
+  stroke-width: 3;
+}
+
+.text {
+  fill: var(--im-fg);
+  font-family: var(--ifm-font-family-monospace);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.nodeCurrent + .text { fill: #1a1a1a; }

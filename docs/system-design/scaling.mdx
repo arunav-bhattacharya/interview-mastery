@@ -1,0 +1,78 @@
+---
+title: Scaling Primitives
+description: Caches, queues, replicas, shards — and when each one is the answer.
+sidebar_position: 2
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+
+# Scaling Primitives
+
+<Pillbar pills={[
+  { label: 'tools', value: '5 core' },
+  { label: 'order of reach', value: 'cache → replicate → shard' },
+]} />
+
+There are roughly five tools you'll reach for. The interview signal is matching
+the right tool to the right symptom.
+
+## 1 — Load balancing
+
+Stateless app servers behind a load balancer (L4 or L7). The whole point is to
+let you scale horizontally and tolerate node failures.
+
+- **L4** — TCP/UDP, fast, opaque payload.
+- **L7** — HTTP-aware, can route on path / header / cookie.
+- Session affinity is a smell — prefer stateless apps; if you need sticky, store
+  session in a shared cache instead.
+
+## 2 — Caching
+
+Cache when reads dominate and the same key is hot. Failure modes:
+
+- **Stale data** — pick TTL or invalidate on write.
+- **Cache stampede** — many requests miss simultaneously; mitigate with
+  request coalescing or stochastic early refresh.
+- **Cache penetration** — every miss hits the DB; cache "not found" too,
+  or use a bloom filter.
+
+| Strategy            | Write goes to         | Read goes to          |
+| ------------------- | --------------------- | --------------------- |
+| Cache-aside         | DB only               | cache, then DB on miss |
+| Write-through       | cache + DB synchronously | cache              |
+| Write-behind        | cache; flushed to DB later | cache             |
+
+## 3 — Replication
+
+Copies of the data for read fan-out or for HA.
+
+- **Leader-follower** — writes go to a leader, replicate to followers. Reads from followers can be stale.
+- **Multi-leader** — multiple writers, asynchronous reconciliation. Watch for write conflicts.
+- **Leaderless / quorum** — Dynamo-style. Use `R + W > N` for read-your-writes.
+
+## 4 — Partitioning (sharding)
+
+When a single node can't hold all the data or absorb all the writes.
+
+- **Range** — keys split by ranges. Risk: hot range.
+- **Hash** — uniform spread, but range queries become fan-out.
+- **Consistent hashing** — minimizes data movement on rebalance.
+
+Hot keys defeat hashing — sometimes you need an in-memory cache tier specifically for the hot tail.
+
+## 5 — Async pipelines
+
+When the work is slow or bursty, decouple it with a durable queue.
+
+- **At-least-once** delivery is the easy default; make consumers **idempotent**.
+- **Order** matters? Either single-partition or sequence-id reconciliation downstream.
+- **Dead-letter queues** for poison messages — don't retry forever.
+
+## Bringing it together
+
+```text
+read-heavy hot key?       → cache
+read-heavy uniform load?  → replicate, route reads to replicas
+write-heavy single shard? → shard by hash, or shard by tenant
+slow / bursty step?       → queue + workers, idempotent consumer
+```

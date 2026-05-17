@@ -1,0 +1,51 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  background: var(--im-surface-2);
+  border: 1px solid var(--im-border);
+  border-radius: 12px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  font: inherit;
+  font-family: var(--ifm-font-family-monospace);
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--im-surface);
+  border: 1px solid var(--im-border);
+  color: var(--im-fg);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--im-accent);
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.play {
+  background: var(--im-accent);
+  border-color: var(--im-accent);
+  color: #1a1a1a;
+}
+
+.counter {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.82rem;
+  color: var(--im-fg-2);
+  margin-left: 6px;
+}
+
+.hint {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  color: var(--im-muted);
+  margin-left: auto;
+}

@@ -1,0 +1,75 @@
+---
+title: Graphs
+description: Nodes, edges, and the four algorithms you actually need.
+sidebar_position: 9
+---
+
+import GraphViz from '@site/src/components/GraphViz';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Graphs
+
+<Pillbar pills={[
+  { label: 'representations', value: 'adj-list · matrix' },
+  { label: 'must know', value: '4 algos' },
+  { label: 'common', value: 'DAG · weighted' },
+]} />
+
+Graphs sound exotic until you notice they are just BFS / DFS plus a few extras.
+For most interviews you need:
+
+1. **BFS / DFS** for traversal.
+2. **Topological sort** for DAG ordering / cycle detection.
+3. **Dijkstra** for non-negative-weighted shortest paths.
+4. **Union-find** for connectivity and dynamic merging.
+
+## The visualizer
+
+A small DAG of course prerequisites — a classic topo-sort setup:
+
+<GraphViz />
+
+## Representation cheatsheet
+
+| Form             | Good for                              | Notes                              |
+| ---------------- | ------------------------------------- | ---------------------------------- |
+| **Adjacency list** | Sparse graphs (most interview cases) | `Map<Integer, List<Integer>>`      |
+| **Adjacency matrix** | Dense / weighted lookups O(1)      | `int[V][V]` — `O(V²)` space        |
+| **Edge list**    | Kruskal / sorting edges               | `int[E][3]` (u, v, w)              |
+
+## Reference: topological sort (Kahn's)
+
+```java title="TopoSort.java"
+public List<Integer> topo(int V, List<int[]> edges) {
+  List<List<Integer>> g = new ArrayList<>();
+  int[] indeg = new int[V];
+  for (int i = 0; i < V; i++) g.add(new ArrayList<>());
+  for (int[] e : edges) { g.get(e[0]).add(e[1]); indeg[e[1]]++; }
+
+  Deque<Integer> q = new ArrayDeque<>();
+  for (int i = 0; i < V; i++) if (indeg[i] == 0) q.offer(i);
+
+  List<Integer> order = new ArrayList<>();
+  while (!q.isEmpty()) {
+    int u = q.poll(); order.add(u);
+    for (int v : g.get(u)) if (--indeg[v] == 0) q.offer(v);
+  }
+  return order.size() == V ? order : List.of(); // empty → cycle
+}
+```
+
+## Complexity
+
+| Algorithm           | Time            | Notes                       |
+| ------------------- | --------------- | --------------------------- |
+| BFS / DFS           | `O(V + E)`      | both representations        |
+| Topo sort           | `O(V + E)`      | DAG only                    |
+| Dijkstra (heap)     | `O(E log V)`    | non-negative weights        |
+| Union-find          | `O(α(N)) per op` | near-constant amortized     |
+
+## Practice
+
+- **Course schedule II** — topological sort.
+- **Number of connected components** — union-find or DFS.
+- **Network delay time** — Dijkstra on a directed graph.
+- **Cheapest flights within K stops** — Bellman-Ford-flavoured BFS.

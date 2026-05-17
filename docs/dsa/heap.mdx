@@ -1,0 +1,72 @@
+---
+title: Heap / Priority Queue
+description: Always know the smallest (or largest) element fast.
+sidebar_position: 7
+---
+
+import HeapViz from '@site/src/components/HeapViz';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Heap / Priority Queue
+
+<Pillbar pills={[
+  { label: 'extract', value: 'O(log n)' },
+  { label: 'peek', value: 'O(1)' },
+  { label: 'great for', value: 'top-K · streams' },
+]} />
+
+A heap is a complete binary tree where every parent is ≤ (min-heap) or ≥
+(max-heap) its children. The implementation lives in an array because of one
+clean property: the children of index `i` are at `2i+1` and `2i+2`.
+
+## The visualizer
+
+A min-heap rendered both as a tree and as its compact array form:
+
+<HeapViz />
+
+## When to reach for one
+
+- **Top-K** anything: K largest, K closest to origin, K smallest costs.
+- **Streaming median** (two heaps — a max-heap and a min-heap).
+- **Merging K sorted lists / streams**.
+- **Greedy schedulers**: earliest-deadline-first, A* path-finding.
+
+## Reference: K-th largest in a stream
+
+```java title="KthLargest.java"
+class KthLargest {
+  private final int k;
+  private final PriorityQueue<Integer> min = new PriorityQueue<>();
+
+  public KthLargest(int k, int[] nums) {
+    this.k = k;
+    for (int v : nums) add(v);
+  }
+
+  public int add(int v) {
+    min.offer(v);
+    if (min.size() > k) min.poll();
+    return min.peek();
+  }
+}
+```
+
+Keep a min-heap of size `k`. The root is always the K-th largest seen so far —
+constant-time peek, `O(log k)` per insert.
+
+## Complexity
+
+| Operation         | Time         |
+| ----------------- | ------------ |
+| Peek              | `O(1)`       |
+| Push              | `O(log n)`   |
+| Pop               | `O(log n)`   |
+| Build from array  | `O(n)`       |
+
+## Practice
+
+- **K largest elements** — bounded min-heap.
+- **Merge K sorted lists** — push the front of each list; pop, advance, push.
+- **Find median from data stream** — two heaps in balance.
+- **Reorganize string** — max-heap of remaining character counts.

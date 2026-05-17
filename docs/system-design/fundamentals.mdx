@@ -1,0 +1,63 @@
+---
+title: Fundamentals
+description: The vocabulary of system design interviews.
+sidebar_position: 1
+---
+
+import SystemDesignDiagram from '@site/src/components/SystemDesignDiagram';
+import Pillbar from '@site/src/components/Pillbar';
+
+# System Design Fundamentals
+
+<Pillbar pills={[
+  { label: 'session length', value: '45–60 min' },
+  { label: 'goal', value: 'tradeoffs, not perfection' },
+  { label: 'tool', value: 'whiteboard / shared doc' },
+]} />
+
+A system design interview is a structured conversation. The interviewer is
+listening for **how you decompose a problem, what tradeoffs you call out, and
+how you defend your choices** — not for a pixel-perfect architecture diagram.
+
+## The reference architecture
+
+Almost every web-scale system at interview level is some variant of this
+five-tier layout. Memorize the shape; the rest is fitting your use-case to it.
+
+<SystemDesignDiagram />
+
+## The framework
+
+1. **Requirements** — functional (what the system does) and non-functional
+   (scale, latency, durability, availability). Pin numbers down early.
+2. **API design** — request / response shapes. Even sketching three endpoints
+   anchors the rest of the discussion.
+3. **High-level architecture** — boxes and arrows; identify the data flow.
+4. **Data model & storage** — schema, indexes, choice of SQL / NoSQL / object.
+5. **Scale & failure** — bottlenecks, caching, replication, partitioning,
+   degradation under failure.
+6. **Wrap-up** — call out what you'd revisit with more time.
+
+## Back-of-envelope numbers
+
+| Operation                      | Latency       |
+| ------------------------------ | ------------- |
+| L1 cache reference             | `1 ns`        |
+| Memory access                  | `100 ns`      |
+| SSD read                       | `100 µs`      |
+| Network round-trip same DC     | `0.5 ms`      |
+| Network round-trip cross-region| `~150 ms`     |
+| HDD seek                       | `10 ms`       |
+
+| Throughput estimate            | Approx. value |
+| ------------------------------ | ------------- |
+| Reads per second (cached)      | `100k+`       |
+| Writes per second (SSD DB)     | `10k`         |
+| Queue ingest                   | `1M+/s`       |
+
+## Things to always mention
+
+- **Read vs. write ratio** — drives whether you cache, replicate, or shard.
+- **Hot keys** — when distribution is skewed, partitioning isn't enough.
+- **Idempotency** — for retries on writes, especially in async pipelines.
+- **Back-pressure** — what happens when downstream slows? Queue overflow?

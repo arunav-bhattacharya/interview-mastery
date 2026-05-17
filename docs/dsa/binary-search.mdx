@@ -1,0 +1,67 @@
+---
+title: Binary Search
+description: Halve the answer space each step.
+sidebar_position: 4
+---
+
+import BinarySearchViz from '@site/src/components/BinarySearchViz';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Binary Search
+
+<Pillbar pills={[
+  { label: 'time', value: 'O(log n)' },
+  { label: 'precondition', value: 'monotonic' },
+  { label: 'use it for', value: 'index · answer' },
+]} />
+
+Binary search is the algorithm you reach for whenever the data is **monotonic**
+in some property — sorted, or a function that flips from false to true exactly
+once. It is also the algorithm most often written incorrectly: off-by-ones in
+the loop condition, midpoint overflow, or shifting bounds the wrong direction.
+
+## The visualizer
+
+Watch `lo` / `mid` / `hi` converge on a target in a sorted array:
+
+<BinarySearchViz />
+
+## The patterns
+
+1. **Index in a sorted array** — the textbook case.
+2. **Find the boundary** — leftmost / rightmost occurrence; replace `==` with `≥`.
+3. **Search on the answer** — when the answer space is monotonic w.r.t. a
+   predicate, binary search the answer instead of the array (e.g., minimum
+   capacity to ship in D days).
+4. **Rotated sorted array** — at least one half is sorted; figure out which and
+   search there.
+
+## Reference: index lookup
+
+```java title="BinarySearch.java"
+public int search(int[] a, int target) {
+  int lo = 0, hi = a.length - 1;
+  while (lo <= hi) {
+    int mid = lo + (hi - lo) / 2;   // avoid overflow
+    if (a[mid] == target) return mid;
+    if (a[mid] < target) lo = mid + 1;
+    else                 hi = mid - 1;
+  }
+  return -1;
+}
+```
+
+## Complexity
+
+| Variant              | Time         | Space  |
+| -------------------- | ------------ | ------ |
+| Plain search         | `O(log n)`   | `O(1)` |
+| Boundary search      | `O(log n)`   | `O(1)` |
+| Binary search answer | `O(R log R)` | `O(1)` |
+
+## Practice
+
+- **Find first / last occurrence** of a target.
+- **Search in rotated sorted array**.
+- **Minimum eating speed (Koko bananas)** — search on the answer.
+- **Median of two sorted arrays** — partition both with binary search.

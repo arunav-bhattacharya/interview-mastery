@@ -1,0 +1,84 @@
+---
+title: Trie
+description: Prefix-share your way to fast string lookup.
+sidebar_position: 8
+---
+
+import TrieViz from '@site/src/components/TrieViz';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Trie
+
+<Pillbar pills={[
+  { label: 'lookup', value: 'O(L)' },
+  { label: 'space', value: 'shared prefixes' },
+  { label: 'great for', value: 'autocomplete · search' },
+]} />
+
+A trie (a.k.a. prefix tree) stores a set of strings such that words with a
+common prefix share the same path from the root. Lookup, insert, and "starts
+with" run in `O(L)` where `L` is the word length — no hashing, no comparing
+against every stored word.
+
+## The visualizer
+
+Six words inserted into a trie. Green-outlined nodes terminate a stored word:
+
+<TrieViz />
+
+## When you want one
+
+- **Autocomplete / search-as-you-type** suggestions.
+- **Word-search boards** (mass DFS over many target words at once).
+- **IP routing** (longest prefix match).
+- Replacing a `HashMap<String,…>` when you also need **prefix queries**.
+
+## Reference: minimal trie in Java
+
+```java title="Trie.java"
+class Trie {
+  static class Node {
+    Node[] kids = new Node[26];
+    boolean end;
+  }
+  private final Node root = new Node();
+
+  public void insert(String w) {
+    Node n = root;
+    for (char c : w.toCharArray()) {
+      int i = c - 'a';
+      if (n.kids[i] == null) n.kids[i] = new Node();
+      n = n.kids[i];
+    }
+    n.end = true;
+  }
+
+  public boolean search(String w)    { return find(w, true);  }
+  public boolean startsWith(String p) { return find(p, false); }
+
+  private boolean find(String s, boolean wholeWord) {
+    Node n = root;
+    for (char c : s.toCharArray()) {
+      int i = c - 'a';
+      if (n.kids[i] == null) return false;
+      n = n.kids[i];
+    }
+    return !wholeWord || n.end;
+  }
+}
+```
+
+## Complexity
+
+| Operation     | Time   | Space (per node)   |
+| ------------- | ------ | ------------------ |
+| Insert        | `O(L)` | one node per new char |
+| Search        | `O(L)` | —                  |
+| Starts-with   | `O(L)` | —                  |
+
+## Practice
+
+- **Implement Trie (prefix tree)** — the warm-up.
+- **Word search II** — DFS the grid, prune by trie node.
+- **Replace words** with the shortest stored root.
+- **Design search autocomplete** (top-K, sentence-level — trie + heap).

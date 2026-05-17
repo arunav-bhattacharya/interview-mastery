@@ -1,0 +1,66 @@
+---
+title: Sliding Window
+description: Reuse work from the previous window.
+sidebar_position: 3
+---
+
+import SlidingWindowViz from '@site/src/components/SlidingWindowViz';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Sliding Window
+
+<Pillbar pills={[
+  { label: 'time', value: 'O(n)' },
+  { label: 'kinds', value: 'fixed · variable' },
+  { label: 'state', value: 'sum / map / count' },
+]} />
+
+A sliding window is a sub-range of an array (or string) that you grow and shrink
+as you walk. The point is **incremental state**: instead of recomputing the sum
+or frequency for every window, update it in `O(1)` per step.
+
+## The visualizer
+
+A fixed window of size three, sliding right and tracking the running sum:
+
+<SlidingWindowViz />
+
+## Two flavours
+
+- **Fixed-size**: the window has a constant length `k`. Slide by one each step;
+  add the new element, subtract the dropped one.
+- **Variable-size**: grow `r` until a condition breaks, then shrink `l` until it
+  holds again. Classic for "longest substring with at most K distinct".
+
+## Reference: longest substring with at most K distinct
+
+```java title="LongestKDistinct.java"
+public int longestKDistinct(String s, int k) {
+  int[] freq = new int[256];
+  int distinct = 0, best = 0, l = 0;
+  for (int r = 0; r < s.length(); r++) {
+    if (freq[s.charAt(r)]++ == 0) distinct++;
+    while (distinct > k) {
+      if (--freq[s.charAt(l)] == 0) distinct--;
+      l++;
+    }
+    best = Math.max(best, r - l + 1);
+  }
+  return best;
+}
+```
+
+## Complexity
+
+| Variant            | Time   | Space        |
+| ------------------ | ------ | ------------ |
+| Fixed window sum   | `O(n)` | `O(1)`       |
+| Variable + map     | `O(n)` | `O(unique)`  |
+| Variable + min/max | `O(n)` | `O(window)`  |
+
+## Practice
+
+- **Max sum of k consecutive**: the fixed-window classic.
+- **Longest substring without repeating characters**: variable + hash set.
+- **Minimum window substring**: variable + frequency map + match count.
+- **Permutation in string**: fixed-window character histogram.

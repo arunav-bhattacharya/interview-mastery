@@ -1,0 +1,278 @@
+/* === Fonts ============================================================ */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/inter/800.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/600.css';
+@import '@fontsource/jetbrains-mono/700.css';
+
+/* === Light palette ==================================================== */
+:root {
+  --im-bg: #fafaf7;
+  --im-surface: #ffffff;
+  --im-surface-2: #f1f1ec;
+  --im-border: #e5e3da;
+  --im-fg: #15161a;
+  --im-fg-2: #4b4d57;
+  --im-muted: #80828c;
+
+  --im-accent: #d97706;          /* amber */
+  --im-accent-soft: #fde68a;
+  --im-accent-fg: #7c2d12;
+
+  --im-iris: #6366f1;            /* indigo for secondary highlights */
+  --im-iris-soft: #e0e7ff;
+
+  --im-success: #10b981;
+  --im-warn: #f59e0b;
+  --im-danger: #ef4444;
+
+  --ifm-color-primary: #d97706;
+  --ifm-color-primary-dark: #c2680b;
+  --ifm-color-primary-darker: #b76210;
+  --ifm-color-primary-darkest: #a05111;
+  --ifm-color-primary-light: #e08727;
+  --ifm-color-primary-lighter: #e58e36;
+  --ifm-color-primary-lightest: #f1a553;
+
+  --ifm-background-color: var(--im-bg);
+  --ifm-background-surface-color: var(--im-surface);
+
+  --ifm-font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --ifm-heading-font-family: 'Inter', sans-serif;
+  --ifm-heading-font-weight: 700;
+  --ifm-h1-font-size: 2.6rem;
+  --ifm-h2-font-size: 1.9rem;
+  --ifm-h3-font-size: 1.4rem;
+  --ifm-line-height-base: 1.7;
+  --ifm-paragraph-margin-bottom: 1.1rem;
+
+  --ifm-code-font-size: 0.92em;
+  --ifm-code-padding-horizontal: 0.4em;
+  --ifm-code-padding-vertical: 0.18em;
+  --ifm-code-border-radius: 4px;
+  --ifm-code-background: rgba(217, 119, 6, 0.10);
+
+  --ifm-navbar-background-color: rgba(250, 250, 247, 0.85);
+  --ifm-navbar-shadow: 0 1px 0 var(--im-border);
+  --ifm-footer-background-color: #15161a;
+  --ifm-footer-color: #c7c8cf;
+  --ifm-footer-link-color: #e5e7eb;
+  --ifm-footer-title-color: #ffffff;
+
+  --docusaurus-highlighted-code-line-bg: rgba(217, 119, 6, 0.14);
+}
+
+/* === Dark palette ===================================================== */
+[data-theme='dark'] {
+  --im-bg: #0b0c10;
+  --im-surface: #14161c;
+  --im-surface-2: #1c1f27;
+  --im-border: #262a33;
+  --im-fg: #f5f5f0;
+  --im-fg-2: #c6c8d1;
+  --im-muted: #8d909c;
+
+  --im-accent: #fbbf24;
+  --im-accent-soft: rgba(251, 191, 36, 0.16);
+  --im-accent-fg: #fde68a;
+
+  --im-iris: #a5b4fc;
+  --im-iris-soft: rgba(165, 180, 252, 0.14);
+
+  --ifm-color-primary: #fbbf24;
+  --ifm-color-primary-dark: #e0a720;
+  --ifm-color-primary-darker: #cf991e;
+  --ifm-color-primary-darkest: #a87d18;
+  --ifm-color-primary-light: #fcc946;
+  --ifm-color-primary-lighter: #fccf57;
+  --ifm-color-primary-lightest: #fddc7c;
+
+  --ifm-background-color: var(--im-bg);
+  --ifm-background-surface-color: var(--im-surface);
+
+  --ifm-navbar-background-color: rgba(11, 12, 16, 0.78);
+  --ifm-navbar-shadow: 0 1px 0 var(--im-border);
+  --ifm-code-background: rgba(251, 191, 36, 0.12);
+
+  --docusaurus-highlighted-code-line-bg: rgba(251, 191, 36, 0.16);
+}
+
+/* === Global base ====================================================== */
+html, body {
+  background: var(--im-bg);
+  color: var(--im-fg);
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+h1, h2, h3, h4 {
+  letter-spacing: -0.018em;
+  color: var(--im-fg);
+}
+
+p, li {
+  color: var(--im-fg-2);
+}
+
+a {
+  color: var(--ifm-color-primary);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+/* === Navbar tweaks ==================================================== */
+.navbar {
+  backdrop-filter: saturate(150%) blur(10px);
+  -webkit-backdrop-filter: saturate(150%) blur(10px);
+}
+.navbar__title { font-weight: 700; letter-spacing: -0.02em; }
+.navbar__link { font-weight: 500; }
+
+/* === Code blocks ====================================================== */
+code,
+kbd,
+pre,
+.prism-code,
+.token,
+.theme-code-block {
+  font-family: var(--ifm-font-family-monospace) !important;
+  font-variant-ligatures: contextual common-ligatures;
+  font-feature-settings: 'calt', 'liga', 'zero', 'ss02';
+  letter-spacing: 0;
+  tab-size: 2;
+}
+
+.theme-code-block,
+pre {
+  border-radius: 12px !important;
+  border: 1px solid var(--im-border);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+pre code,
+.theme-code-block code {
+  font-size: inherit;
+  line-height: 1.6;
+}
+
+/* inline code: small chip */
+:not(pre) > code {
+  background: var(--ifm-code-background);
+  color: var(--im-accent-fg);
+  padding: 0.12em 0.45em;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+[data-theme='dark'] :not(pre) > code {
+  color: var(--im-accent-fg);
+  background: var(--im-accent-soft);
+  border-color: rgba(251, 191, 36, 0.18);
+}
+
+/* code-block titles */
+.theme-code-block-title {
+  font-family: var(--ifm-font-family-monospace) !important;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+
+/* === Markdown content ================================================= */
+.markdown > h1:first-child { margin-bottom: 0.4em; }
+.markdown h2 {
+  margin-top: 2.2em;
+  padding-bottom: 0.4em;
+  border-bottom: 1px solid var(--im-border);
+}
+.markdown h3 { margin-top: 1.8em; }
+.markdown blockquote {
+  border-left: 3px solid var(--im-accent);
+  background: var(--im-accent-soft);
+  color: var(--im-accent-fg);
+  border-radius: 0 8px 8px 0;
+  padding: 0.8em 1em;
+}
+.markdown table {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.94rem;
+}
+.markdown table th {
+  background: var(--im-surface-2);
+  font-weight: 600;
+}
+.markdown table th,
+.markdown table td {
+  border: 1px solid var(--im-border);
+  padding: 0.55em 0.8em;
+}
+
+/* === Sidebar ========================================================== */
+.menu {
+  font-size: 0.92rem;
+  padding: 0.6rem;
+}
+.menu__list-item-collapsible,
+.menu__link {
+  border-radius: 8px;
+}
+.menu__link--active {
+  background: var(--im-accent-soft);
+  color: var(--im-accent-fg);
+  font-weight: 600;
+}
+[data-theme='dark'] .menu__link--active {
+  color: var(--im-accent-fg);
+}
+
+/* === Footer =========================================================== */
+.footer {
+  border-top: 1px solid var(--im-border);
+  background: #0b0c10;
+}
+
+/* === Reusable surface utilities ======================================= */
+.im-surface {
+  background: var(--im-surface);
+  border: 1px solid var(--im-border);
+  border-radius: 16px;
+}
+
+.im-accent-rule {
+  display: inline-block;
+  height: 3px;
+  width: 36px;
+  background: var(--im-accent);
+  border-radius: 999px;
+  margin-bottom: 1rem;
+}
+
+.im-mono {
+  font-family: var(--ifm-font-family-monospace);
+  letter-spacing: 0;
+  font-variant-ligatures: contextual;
+}
+
+.im-kbd {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  padding: 0.1em 0.45em;
+  background: var(--im-surface-2);
+  border: 1px solid var(--im-border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  color: var(--im-fg);
+}
+
+/* === Hide on small screens ============================================ */
+@media (max-width: 760px) {
+  :root { --ifm-h1-font-size: 2.1rem; --ifm-h2-font-size: 1.6rem; }
+}

@@ -1,0 +1,63 @@
+---
+title: Two Pointers
+description: One array, two indices, linear time.
+sidebar_position: 2
+---
+
+import TwoPointerViz from '@site/src/components/TwoPointerViz';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Two Pointers
+
+<Pillbar pills={[
+  { label: 'time', value: 'O(n)' },
+  { label: 'space', value: 'O(1)' },
+  { label: 'precondition', value: 'often sorted' },
+]} />
+
+The two-pointer pattern turns many `O(n²)` brute-force scans into a single `O(n)`
+walk by maintaining **two indices** that move toward (or with) each other based
+on what the data says.
+
+## The visualizer
+
+Below: a classic *pair sum* in a sorted array. Pointers converge based on the
+sum's relation to the target.
+
+<TwoPointerViz />
+
+## When it fits
+
+- The input is **sorted** (or sortable) — pair sum, three-sum, container with most water.
+- **Opposite-end shrink**: start with `l=0, r=n-1`; based on a predicate move the lower-cost side.
+- **Same-direction (fast/slow)**: in-place dedup, removing elements, finding the k-th from end of a list.
+
+## Reference: pair sum in a sorted array
+
+```java title="PairSum.java"
+public int[] pairSum(int[] a, int target) {
+  int l = 0, r = a.length - 1;
+  while (l < r) {
+    int s = a[l] + a[r];
+    if (s == target) return new int[] { l, r };
+    if (s < target) l++;
+    else            r--;
+  }
+  return new int[] { -1, -1 };
+}
+```
+
+## Complexity
+
+| Variant              | Time     | Space  |
+| -------------------- | -------- | ------ |
+| Opposite-end         | `O(n)`   | `O(1)` |
+| 3-sum (sort + 2ptr)  | `O(n²)`  | `O(1)` |
+| Fast / slow on list  | `O(n)`   | `O(1)` |
+
+## Practice
+
+- **Two sum II — sorted array**: textbook opposite-end.
+- **Container with most water**: shrink the smaller height.
+- **3-sum**: outer loop + opposite-end inner; skip duplicates.
+- **Remove duplicates in place**: same-direction (fast/slow).

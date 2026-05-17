@@ -1,0 +1,97 @@
+---
+title: Case Studies
+description: Three classic prompts walked end-to-end.
+sidebar_position: 3
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+
+# Case Studies
+
+<Pillbar pills={[
+  { label: 'studies', value: 3 },
+  { label: 'each in', value: '~10 min' },
+]} />
+
+Three prompts you should be able to drive a conversation through from memory.
+
+## 1 — Design a URL shortener (TinyURL)
+
+**Functional**
+
+- Create short URL for a long one.
+- Redirect short → long.
+- Optional: custom alias; expiry.
+
+**Numbers**
+
+- 500M short URLs / month → ~200 writes/s peak.
+- 50× read-to-write → ~10k reads/s peak.
+
+**API**
+
+```http
+POST /api/shorten   body: { url, alias? }   → { short }
+GET  /:short                                → 301 to long
+```
+
+**Storage**
+
+- KV store: `short → long`. Reads dominate, so a **cache** is essential.
+- ID generation: 7-char base-62 → ~3.5 trillion keys. Generate via a **counter + base62 encode** (avoid collision retries).
+
+**Scale notes**
+
+- Reads are cacheable; redirect path can hit a CDN with 301s having a short TTL.
+- Counter behind a Redis INCR or a sharded sequence.
+- Write path is cheap; no need to shard the DB at this scale.
+
+---
+
+## 2 — Design a rate limiter
+
+**Functional**
+
+- Reject requests above a per-user-per-window threshold.
+- Configurable: requests per minute, requests per hour, per route.
+
+**Algorithms**
+
+- **Fixed window** — simple, but allows a 2× burst across the boundary.
+- **Sliding window log** — exact but `O(N)` memory per user.
+- **Sliding window counter** — weighted blend of current and previous bucket; cheap and good enough.
+- **Token bucket** — every request consumes a token; tokens refill at a fixed rate. Good for steady throughput with bursts.
+
+**Architecture**
+
+- Inline at the API gateway or as a sidecar.
+- Counters in Redis (atomic INCR + EXPIRE). One round-trip per request — measure latency carefully.
+
+---
+
+## 3 — Design a news feed
+
+**Functional**
+
+- A user's feed shows recent posts from people they follow.
+- Posts are read far more than they are written.
+
+**Two strategies**
+
+| Strategy           | Read cost | Write cost | Notes                                  |
+| ------------------ | --------- | ---------- | -------------------------------------- |
+| **Pull (fan-out on read)**  | high      | tiny       | great for low-follower influencers     |
+| **Push (fan-out on write)** | tiny      | huge       | precompute each follower's feed        |
+| **Hybrid**                  | medium    | medium     | push for normal users, pull for celebrities |
+
+**Storage**
+
+- Posts in a write-optimized store (Cassandra / DynamoDB).
+- Per-user feed in a KV store with TTL or capped length.
+- Hot timelines warmed in a cache.
+
+**Things to mention**
+
+- Eventual consistency is acceptable — feed lag of a few seconds is normal.
+- Ranking and ads layer in *between* feed retrieval and rendering.
+- Celebrity / hot-user problem solved by hybrid fan-out.

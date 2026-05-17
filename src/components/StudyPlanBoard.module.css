@@ -1,0 +1,132 @@
+.wrap {
+  margin: 1.5rem 0;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.progressBar {
+  flex: 1;
+  height: 8px;
+  background: var(--im-surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--im-border);
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #fbbf24, #d97706);
+  transition: width 0.3s ease;
+}
+
+.progressLabel {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.82rem;
+  color: var(--im-fg-2);
+  letter-spacing: 0.02em;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.column {
+  background: var(--im-surface);
+  border: 1px solid var(--im-border);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 220px;
+}
+
+.todo  { border-top: 3px solid var(--im-muted); }
+.doing { border-top: 3px solid var(--im-accent); }
+.done  { border-top: 3px solid var(--im-success); }
+
+.columnHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.columnTitle {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--im-fg);
+}
+
+.columnCount {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--im-surface-2);
+  border: 1px solid var(--im-border);
+  color: var(--im-fg-2);
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  background: var(--im-surface-2);
+  border: 1px solid var(--im-border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+  color: var(--im-fg);
+}
+.card:hover { border-color: var(--im-accent); transform: translateY(-1px); }
+
+.cardGroup {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--im-muted);
+}
+
+.cardLabel {
+  font-weight: 600;
+  font-size: 0.92rem;
+  letter-spacing: -0.005em;
+  margin-top: 2px;
+}
+
+.done .card .cardLabel { text-decoration: line-through; opacity: 0.7; }
+
+.empty {
+  font-family: var(--ifm-font-family-monospace);
+  color: var(--im-muted);
+  padding: 14px;
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.note {
+  margin: 14px 0 0;
+  font-size: 0.78rem;
+  color: var(--im-muted);
+}
+
+@media (max-width: 760px) {
+  .board { grid-template-columns: 1fr; }
+}

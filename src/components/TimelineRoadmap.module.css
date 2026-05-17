@@ -1,0 +1,105 @@
+.timeline {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.markerCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.marker {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--im-surface);
+  border: 2px solid var(--im-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--ifm-font-family-monospace);
+  font-weight: 700;
+  font-size: 0.95rem;
+  position: relative;
+  z-index: 1;
+}
+
+.amber .marker { border-color: #d97706; color: #d97706; background: linear-gradient(180deg, var(--im-surface), rgba(217,119,6,0.06)); }
+.iris  .marker { border-color: #6366f1; color: #6366f1; background: linear-gradient(180deg, var(--im-surface), rgba(99,102,241,0.06)); }
+.mint  .marker { border-color: #10b981; color: #10b981; background: linear-gradient(180deg, var(--im-surface), rgba(16,185,129,0.06)); }
+.rose  .marker { border-color: #e11d48; color: #e11d48; background: linear-gradient(180deg, var(--im-surface), rgba(225,29,72,0.06)); }
+
+.markerLabel { letter-spacing: 0.02em; }
+
+.connector {
+  flex: 1;
+  width: 2px;
+  background: var(--im-border);
+  margin: 2px 0;
+}
+
+.card {
+  background: var(--im-surface);
+  border: 1px solid var(--im-border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 10px;
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+.card:hover { transform: translateY(-1px); border-color: var(--im-fg-2); }
+
+.headRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.focus {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  color: var(--im-muted);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.75rem;
+  padding: 3px 9px;
+  background: var(--im-surface-2);
+  border-radius: 999px;
+  color: var(--im-fg-2);
+  border: 1px solid var(--im-border);
+}
+
+@media (max-width: 640px) {
+  .row { grid-template-columns: 56px 1fr; gap: 10px; }
+  .marker { width: 46px; height: 46px; font-size: 0.85rem; }
+}

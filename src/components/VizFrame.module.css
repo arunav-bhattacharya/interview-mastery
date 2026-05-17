@@ -1,0 +1,26 @@
+.frame {
+  background: var(--im-surface);
+  border: 1px solid var(--im-border);
+  border-radius: 16px;
+  padding: 18px;
+  margin: 1.4rem 0;
+}
+
+.title {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--im-muted);
+  margin-bottom: 14px;
+}
+
+.stage {
+  overflow-x: auto;
+}
+
+.caption {
+  font-size: 0.85rem;
+  color: var(--im-fg-2);
+  margin-top: 10px;
+}
