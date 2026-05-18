@@ -1,0 +1,44 @@
+---
+title: Interview Q&A & Checklist
+description: "Spring-specific Q&A reference and self-assessment checklist."
+sidebar_position: 9
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import { Checklist, ChecklistItem } from '@site/src/components/Checklist';
+
+# Interview Q&A & Checklist
+
+## Interview Q&A
+**Q: Why is constructor injection preferred over `@Autowired` on fields?**
+A: Constructor injection makes dependencies explicit, the class testable without Spring, and the resulting instance immutable. Field injection hides dependencies and makes unit testing harder.
+
+**Q: How does `@Transactional` work under the hood?**
+A: Spring creates a proxy around the bean. Calls through the proxy open a transaction before invoking the method and commit / rollback after. **Self-calls don't go through the proxy** → no transaction.
+
+**Q: What's the difference between `@RestController` and `@Controller`?**
+A: `@RestController` adds `@ResponseBody` to every method → the return value is serialized directly. `@Controller` returns view names by default.
+
+**Q: How do you debug a slow endpoint in Spring Boot?**
+A: Enable SQL logging, add Actuator metrics, instrument with Micrometer / OpenTelemetry, profile with `jfr` / `async-profiler`. Often it's an N+1 query.
+
+**Q: Sync HTTP vs. async messaging — when does each fit?**
+A: Sync when the caller needs the result *now* (login, checkout). Async when the work is slow / bursty / decoupled (email, video encoding, analytics).
+
+---
+
+---
+
+## Review Checklist
+<Checklist>
+  <ChecklistItem id="spring-interview-qa-0-can-wire-a-spring-boot-service-with-cons">Can wire a Spring Boot service with constructor injection from memory.</ChecklistItem>
+  <ChecklistItem id="spring-interview-qa-0-know-the-gotcha-with-transactional-self">Know the gotcha with `@Transactional` self-calls.</ChecklistItem>
+  <ChecklistItem id="spring-interview-qa-0-returned-proper-status-codes-rfc-7807-pr">Returned proper status codes + RFC 7807 problem responses.</ChecklistItem>
+  <ChecklistItem id="spring-interview-qa-0-configured-a-stateless-oauth2-resource-s">Configured a stateless OAuth2 resource server.</ChecklistItem>
+  <ChecklistItem id="spring-interview-qa-0-fixed-an-n-1-query-with-join-fetch">Fixed an N+1 query with `JOIN FETCH`.</ChecklistItem>
+  <ChecklistItem id="spring-interview-qa-0-exposed-a-prometheus-metric-via-micromet">Exposed a Prometheus metric via Micrometer.</ChecklistItem>
+  <ChecklistItem id="spring-interview-qa-0-used-testcontainers-for-a-real-db-integr">Used Testcontainers for a real-DB integration test.</ChecklistItem>
+  <ChecklistItem id="spring-interview-qa-0-wrote-a-multi-stage-dockerfile">Wrote a multi-stage Dockerfile.</ChecklistItem>
+</Checklist>

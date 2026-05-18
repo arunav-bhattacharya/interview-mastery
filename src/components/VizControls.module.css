@@ -33,7 +33,11 @@
 .play {
   background: var(--im-accent);
   border-color: var(--im-accent);
-  color: #1a1a1a;
+  color: #ffffff;
+}
+.play:hover:not(:disabled) {
+  background: var(--ifm-color-primary-dark);
+  border-color: var(--ifm-color-primary-dark);
 }
 
 .counter {

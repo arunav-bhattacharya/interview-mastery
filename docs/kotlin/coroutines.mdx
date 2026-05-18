@@ -1,0 +1,139 @@
+---
+title: Coroutines
+description: "Structured concurrency, suspend functions, scopes, dispatchers, Flow."
+sidebar_position: 3
+---
+
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Coroutines
+
+<Pillbar pills={[
+  { label: 'topic', value: 'concurrency' },
+  { label: 'depth', value: 'senior critical' },
+]} />
+
+Coroutines are Kotlin's concurrency primitive. The mental model: **lightweight tasks that can suspend without blocking a thread**. Millions of them on a small pool — like virtual threads, but with structured-concurrency semantics baked into the type system.
+
+## `suspend` functions
+
+A function marked `suspend` can pause and resume — typically waiting on I/O or another coroutine.
+
+```kotlin
+suspend fun fetchUser(id: Long): User {
+  return httpClient.get("/users/$id").body()
+}
+```
+
+`suspend` is contagious: only another `suspend` function (or a `launch`/`async` block) can call it. The compiler enforces this — you can't accidentally call a blocking-like function from a synchronous context.
+
+## Scopes and structured concurrency
+
+Every coroutine is launched in a `CoroutineScope`. When the scope ends, **all child coroutines are cancelled**. This is the headline win — no orphaned tasks, no leaked threads.
+
+```kotlin
+suspend fun loadDashboard(): Dashboard = coroutineScope {
+  val user      = async { fetchUser(currentUserId) }
+  val orders    = async { fetchOrders(currentUserId) }
+  val balance   = async { fetchBalance(currentUserId) }
+  Dashboard(user.await(), orders.await(), balance.await())
+}
+```
+
+Three parallel calls. If any one throws, the others are cancelled and `loadDashboard` re-throws.
+
+### `launch` vs `async`
+
+| Builder | Returns | Use when |
+| --- | --- | --- |
+| `launch` | `Job` | Fire-and-forget (logging, event publishing) |
+| `async` | `Deferred<T>` | You need the result; call `.await()` |
+
+## Dispatchers
+
+A dispatcher decides **which thread pool** runs a coroutine.
+
+| Dispatcher | For |
+| --- | --- |
+| `Dispatchers.Default` | CPU-bound work; one thread per core |
+| `Dispatchers.IO` | Blocking I/O (DB, file, legacy HTTP); large pool |
+| `Dispatchers.Main` | UI updates (Android, Compose Desktop) |
+| `Dispatchers.Unconfined` | Whatever thread is available — for testing/library code |
+
+Switch with `withContext`:
+
+```kotlin
+suspend fun fetchAndParse(): Report {
+  val raw = withContext(Dispatchers.IO) { httpClient.get(url).bodyAsText() }
+  return withContext(Dispatchers.Default) { parseExpensive(raw) }
+}
+```
+
+## Cancellation is cooperative
+
+A coroutine doesn't actually stop on cancellation — it checks at every `suspend` point. If you have a tight CPU loop without `suspend` calls, call `yield()` or check `isActive`:
+
+```kotlin
+suspend fun crunch(items: List<Item>) = coroutineScope {
+  items.forEach {
+    ensureActive()    // throws CancellationException if cancelled
+    expensive(it)
+  }
+}
+```
+
+## `Flow` — async streams
+
+`Flow<T>` is the coroutine equivalent of `Stream` (and conceptually similar to Reactive Streams' `Publisher` but cold + suspend-based).
+
+```kotlin
+fun heartbeatFlow(): Flow<Long> = flow {
+  while (true) {
+    emit(System.currentTimeMillis())
+    delay(1.seconds)
+  }
+}
+
+suspend fun observe() {
+  heartbeatFlow()
+    .map { it / 1000 }
+    .filter { it % 5 == 0L }
+    .collect { println("tick $it") }
+}
+```
+
+Operators (`map`, `filter`, `combine`, `flatMapMerge`) compose pipelines; `collect` is the terminal operation that actually runs them.
+
+## Common pitfalls
+
+- **Calling blocking code in a coroutine without `withContext(Dispatchers.IO)`** — burns a Default-pool thread that should be doing CPU work.
+- **Using `GlobalScope`** — bypasses structured concurrency. Almost always wrong in production.
+- **Catching `CancellationException`** — swallowing it breaks cancellation. Re-throw it if you must catch.
+- **Long CPU loops without `yield()`** — cancellation never lands; the coroutine ignores `cancel()`.
+
+## Coroutines vs. Java virtual threads
+
+| | Coroutines | Virtual threads (Java 21+) |
+| --- | --- | --- |
+| Unit of scheduling | Continuation (compiler-rewritten) | Real `Thread` object (light) |
+| Blocking I/O on legacy APIs | Needs `Dispatchers.IO` | Cheap natively |
+| Cancellation | Structured, type-enforced | None built in — you DIY |
+| Cross-language interop | Kotlin-only | JVM-wide |
+| Ecosystem | `Flow`, `Channel`, `Mutex` | Inherits standard java.util.concurrent |
+
+For greenfield Kotlin → coroutines. For mixed Kotlin/Java → virtual threads are simpler at the boundary.
+
+## Bridging coroutines and Spring
+
+Spring Boot has first-class coroutine support: controllers can be `suspend fun`s, `WebClient` returns coroutines via `awaitBody()`, and `@Transactional` works on suspend methods via the reactive transaction manager.
+
+```kotlin
+@RestController
+class OrderController(private val service: OrderService) {
+
+  @GetMapping("/api/orders/{id}")
+  suspend fun get(@PathVariable id: Long): OrderDto =
+    service.findById(id)            // suspend call, non-blocking
+}
+```

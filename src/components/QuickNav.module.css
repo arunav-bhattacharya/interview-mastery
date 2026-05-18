@@ -1,0 +1,52 @@
+.wrap {
+  background: var(--im-surface);
+  border: 1px solid var(--im-border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 0.5rem 0 2rem;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--im-accent);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.headIcon {
+  font-size: 1.1rem;
+}
+
+.headLabel {
+  letter-spacing: 0.01em;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill {
+  display: inline-block;
+  padding: 7px 14px;
+  background: var(--im-surface-2);
+  border: 1px solid var(--im-border);
+  color: var(--im-fg-2);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.pill:hover {
+  background: var(--im-accent-soft);
+  border-color: var(--im-accent);
+  color: var(--im-accent-fg);
+  text-decoration: none;
+}

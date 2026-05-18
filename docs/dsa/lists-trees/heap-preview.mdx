@@ -1,0 +1,28 @@
+---
+title: Heap (preview)
+sidebar_position: 5
+---
+
+import LinkedListViz from '@site/src/components/LinkedListViz';
+import TreeViz from '@site/src/components/TreeViz';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+
+# Heap (preview)
+
+A short preview — the dedicated hub is at [Heap & Trie](../heap-trie/index.mdx).
+
+A **heap** keeps the smallest (or largest) element accessible in `O(1)` and supports `O(log n)` insert / extract. Use a heap whenever you ask "what's the next smallest / largest?" repeatedly — top-K problems, merging K sorted streams, finding the streaming median, Dijkstra's algorithm.
+
+```text
+Min-heap invariant: parent ≤ children
+Stored compactly in an array — parent(i) = (i − 1) / 2
+```
+
+A **bounded heap of size K** answers "top K largest" in `O(n log K)` time and `O(K)` space — much better than sorting the whole input.
+
+→ Continue at the [Heap & Trie hub](../heap-trie/index.mdx).
+
+---

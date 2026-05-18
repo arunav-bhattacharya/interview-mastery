@@ -1,0 +1,79 @@
+---
+title: Spring Data JPA
+description: "Repositories, N+1 problem, entity graphs, transaction lifecycle."
+sidebar_position: 5
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Spring Data JPA
+
+```java
+public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
+  Optional<OrderEntity> findByPublicId(String publicId);
+
+  @Query("SELECT o FROM OrderEntity o WHERE o.placedAt < :before")
+  List<OrderEntity> findStaleOrders(@Param("before") Instant before);
+}
+```
+
+### N+1 query problem
+
+```java
+List<OrderEntity> orders = repo.findAll();
+for (OrderEntity o : orders) o.getItems().size();   // 1 + N queries!
+```
+
+Fix with `JOIN FETCH`:
+
+```java
+@Query("SELECT o FROM OrderEntity o LEFT JOIN FETCH o.items")
+List<OrderEntity> findAllWithItems();
+```
+
+Or **entity graphs** / **projections**.
+
+### Lifecycle
+
+- `@Transactional` opens a session. Lazy associations resolve only inside it.
+- Outside the transaction, `LazyInitializationException`.
+
+### Repository hierarchy
+
+Spring Data interfaces stack like this:
+
+```text
+Repository<T, ID>  (marker)
+  └─ CrudRepository<T, ID>          save, findById, deleteById, count, ...
+       └─ PagingAndSortingRepository<T, ID>   findAll(Pageable), findAll(Sort)
+            └─ JpaRepository<T, ID>           flush, saveAndFlush, deleteInBatch
+```
+
+Pick the smallest that gives you what you need. Use a custom interface (`OrderRepositoryCustom` + `OrderRepositoryImpl`) for one-off complex queries instead of stretching `@Query`.
+
+### Connection pooling — HikariCP
+
+Spring Boot uses **HikariCP** by default. The settings that actually matter:
+
+```yaml
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 20         # ≈ (cores × 2) + spindles; tune by P95 latency under load
+      minimum-idle: 5
+      connection-timeout: 30000     # ms to wait for a connection before throwing
+      idle-timeout: 600000          # 10 min before reaping idle conns
+      max-lifetime: 1800000         # 30 min, less than DB's wait_timeout
+      leak-detection-threshold: 60000  # warn if a conn is held > 60 s
+```
+
+- **Don't size the pool to the application** — size it to the **database**. Many small pools are better than one big one.
+- **Connection leaks** show up as exhaustion under load. `leak-detection-threshold` will tell you which thread is holding on; usually a missing `@Transactional` or a result set never closed.
+
+### Read models vs. domain entities
+
+Don't reuse JPA entities as API DTOs. Map between them — explicit boundaries beat accidental coupling.
+
+---

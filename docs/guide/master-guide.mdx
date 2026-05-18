@@ -1,0 +1,193 @@
+---
+title: Master Guide
+description: Senior software engineer interview preparation — overview, study plan, schedule.
+sidebar_position: 1
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import Pillbar from '@site/src/components/Pillbar';
+import RoundsBoard from '@site/src/components/RoundsBoard';
+import SkillsAssessment from '@site/src/components/SkillsAssessment';
+import ProgramOverview from '@site/src/components/ProgramOverview';
+import DailyScheduleViz from '@site/src/components/DailyScheduleViz';
+import PacingCards from '@site/src/components/PacingCards';
+import CheckpointsGrid from '@site/src/components/CheckpointsGrid';
+import { Checklist, ChecklistItem } from '@site/src/components/Checklist';
+
+# Senior Software Engineer Interview Preparation
+
+<Pillbar pills={[
+  { label: 'time', value: '30 min read' },
+  { label: 'role', value: 'senior SWE' },
+  { label: 'scope', value: 'FAANG · top tech' },
+]} />
+
+<QuickNav items={[
+  { label: 'OVERVIEW & INTERVIEW STRUCTURE', href: '#overview-and-interview-structure' },
+  { label: 'STUDY PLAN SUMMARY', href: '#study-plan-summary' },
+  { label: 'DAILY SCHEDULE TEMPLATE', href: '#daily-schedule-template' },
+  { label: 'FLEXIBLE PACING GUIDE', href: '#flexible-pacing-guide' },
+  { label: 'RESOURCES & LINKS', href: '#resources-and-links' },
+  { label: 'CONTENT STRUCTURE', href: '#content-structure' },
+  { label: 'SUCCESS METRICS', href: '#success-metrics' },
+  { label: 'GETTING STARTED', href: '#getting-started' },
+]} />
+
+## Overview and Interview Structure
+
+### What Senior SWE Interviews Look Like
+
+Based on 2024–2025 interview patterns from FAANG and top tech companies:
+
+<RoundsBoard />
+
+### What Makes Senior-Level Different from Junior/Mid
+
+| Aspect | Junior / Mid | Senior (what they expect) |
+| --- | --- | --- |
+| Coding | Solve the problem | Solve optimally + discuss trade-offs + clean code |
+| System Design | Basic understanding | Lead the discussion, make architectural decisions |
+| Behavioral | Project execution | Leadership, mentorship, cross-team influence |
+| Communication | Clear explanations | Drive conversations, ask the right questions |
+| Scope | Individual tasks | End-to-end ownership, business impact |
+
+### Skills Assessment Breakdown
+
+Per round, here's roughly how the evaluation splits:
+
+<SkillsAssessment />
+
+---
+
+## Study Plan Summary
+
+A focused plan that gets you from baseline to interview-ready. Times are guidelines — adjust to your pace.
+
+<ProgramOverview />
+
+### Goals at a Glance
+
+| Area | Focus | Key Deliverable |
+| --- | --- | --- |
+| DSA | Arrays, Strings, Trees, Graphs, DP | 60–70 LeetCode problems |
+| System Design | Fundamentals + 10 case studies | Can lead design discussions |
+| LLD | OOP design problems | Code clean class designs |
+| Java & Spring | Concurrency, JVM, Spring Boot | Deep technical knowledge |
+| SQL | Joins, Window Functions, CTEs | Query optimization skills |
+| AWS & GenAI | Cloud architecture | Solution design ready |
+| Behavioral | 10 STAR stories | Interview ready |
+
+---
+
+## Daily Schedule Template
+
+<DailyScheduleViz />
+
+---
+
+## Flexible Pacing Guide
+
+This site uses **modules** instead of strict days. Pick the cadence that fits your life.
+
+<PacingCards />
+
+> **Tip:** Consistency beats intensity. Two focused hours daily beats a fourteen-hour weekend cram.
+
+---
+
+## Resources and Links
+
+### Books (priority order)
+
+| Book | Purpose | When to read |
+| --- | --- | --- |
+| *System Design Interview* Vol 1 & 2 — Alex Xu | System Design | During System Design modules |
+| *Cracking the Coding Interview* — Gayle McDowell | DSA basics | Reference |
+| *Effective Java* — Joshua Bloch | Java best practices | During Java modules |
+| *Designing Data-Intensive Applications* — Kleppmann | Advanced systems | Optional, but excellent |
+
+### Online platforms
+
+| Platform | URL | Use for |
+| --- | --- | --- |
+| LeetCode | [leetcode.com](https://leetcode.com) | DSA practice |
+| NeetCode | [neetcode.io](https://neetcode.io) | Curated problem lists |
+| Educative | [educative.io](https://educative.io) | System Design courses |
+| Pramp | [pramp.com](https://pramp.com) | Free mock interviews |
+| ByteByteGo | [bytebytego.com](https://bytebytego.com) | System Design videos |
+
+### YouTube channels
+
+- **NeetCode** — DSA solutions
+- **ByteByteGo** — System Design
+- **Gaurav Sen** — System Design deep dives
+- **Java Brains** — Spring Boot
+- **Tech Dummies** — Distributed systems
+
+### Quick-reference links
+
+- [NeetCode 150 roadmap](https://neetcode.io/roadmap)
+- [Blind 75 list](https://leetcode.com/discuss/general-discussion/460599/blind-75-leetcode-questions)
+- [System Design Primer (GitHub)](https://github.com/donnemartin/system-design-primer)
+- [AWS Well-Architected](https://aws.amazon.com/architecture/well-architected/)
+
+---
+
+## Content Structure
+
+The site is organized into seven sidebar categories:
+
+```text
+content/
+├── Guide          ← you are here
+├── DSA            ← grouped pattern hubs + reference pages
+├── System Design  ← fundamentals, building blocks, case studies, LLD
+├── Java           ← core + Spring + Design Patterns
+├── SQL            ← single comprehensive practice hub
+├── Cloud          ← AWS & Cloud Architecture + GenAI
+└── Behavioral     ← STAR method + story prep + mock interview
+```
+
+Each lesson page is itself a hub: a Quick Navigation bar of pills at the top, followed by collapsible sections that walk through each pattern using a consistent template.
+
+---
+
+## Success Metrics
+
+### Checkpoints
+
+<CheckpointsGrid />
+
+### Final readiness checklist (before applying)
+
+<Checklist>
+  <ChecklistItem id="guide-master-guide-0-60-leetcode-problems-solved-mix-of-easy">**60+ LeetCode problems solved** (mix of easy, medium, hard)</ChecklistItem>
+  <ChecklistItem id="guide-master-guide-0-10-system-designs-practiced-with-diagram">**10+ system designs practiced** with diagrams</ChecklistItem>
+  <ChecklistItem id="guide-master-guide-0-java-concurrency-concepts-clear">**Java concurrency concepts clear**</ChecklistItem>
+  <ChecklistItem id="guide-master-guide-0-10-star-stories-prepared-and-practiced">**10 STAR stories prepared and practiced**</ChecklistItem>
+  <ChecklistItem id="guide-master-guide-0-5-mock-interviews-completed">**5+ mock interviews completed**</ChecklistItem>
+  <ChecklistItem id="guide-master-guide-0-resume-updated-with-quantified-achieveme">**Resume updated with quantified achievements**</ChecklistItem>
+  <ChecklistItem id="guide-master-guide-0-linkedin-profile-optimized">**LinkedIn profile optimized**</ChecklistItem>
+</Checklist>
+
+---
+
+## Getting Started
+
+### First steps
+
+1. Read through this guide to understand the structure.
+2. Set up a LeetCode account (Premium recommended).
+3. Bookmark NeetCode.io.
+4. Start with **Arrays & Strings** in the DSA section.
+
+### Initial goals
+
+- Solve 3–5 problems from each DSA pattern.
+- Watch 2 NeetCode videos per topic.
+- Order *System Design Interview* by Alex Xu.
+- Draft 3 STAR stories from your experience.
+
+> Consistency beats intensity. Two focused hours daily beats fourteen hours on a weekend.
+
+Good luck.

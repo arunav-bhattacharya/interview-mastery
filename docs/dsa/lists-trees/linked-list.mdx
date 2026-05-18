@@ -1,0 +1,110 @@
+---
+title: Linked List
+sidebar_position: 1
+---
+
+import LinkedListViz from '@site/src/components/LinkedListViz';
+import TreeViz from '@site/src/components/TreeViz';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+
+# Linked List
+
+### What is a Linked List?
+
+A linked list is a sequence of nodes, each holding a value and a pointer to the next. There's no random access — to read element `k`, you walk `k` nodes. The interview value is the **pointer manipulation** the data structure forces you to do carefully.
+
+### Why Does It Work?
+
+Linked lists trade fast index access for cheap insert/delete anywhere — as long as you already have a pointer to a neighbour. The cost of inserting or removing a node is bounded by **two pointer rewrites**, never the list's length.
+
+### Mental Model
+
+Three named pointers walking the list: `prev`, `curr`, `next`. The reversal trick is just **bending three arrows per step** — save `next` before you overwrite `curr.next`.
+
+<LinkedListViz />
+
+### When to Use
+
+- Operations need `O(1)` insert/remove at known positions.
+- The problem says **"in-place"** and **"constant extra space"** on a list.
+- Implementing queues, deques, LRU caches.
+
+<div className="im-core-concept">
+
+### Core Concept
+
+The four interview patterns:
+
+1. **Reverse** — flip `next` as you walk.
+2. **Two-pointer (fast/slow)** — middle, cycle detect, k-th from end.
+3. **Merge** — dummy node + tail pointer.
+4. **Dummy sentinel** — when the head may change, prepend a dummy.
+
+</div>
+### Template Code
+
+<CodeTabs
+  title="ReverseLinkedList"
+  java={`public ListNode reverse(ListNode head) {
+  ListNode prev = null, curr = head;
+  while (curr != null) {
+    ListNode next = curr.next;
+    curr.next = prev;
+    prev = curr;
+    curr = next;
+  }
+  return prev;
+}`}
+  kotlin={`fun reverse(head: ListNode?): ListNode? {
+  var prev: ListNode? = null
+  var curr = head
+  while (curr != null) {
+    val next = curr.next
+    curr.next = prev
+    prev = curr
+    curr = next
+  }
+  return prev
+}`}
+  python={`def reverse(head):
+    prev, curr = None, head
+    while curr:
+        nxt = curr.next
+        curr.next = prev
+        prev = curr
+        curr = nxt
+    return prev`}
+  go={`func reverse(head *ListNode) *ListNode {
+  var prev *ListNode
+  curr := head
+  for curr != nil {
+    next := curr.Next
+    curr.Next = prev
+    prev = curr
+    curr = next
+  }
+  return prev
+}`}
+/>
+
+### Key Problems to Master
+
+| # | Problem | Difficulty | Pattern | LeetCode |
+| - | --- | --- | --- | --- |
+| 1 | Reverse Linked List | <Difficulty>Easy</Difficulty> | Pointer flip | [LC 206](https://leetcode.com/problems/reverse-linked-list/) |
+| 2 | Linked List Cycle | <Difficulty>Easy</Difficulty> | Fast / slow | [LC 141](https://leetcode.com/problems/linked-list-cycle/) |
+| 3 | Merge Two Sorted Lists | <Difficulty>Easy</Difficulty> | Dummy + tail | [LC 21](https://leetcode.com/problems/merge-two-sorted-lists/) |
+| 4 | Remove Nth From End | <Difficulty>Medium</Difficulty> | Two-pointer offset | [LC 19](https://leetcode.com/problems/remove-nth-node-from-end-of-list/) |
+| 5 | Reorder List | <Difficulty>Medium</Difficulty> | Middle + reverse + weave | [LC 143](https://leetcode.com/problems/reorder-list/) |
+| 6 | LRU Cache | <Difficulty>Medium</Difficulty> | DLL + map | [LC 146](https://leetcode.com/problems/lru-cache/) |
+
+### Common Mistakes to Avoid
+
+- Forgetting to save `next` before overwriting `curr.next`.
+- Returning `head` after reversing — `head` is now the tail.
+- Skipping the dummy-node trick when the head may change.
+
+---

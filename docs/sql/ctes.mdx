@@ -1,0 +1,110 @@
+---
+title: Common Table Expressions (CTEs)
+description: Non-recursive CTEs for readability, recursive CTEs for hierarchies and graphs.
+sidebar_position: 6
+---
+
+import CodeTabs from '@site/src/components/CodeTabs';
+
+# Common Table Expressions (CTEs)
+
+CTEs name a subquery for clarity. They make queries read top-down: each `WITH` block is a named step, and the final `SELECT` is the answer.
+
+## Non-recursive CTE
+
+```sql
+WITH top_customers AS (
+  SELECT customer_id, SUM(amount) AS total
+  FROM orders
+  WHERE placed_at >= CURRENT_DATE - INTERVAL '30 days'
+  GROUP BY customer_id
+  ORDER BY total DESC
+  LIMIT 100
+)
+SELECT c.name, t.total
+FROM customers c
+JOIN top_customers t ON t.customer_id = c.id
+ORDER BY t.total DESC;
+```
+
+You can chain multiple CTEs in the same `WITH`:
+
+```sql
+WITH
+  recent AS (
+    SELECT * FROM orders
+    WHERE placed_at >= CURRENT_DATE - INTERVAL '7 days'
+  ),
+  high_value AS (
+    SELECT customer_id, SUM(amount) AS total
+    FROM recent
+    GROUP BY customer_id
+    HAVING SUM(amount) > 1000
+  )
+SELECT c.name, h.total
+FROM customers c
+JOIN high_value h ON h.customer_id = c.id;
+```
+
+## Recursive CTE — employee hierarchy
+
+The classic interview ask. Start with the roots, then walk down level by level:
+
+<CodeTabs
+  title="RecursiveCTE"
+  sql={`WITH RECURSIVE org AS (
+  -- Anchor: top of the hierarchy
+  SELECT id, name, manager_id, 0 AS depth
+  FROM employees
+  WHERE manager_id IS NULL
+
+  UNION ALL
+
+  -- Recursive: rows that report into anything already in 'org'
+  SELECT e.id, e.name, e.manager_id, org.depth + 1
+  FROM employees e
+  JOIN org ON e.manager_id = org.id
+)
+SELECT id, name, depth
+FROM org
+ORDER BY depth, name;`}
+/>
+
+The two halves of `UNION ALL` are the **anchor** (base case) and the **recursive step**. The engine keeps applying the recursive step until it produces no new rows.
+
+## Recursive CTE — path enumeration (graph)
+
+Want the full management chain for each employee?
+
+```sql
+WITH RECURSIVE chain AS (
+  SELECT id, name, manager_id, ARRAY[name] AS path, 0 AS depth
+  FROM employees
+
+  UNION ALL
+
+  SELECT e.id, e.name, e.manager_id, chain.path || e.name, chain.depth + 1
+  FROM employees e
+  JOIN chain ON chain.manager_id = e.id
+)
+SELECT id, name, path
+FROM chain
+WHERE manager_id IS NULL;   -- only the rows that reached the root
+```
+
+## When to use a CTE vs. a subquery
+
+| Want | Reach for |
+| --- | --- |
+| Reuse the same derived table twice | CTE |
+| Improve readability of a 50-line query | CTE |
+| Walk a hierarchy or graph | Recursive CTE |
+| Inline filter used once | Subquery (let the planner inline it) |
+
+## Gotchas
+
+- **Postgres ≤11 materialized CTEs** — the engine wouldn't push predicates through. Solved in PG 12 with the `NOT MATERIALIZED` hint and auto-inlining. Older code may still force materialization unintentionally.
+- **Recursion has no `LIMIT` by default** — an unbounded recursion can run forever. Always have a clear termination condition or a `WHERE depth < N` guard.
+- **`UNION` vs. `UNION ALL` in recursive CTEs**: `UNION` removes duplicates row-by-row, which can hide infinite loops; `UNION ALL` is faster and is what you want unless you're explicitly dedup'ing.
+
+Next: [Window functions](./window-functions.mdx).

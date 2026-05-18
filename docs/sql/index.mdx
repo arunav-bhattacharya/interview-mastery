@@ -1,0 +1,55 @@
+---
+title: SQL
+description: SQL hub — fundamentals, joins, aggregations, subqueries, CTEs, window functions, optimization, practice.
+sidebar_position: 1
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import Pillbar from '@site/src/components/Pillbar';
+
+# SQL for Interviews
+
+<Pillbar pills={[
+  { label: 'time', value: '3–4 hours' },
+  { label: 'must-know', value: 'JOIN · GROUP BY · window' },
+  { label: 'format', value: 'hub + spokes' },
+]} />
+
+<QuickNav items={[
+  { label: 'FUNDAMENTALS', href: './fundamentals' },
+  { label: 'JOINS', href: './joins' },
+  { label: 'AGGREGATIONS', href: './aggregations' },
+  { label: 'SUBQUERIES', href: './subqueries' },
+  { label: 'CTEs', href: './ctes' },
+  { label: 'WINDOW FUNCTIONS', href: './window-functions' },
+  { label: 'OPTIMIZATION', href: './optimization' },
+  { label: 'PRACTICE', href: './practice' },
+]} />
+
+## Overview
+
+SQL is the one language you can't fake in an interview. A two-line query that joins three tables, filters by date, and groups by user tells the interviewer more about your data fluency than ten minutes of conversation.
+
+The interview rubric: **read complex queries**, **write moderately complex queries from scratch**, **optimize a slow query**, **discuss tradeoffs**.
+
+## What each spoke covers
+
+| Spoke | Focus | When you reach for it |
+| --- | --- | --- |
+| [Fundamentals](./fundamentals.mdx) | Logical clause order, NULL semantics, sample schema | Always — this is the mental model |
+| [Joins](./joins.mdx) | INNER · LEFT · RIGHT · FULL · self-join · CROSS | "Combine data from two tables" |
+| [Aggregations](./aggregations.mdx) | `GROUP BY` · `HAVING` · aggregate functions | "Count / total / average per X" |
+| [Subqueries](./subqueries.mdx) | Scalar · `IN` · `EXISTS` · correlated | "Filter by a derived condition" |
+| [CTEs](./ctes.mdx) | Non-recursive + recursive | "Break a query into named steps" |
+| [Window functions](./window-functions.mdx) | `ROW_NUMBER` · `RANK` · `LAG` · running totals | "Aggregate without collapsing rows" |
+| [Optimization](./optimization.mdx) | `EXPLAIN ANALYZE` · indexes · keyset pagination | "This query is slow" |
+| [Practice](./practice.mdx) | 10 worked problems · quick reference · checklist | After you've read the rest |
+
+## Interview rubric (what you're scored on)
+
+- **Read complex queries.** Look at a 30-line query and explain it in plain English.
+- **Write moderately complex queries from scratch.** Multi-join + `GROUP BY` + `HAVING` + a window — 5–10 minutes, clean code.
+- **Optimize a slow query.** Read `EXPLAIN ANALYZE`, name the bottleneck, propose an index.
+- **Discuss tradeoffs.** When is `EXISTS` better than `IN`? When does `OFFSET` break down?
+
+Start with **Fundamentals** if you're rusty, then jump to **Window Functions** (the modern interview separator) and **Practice**.

@@ -1,0 +1,42 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin: 2px 0;
+  transition: background 0.15s ease;
+}
+.row:hover {
+  background: var(--im-surface-2);
+}
+
+.checkbox {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--im-accent);
+  margin: 0;
+}
+
+.link {
+  flex: 1 1 auto;
+  color: var(--im-fg);
+  text-decoration: none;
+  font-size: 0.94rem;
+}
+.link:hover {
+  color: var(--im-accent);
+  text-decoration: underline;
+}
+
+.checked .link {
+  text-decoration: line-through;
+  color: var(--im-muted);
+  text-decoration-color: var(--im-muted);
+}
+
+.checked .checkbox {
+  /* already styled via accent-color */
+}

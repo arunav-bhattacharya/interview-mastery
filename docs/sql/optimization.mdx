@@ -1,0 +1,109 @@
+---
+title: Query Optimization
+description: Read EXPLAIN ANALYZE, add the right index, use keyset pagination.
+sidebar_position: 8
+---
+
+# Query Optimization
+
+The interview asks: "this query is slow — make it faster." Your structured answer:
+
+1. **Read `EXPLAIN ANALYZE`.** Identify the bottleneck operator.
+2. **Decide the fix.** Index? Rewrite? Materialize? Partition?
+3. **Verify.** Re-run `EXPLAIN ANALYZE` and compare actual times.
+
+## Read `EXPLAIN ANALYZE`
+
+```sql
+EXPLAIN ANALYZE
+SELECT id, status
+FROM orders
+WHERE customer_id = 4218
+  AND placed_at >= '2024-01-01';
+```
+
+Look for:
+
+| You see | What it means | Likely fix |
+| --- | --- | --- |
+| `Seq Scan` on a large table | No usable index | Add an index |
+| `Index Only Scan` | Covering index — ideal | None |
+| `Bitmap Heap Scan` | Index found rows, but many — heap visits expensive | Increase selectivity, add covering columns |
+| Estimate vs. actual diverges 100× | Stats out of date | `ANALYZE` the table |
+| `Nested Loop` on two large tables | Planner mis-cardinality | Re-`ANALYZE` or rewrite |
+| `Hash Join` with a huge build side | Sort/spill risk | Tune `work_mem` or reduce rows first |
+
+The runtime is in **actual time**, not the planner's cost. `cost=0..1000` is a unit-less estimate.
+
+## Add the right index
+
+```sql
+CREATE INDEX idx_orders_customer_placed
+  ON orders (customer_id, placed_at);
+```
+
+Composite-key order matters: lead with the column you filter by **equality**, then the one you filter by **range**. The above is right for `WHERE customer_id = ? AND placed_at >= ?` but useless for `WHERE placed_at >= ?` alone.
+
+### Covering index
+
+For an **index-only scan**, include the columns the query reads:
+
+```sql
+CREATE INDEX idx_orders_customer_placed_cover
+  ON orders (customer_id, placed_at)
+  INCLUDE (status, amount);
+```
+
+PG ≥11 / SQL Server / Oracle support `INCLUDE` columns; MySQL composite indexes implicitly cover trailing columns.
+
+### Partial index for the common case
+
+```sql
+CREATE INDEX idx_orders_fulfilled_placed_at
+  ON orders (placed_at)
+  WHERE status = 'fulfilled';
+```
+
+Much smaller than the full index, much faster to scan — if most queries hit the predicate.
+
+## Keyset pagination — kill `OFFSET`
+
+`OFFSET 1000000` is `O(offset + limit)` because the engine reads every preceding row. Keyset (a.k.a. seek) pagination:
+
+```sql
+-- Page 1
+SELECT * FROM orders
+WHERE placed_at < NOW()
+ORDER BY placed_at DESC, id DESC
+LIMIT 50;
+
+-- Page 2 — use the (placed_at, id) of the last row from page 1
+SELECT * FROM orders
+WHERE (placed_at, id) < ('2024-06-15 12:34:56'::timestamp, 9981234)
+ORDER BY placed_at DESC, id DESC
+LIMIT 50;
+```
+
+`O(limit)` regardless of page depth, given a composite index on `(placed_at DESC, id DESC)`.
+
+## Common pitfalls
+
+- **Function on indexed column** — `WHERE LOWER(email) = ...` makes the index unusable. Build a functional index: `CREATE INDEX ... ON users (LOWER(email))`.
+- **Leading wildcard** — `LIKE '%foo'` can't use a B-tree. Use a full-text index (`tsvector`/`GIN`) or `pg_trgm`.
+- **Implicit type cast** — `WHERE bigint_col = '42'` (string literal) can sometimes prevent index usage; cast yourself.
+- **Bulk loads without `ANALYZE`** — the planner is now flying blind, all subsequent queries get bad plans.
+- **`SELECT *` from a join** — pulls in unused columns, prevents index-only scans, blows up the wire transfer.
+- **`OR`-joined predicates** — sometimes worse than a `UNION ALL` of two simple queries with separate indexes.
+
+## Don't add too many indexes
+
+Every index slows down `INSERT` / `UPDATE` / `DELETE` (write amplification) and bloats storage. Build them from query-driven evidence, not "just in case."
+
+## When the query is unfixable
+
+- **Materialized view** — pre-aggregate the slow shape.
+- **Denormalize** — accept one extra column write to avoid a join.
+- **Pre-compute in the application** — e.g. a counter table updated on each insert.
+- **Partition** — by date / tenant; the planner can prune entire partitions.
+
+Next: [Practice problems](./practice.mdx).

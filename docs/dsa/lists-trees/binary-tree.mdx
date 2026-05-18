@@ -1,0 +1,93 @@
+---
+title: Binary Tree
+sidebar_position: 4
+---
+
+import LinkedListViz from '@site/src/components/LinkedListViz';
+import TreeViz from '@site/src/components/TreeViz';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+
+# Binary Tree
+
+### What is a Binary Tree?
+
+A binary tree is a hierarchy where each node has up to two children (`left`, `right`). Most interview tree problems are traversals plus a small amount of per-node bookkeeping.
+
+### Why Does It Work?
+
+Every interesting tree algorithm boils down to **recursion on subtrees**. The base case is `null`; the recursive case combines the answers from the children with the node's own value.
+
+### Mental Model
+
+Trees are recursion's home territory. Think: "if I had the answer for `left` and the answer for `right`, what would I do with them?"
+
+<TreeViz />
+
+### When to Use
+
+- Hierarchical data — DOM, AST, file system, decision trees.
+- Sorted lookups when balanced (BST, AVL, red-black).
+- Range queries (segment tree, Fenwick / BIT).
+- Tries (a tree of characters — see the Heap & Trie hub).
+
+<div className="im-core-concept">
+
+### Core Concept
+
+The three traversal orders:
+
+| Order | When to use |
+| --- | --- |
+| **Pre-order** (root → L → R) | Copy / serialize a tree |
+| **In-order** (L → root → R) | Iterate a BST in sorted order |
+| **Post-order** (L → R → root) | Compute / aggregate from leaves up |
+| **Level-order** (BFS) | Per-level processing, shortest path |
+
+</div>
+### Template Code
+
+<CodeTabs
+  title="MaxDepth"
+  java={`public int maxDepth(TreeNode root) {
+  if (root == null) return 0;
+  return 1 + Math.max(maxDepth(root.left), maxDepth(root.right));
+}`}
+  kotlin={`fun maxDepth(root: TreeNode?): Int {
+  if (root == null) return 0
+  return 1 + maxOf(maxDepth(root.left), maxDepth(root.right))
+}`}
+  python={`def max_depth(root):
+    if root is None: return 0
+    return 1 + max(max_depth(root.left), max_depth(root.right))`}
+  go={`func maxDepth(r *TreeNode) int {
+  if r == nil { return 0 }
+  l, rr := maxDepth(r.Left), maxDepth(r.Right)
+  if l > rr { return l + 1 }
+  return rr + 1
+}`}
+/>
+
+### Key Problems to Master
+
+| # | Problem | Difficulty | Pattern | LeetCode |
+| - | --- | --- | --- | --- |
+| 1 | Maximum Depth of Binary Tree | <Difficulty>Easy</Difficulty> | DFS recursion | [LC 104](https://leetcode.com/problems/maximum-depth-of-binary-tree/) |
+| 2 | Invert Binary Tree | <Difficulty>Easy</Difficulty> | DFS rewrite | [LC 226](https://leetcode.com/problems/invert-binary-tree/) |
+| 3 | Same Tree | <Difficulty>Easy</Difficulty> | Mutual recursion | [LC 100](https://leetcode.com/problems/same-tree/) |
+| 4 | Binary Tree Level-Order Traversal | <Difficulty>Medium</Difficulty> | BFS | [LC 102](https://leetcode.com/problems/binary-tree-level-order-traversal/) |
+| 5 | Validate BST | <Difficulty>Medium</Difficulty> | Bounds | [LC 98](https://leetcode.com/problems/validate-binary-search-tree/) |
+| 6 | Lowest Common Ancestor | <Difficulty>Medium</Difficulty> | DFS, return signal | [LC 236](https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-tree/) |
+| 7 | Binary Tree Max Path Sum | <Difficulty>Hard</Difficulty> | Post-order + global max | [LC 124](https://leetcode.com/problems/binary-tree-maximum-path-sum/) |
+| 8 | Serialize and Deserialize Binary Tree | <Difficulty>Hard</Difficulty> | Pre-order with markers | [LC 297](https://leetcode.com/problems/serialize-and-deserialize-binary-tree/) |
+
+### Common Mistakes to Avoid
+
+- Confusing **pre-order** with **in-order** — the difference matters for BST sorted iteration.
+- Forgetting the `null` base case → `NullPointerException`.
+- Validating a BST by checking only immediate children (wrong) instead of carrying min/max bounds (right).
+- Recursing too deep on a skewed tree — switch to iterative if depth could exceed thousands.
+
+---

@@ -1,0 +1,116 @@
+---
+title: Arrays & Strings
+description: Two Pointers, Sliding Window, HashMaps — patterns covering ~35–40% of all interview problems.
+sidebar_position: 1
+---
+
+import TwoPointerViz from '@site/src/components/TwoPointerViz';
+import SlidingWindowViz from '@site/src/components/SlidingWindowViz';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+import { Checklist, ChecklistItem } from '@site/src/components/Checklist';
+
+# Arrays & Strings
+
+These three patterns appear in **~35–40% of all interview problems**. Master them first — most harder problems combine two of them (e.g. sliding window + hashmap).
+
+## Patterns in this family
+
+- **[Two Pointers](./two-pointers.mdx)**
+- **[Sliding Window](./sliding-window.mdx)**
+- **[HashMap / Frequency Count](./hashmap.mdx)**
+- **[Prefix Sum](./prefix-sum.mdx)**
+
+<QuickNav items={[
+  { label: 'TWO POINTERS', href: '/learn/dsa/arrays-strings/two-pointers' },
+  { label: 'SLIDING WINDOW', href: '/learn/dsa/arrays-strings/sliding-window' },
+  { label: 'HASHMAP / FREQUENCY COUNT', href: '/learn/dsa/arrays-strings/hashmap' },
+  { label: 'PREFIX SUM', href: '/learn/dsa/arrays-strings/prefix-sum' },
+]} />
+
+
+---
+
+## Array Manipulation Tricks
+
+A few specialised array techniques that don't warrant their own spoke but come up in interviews:
+
+### Rotate Array (in place)
+
+> Rotate `nums` by `k` steps to the right. `O(n)` time, `O(1)` space.
+
+**Trick:** reverse the whole array, reverse the first `k` elements, reverse the remaining `n - k`.
+
+```java
+void rotate(int[] nums, int k) {
+    int n = nums.length;
+    k %= n;
+    reverse(nums, 0, n - 1);
+    reverse(nums, 0, k - 1);
+    reverse(nums, k, n - 1);
+}
+private void reverse(int[] a, int lo, int hi) {
+    while (lo < hi) {
+        int t = a[lo]; a[lo++] = a[hi]; a[hi--] = t;
+    }
+}
+```
+
+Why three reversals? Each shifts elements past one boundary; together they realise a rotation without any auxiliary array.
+
+### Product of Array Except Self
+
+> For each index `i`, return the product of every element **except** `nums[i]`, with no division and in `O(n)` time.
+
+**Trick:** compute prefix products left-to-right, then multiply by suffix products right-to-left in a second pass.
+
+```java
+int[] productExceptSelf(int[] nums) {
+    int n = nums.length;
+    int[] out = new int[n];
+    out[0] = 1;
+    for (int i = 1; i < n; i++) out[i] = out[i - 1] * nums[i - 1];   // prefix
+    int suffix = 1;
+    for (int i = n - 1; i >= 0; i--) {
+        out[i] *= suffix;
+        suffix *= nums[i];
+    }
+    return out;
+}
+```
+
+`O(1)` extra space if you don't count the output array.
+
+### Other smaller patterns
+
+- **Cyclic sort** — when the array contains values in `[1, n]`, sort in place by swapping each value to its correct index. Find-missing-number variants.
+- **Boyer–Moore majority vote** — find the strict majority element in `O(n)` time, `O(1)` space.
+- **Encoding by sorted key / counts** — group anagrams, find duplicates, detect rotations.
+
+---
+
+
+## Checklist
+
+
+<Checklist>
+  <ChecklistItem id="dsa-arrays-strings-index-0-solved-10-two-pointer-problems-mixed-eas">Solved 10+ two-pointer problems (mixed easy / medium).</ChecklistItem>
+  <ChecklistItem id="dsa-arrays-strings-index-0-implemented-both-fixed-and-variable-slid">Implemented both fixed and variable sliding windows from scratch.</ChecklistItem>
+  <ChecklistItem id="dsa-arrays-strings-index-0-used-a-hash-map-to-drop-an-on-brute-forc">Used a hash map to drop an `O(n²)` brute force to `O(n)` at least three times.</ChecklistItem>
+  <ChecklistItem id="dsa-arrays-strings-index-0-wrote-a-prefix-sum-solution-to-subarray">Wrote a prefix-sum solution to "subarray sum equals K".</ChecklistItem>
+  <ChecklistItem id="dsa-arrays-strings-index-0-solved-3-sum-without-consulting-a-refere">Solved 3-Sum without consulting a reference.</ChecklistItem>
+  <ChecklistItem id="dsa-arrays-strings-index-0-handled-all-the-edge-cases-empty-length">Handled all the edge cases (empty, length 1, duplicates) in your templates.</ChecklistItem>
+</Checklist>
+
+---
+
+
+## Additional Resources
+
+
+- [NeetCode Arrays & Hashing playlist](https://neetcode.io/practice)
+- [Blind 75 — Arrays / Hashing](https://leetcode.com/discuss/general-discussion/460599/blind-75-leetcode-questions)
+- [Educative — Grokking the Coding Interview](https://educative.io)
+- [LeetCode Two Pointers tag](https://leetcode.com/tag/two-pointers/)

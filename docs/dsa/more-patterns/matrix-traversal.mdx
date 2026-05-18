@@ -1,0 +1,123 @@
+---
+title: Matrix Traversal
+sidebar_position: 2
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+
+# Matrix Traversal
+
+### What is Matrix Traversal?
+
+Grids are just graphs in disguise. Each cell has up to four (or eight) neighbours and you walk them with BFS / DFS — usually for shortest path, flood fill, or pattern matching.
+
+### Why Does It Work?
+
+The same traversal machinery from graphs applies: a visited set, a queue or stack, and a clear "neighbour" function. The only twist is that neighbours are computed from `(r, c)` offsets instead of an adjacency list.
+
+### Mental Model
+
+A grid is a graph where each `(r, c)` is a vertex and edges connect adjacent cells. Pick BFS for "minimum moves" and DFS for "all connected".
+
+### When to Use
+
+- Flood fill (Number of Islands, Surrounded Regions, paint bucket).
+- Shortest path on a grid (with weights → Dijkstra; with binary cost → 0-1 BFS).
+- Spiral / diagonal / rotated traversals.
+- Pattern matching (Word Search, Sudoku).
+
+<div className="im-core-concept">
+
+### Core Concept
+
+The 4-direction (or 8-direction) offset trick:
+
+```text
+int[][] DIRS = {{0,1}, {1,0}, {0,-1}, {-1,0}};
+for (int[] d : DIRS) {
+  int nr = r + d[0], nc = c + d[1];
+  if (in_bounds && !seen[nr][nc] && passable) visit(nr, nc);
+}
+```
+
+</div>
+### Template Code
+
+<CodeTabs
+  title="NumberOfIslands"
+  java={`public int numIslands(char[][] grid) {
+  int rows = grid.length, cols = grid[0].length, count = 0;
+  for (int r = 0; r < rows; r++) {
+    for (int c = 0; c < cols; c++) {
+      if (grid[r][c] == '1') { dfs(grid, r, c, rows, cols); count++; }
+    }
+  }
+  return count;
+}
+
+private void dfs(char[][] g, int r, int c, int rows, int cols) {
+  if (r < 0 || r >= rows || c < 0 || c >= cols || g[r][c] != '1') return;
+  g[r][c] = '0';
+  dfs(g, r + 1, c, rows, cols); dfs(g, r - 1, c, rows, cols);
+  dfs(g, r, c + 1, rows, cols); dfs(g, r, c - 1, rows, cols);
+}`}
+  kotlin={`fun numIslands(g: Array<CharArray>): Int {
+  val rows = g.size; val cols = g[0].size; var count = 0
+  fun dfs(r: Int, c: Int) {
+    if (r !in 0 until rows || c !in 0 until cols || g[r][c] != '1') return
+    g[r][c] = '0'
+    dfs(r + 1, c); dfs(r - 1, c); dfs(r, c + 1); dfs(r, c - 1)
+  }
+  for (r in 0 until rows) for (c in 0 until cols)
+    if (g[r][c] == '1') { dfs(r, c); count++ }
+  return count
+}`}
+  python={`def num_islands(g: list[list[str]]) -> int:
+    rows, cols = len(g), len(g[0]); count = 0
+    def dfs(r: int, c: int) -> None:
+        if r < 0 or r >= rows or c < 0 or c >= cols or g[r][c] != '1': return
+        g[r][c] = '0'
+        dfs(r+1, c); dfs(r-1, c); dfs(r, c+1); dfs(r, c-1)
+    for r in range(rows):
+        for c in range(cols):
+            if g[r][c] == '1': dfs(r, c); count += 1
+    return count`}
+  go={`func numIslands(g [][]byte) int {
+  rows, cols, count := len(g), len(g[0]), 0
+  var dfs func(r, c int)
+  dfs = func(r, c int) {
+    if r < 0 || r >= rows || c < 0 || c >= cols || g[r][c] != '1' { return }
+    g[r][c] = '0'
+    dfs(r+1, c); dfs(r-1, c); dfs(r, c+1); dfs(r, c-1)
+  }
+  for r := 0; r < rows; r++ {
+    for c := 0; c < cols; c++ {
+      if g[r][c] == '1' { dfs(r, c); count++ }
+    }
+  }
+  return count
+}`}
+/>
+
+### Key Problems to Master
+
+| # | Problem | Difficulty | Pattern | LeetCode |
+| - | --- | --- | --- | --- |
+| 1 | Number of Islands | <Difficulty>Medium</Difficulty> | Flood fill | [LC 200](https://leetcode.com/problems/number-of-islands/) |
+| 2 | Rotting Oranges | <Difficulty>Medium</Difficulty> | Multi-source BFS | [LC 994](https://leetcode.com/problems/rotting-oranges/) |
+| 3 | Word Search | <Difficulty>Medium</Difficulty> | DFS + visited | [LC 79](https://leetcode.com/problems/word-search/) |
+| 4 | Spiral Matrix | <Difficulty>Medium</Difficulty> | Bounds shrinkage | [LC 54](https://leetcode.com/problems/spiral-matrix/) |
+| 5 | Set Matrix Zeroes | <Difficulty>Medium</Difficulty> | Markers in first row / col | [LC 73](https://leetcode.com/problems/set-matrix-zeroes/) |
+| 6 | Shortest Path in Binary Matrix | <Difficulty>Medium</Difficulty> | 8-direction BFS | [LC 1091](https://leetcode.com/problems/shortest-path-in-a-binary-matrix/) |
+
+### Common Mistakes to Avoid
+
+- Forgetting bounds check before reading `grid[r][c]`.
+- Modifying the grid in place when the problem requires the original — clone first.
+- 8 directions when the problem allows only 4 (or vice versa).
+- BFS with no per-cell distance tracking when shortest path is the goal.
+
+---

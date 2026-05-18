@@ -1,0 +1,44 @@
+.wrap {
+  position: relative;
+}
+
+/* Floating toggle: stays pinned to the viewport so it's reachable wherever  */
+/* the reader is on the page. Anchored just under the navbar, right edge.   */
+.tocBtn {
+  position: fixed;
+  top: calc(var(--ifm-navbar-height, 60px) + 12px);
+  right: 18px;
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: var(--im-surface);
+  border: 1px solid var(--im-border);
+  border-radius: 999px;
+  color: var(--im-fg-2);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+  transition: border-color 0.15s ease, color 0.15s ease, transform 0.15s ease,
+    box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.tocBtn:hover {
+  border-color: var(--im-accent);
+  color: var(--im-accent-fg);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.20);
+}
+
+/* When TOC is hidden, the button switches to accent fill to signal state. */
+.tocBtnHidden {
+  background: var(--im-accent-soft);
+  color: var(--im-accent-fg);
+  border-color: var(--im-accent);
+}
+
+@media (max-width: 996px) {
+  .tocBtn { display: none; }
+}

@@ -1,0 +1,138 @@
+---
+title: Panache & Data
+description: "Hibernate ORM Panache — active record + repository patterns; reactive variant."
+sidebar_position: 4
+---
+
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Panache & Data
+
+<Pillbar pills={[
+  { label: 'extension', value: 'hibernate-orm-panache' },
+  { label: 'depth', value: 'Hibernate sugar' },
+]} />
+
+**Panache** is Quarkus's thin layer over Hibernate ORM. It offers two flavours of the same data access:
+
+1. **Active Record** — entities have static finders / mutators on themselves.
+2. **Repository** — separate repository class, entity stays a POJO.
+
+Pick by team preference. Active Record is more concise; Repository is more testable and survives entity-class refactors better. Senior interviews tend to prefer Repository for the same reason they prefer constructor injection over field injection.
+
+## Active Record example
+
+```java
+@Entity
+public class Order extends PanacheEntity {
+  public String publicId;
+  public Long userId;
+  public Instant placedAt;
+  public BigDecimal total;
+
+  public static List<Order> findActiveBy(Long userId) {
+    return list("userId = ?1 and placedAt > ?2", userId, Instant.now().minus(30, DAYS));
+  }
+}
+```
+
+`PanacheEntity` gives you a `Long id` plus statics: `findById`, `listAll`, `find`, `count`, `delete`, `persist`, `streamAll`, etc.
+
+Use it:
+
+```java
+Order o = new Order();
+o.userId = 42L;
+o.persist();        // INSERT
+
+Order found = Order.findById(o.id);
+List<Order> recent = Order.findActiveBy(42L);
+o.delete();
+```
+
+## Repository example
+
+```java
+@Entity
+public class Order {
+  @Id @GeneratedValue Long id;
+  public String publicId;
+  public Long userId;
+  public Instant placedAt;
+}
+
+@ApplicationScoped
+public class OrderRepository implements PanacheRepository<Order> {
+
+  public List<Order> findActiveBy(Long userId) {
+    return list("userId = ?1 and placedAt > ?2", userId, Instant.now().minus(30, DAYS));
+  }
+}
+```
+
+Use it:
+
+```java
+@Inject OrderRepository repo;
+
+Order o = new Order();
+o.userId = 42L;
+repo.persist(o);
+List<Order> recent = repo.findActiveBy(42L);
+```
+
+The query language is **JPQL** as usual; Panache just adds the convenient shortcuts (`?1`, `?2` parameters, `Sort.by(...)`, `Page.of(0, 20)`).
+
+## Transactions
+
+`@Transactional` (Jakarta) works exactly as expected — Panache calls inside a transactional method participate in the active transaction. Same proxy-based interception, same self-call gotcha as Spring's `@Transactional`.
+
+```java
+@ApplicationScoped
+public class CheckoutService {
+
+  @Transactional
+  public Order place(CreateOrder req) {
+    Order o = new Order();
+    o.userId = req.userId();
+    o.publicId = UUID.randomUUID().toString();
+    Order.persist(o);                  // active-record API
+    return o;
+  }
+}
+```
+
+## Pagination & sorting
+
+```java
+PanacheQuery<Order> q = Order.find("userId", 42L);
+List<Order> page1 = q.page(Page.of(0, 20)).list();
+List<Order> page2 = q.page(Page.of(1, 20)).list();
+long total = q.count();
+```
+
+For ordered queries:
+
+```java
+Order.find("userId = ?1", Sort.by("placedAt").descending(), userId).list();
+```
+
+## Common pitfalls
+
+- **N+1 queries**: same as plain JPA. Use `fetch join` in JPQL or entity graphs.
+- **Lazy loading outside a session**: lazy associations resolve only inside the `@Transactional` boundary. Accessing them afterwards throws `LazyInitializationException`.
+- **Active Record + inheritance**: `PanacheEntity` extends `PanacheEntityBase` and adds an `id` field. If your schema has a different PK column, extend `PanacheEntityBase` directly and define your own `@Id` field.
+- **Streaming large result sets**: prefer `Order.streamAll()` over `listAll()` — `streamAll` is a true cursor; `listAll` materialises everything.
+
+## Hibernate Reactive (optional)
+
+`quarkus-hibernate-reactive-panache` swaps the blocking JDBC client for the non-blocking Vert.x SQL client and returns `Uni<T>` / `Multi<T>` from queries.
+
+```java
+public Uni<Order> findById(Long id) {
+  return Order.findById(id);            // returns Uni<Order>
+}
+```
+
+Useful in **reactive endpoints** that need to talk to Postgres / MySQL without hopping back to a worker thread. The cost is that the whole call chain must stay reactive.

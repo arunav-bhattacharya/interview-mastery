@@ -1,0 +1,122 @@
+---
+title: Binary Search
+sidebar_position: 2
+---
+
+import TreeViz from '@site/src/components/TreeViz';
+import BinarySearchViz from '@site/src/components/BinarySearchViz';
+import DPTableViz from '@site/src/components/DPTableViz';
+import GraphViz from '@site/src/components/GraphViz';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+
+# Binary Search
+
+### What is Binary Search?
+
+A halving search on a monotonic structure. Maintain `[lo, hi]`, inspect the midpoint, and eliminate half of the range each step. `O(log n)`.
+
+Beyond array index lookup, **binary search on the answer** is the more interesting variant: when the answer space is monotonic with respect to a feasibility predicate, you binary-search the answer instead of the array.
+
+### Why Does It Work?
+
+The pre-condition is **monotonicity**. If `a[mid] < target` and the array is sorted, every element to the left is also `< target` and can be discarded. The same argument generalizes to any predicate that flips from false to true exactly once.
+
+### Mental Model
+
+<BinarySearchViz />
+
+Three indices moving inward: `lo`, `mid`, `hi`. The discarded half stays greyed out — you'll never look at it again.
+
+### When to Use
+
+- Input is sorted.
+- Input is unsorted but the question is on a derived monotonic property — minimum capacity, maximum days, smallest valid value.
+- Brute force is `O(n)` and the predicate has a single flip-point.
+- Rotated sorted array.
+
+<div className="im-core-concept">
+
+### Core Concept
+
+```text
+while lo <= hi:
+  mid = lo + (hi - lo) / 2    # avoid overflow
+  if test(mid) is "match":     return mid
+  if test(mid) says "go right": lo = mid + 1
+  else:                         hi = mid - 1
+return -1
+```
+
+</div>
+
+### Template Code
+
+<CodeTabs
+  title="BinarySearch"
+  java={`public int search(int[] a, int target) {
+  int lo = 0, hi = a.length - 1;
+  while (lo <= hi) {
+    int mid = lo + (hi - lo) / 2;
+    if (a[mid] == target) return mid;
+    if (a[mid]  < target) lo = mid + 1;
+    else                  hi = mid - 1;
+  }
+  return -1;
+}`}
+  kotlin={`fun search(a: IntArray, target: Int): Int {
+  var lo = 0; var hi = a.size - 1
+  while (lo <= hi) {
+    val mid = lo + (hi - lo) / 2
+    when {
+      a[mid] == target -> return mid
+      a[mid]  < target -> lo = mid + 1
+      else             -> hi = mid - 1
+    }
+  }
+  return -1
+}`}
+  python={`def search(a: list[int], target: int) -> int:
+    lo, hi = 0, len(a) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if a[mid] == target: return mid
+        if a[mid] < target:  lo = mid + 1
+        else:                hi = mid - 1
+    return -1`}
+  go={`func search(a []int, target int) int {
+  lo, hi := 0, len(a)-1
+  for lo <= hi {
+    mid := lo + (hi-lo)/2
+    switch {
+    case a[mid] == target: return mid
+    case a[mid]  < target: lo = mid + 1
+    default:               hi = mid - 1
+    }
+  }
+  return -1
+}`}
+/>
+
+### Key Problems to Master
+
+| # | Problem | Difficulty | Variant | LeetCode |
+| - | --- | --- | --- | --- |
+| 1 | Binary Search | <Difficulty>Easy</Difficulty> | Plain | [LC 704](https://leetcode.com/problems/binary-search/) |
+| 2 | Find First and Last Occurrence | <Difficulty>Medium</Difficulty> | Boundary | [LC 34](https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/) |
+| 3 | Search in Rotated Sorted Array | <Difficulty>Medium</Difficulty> | Side decision | [LC 33](https://leetcode.com/problems/search-in-rotated-sorted-array/) |
+| 4 | Find Minimum in Rotated Sorted Array | <Difficulty>Medium</Difficulty> | Boundary | [LC 153](https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/) |
+| 5 | Koko Eating Bananas | <Difficulty>Medium</Difficulty> | Search on answer | [LC 875](https://leetcode.com/problems/koko-eating-bananas/) |
+| 6 | Ship Packages in D Days | <Difficulty>Medium</Difficulty> | Search on answer | [LC 1011](https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/) |
+| 7 | Median of Two Sorted Arrays | <Difficulty>Hard</Difficulty> | Partition both | [LC 4](https://leetcode.com/problems/median-of-two-sorted-arrays/) |
+
+### Common Mistakes to Avoid
+
+- `(lo + hi) / 2` — overflows. Use `lo + (hi - lo) / 2`.
+- Wrong loop condition — plain uses `lo <= hi`, boundary often uses `lo < hi`.
+- Shifting the wrong bound. Draw the true/false flip on paper before coding.
+- Applying binary search to a non-monotonic function.
+
+---

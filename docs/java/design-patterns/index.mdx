@@ -1,0 +1,104 @@
+---
+title: Overview
+description: SOLID principles, GoF design patterns, and architectural patterns — interview-grade guide for Java / Spring developers.
+sidebar_position: 1
+slug: /java/design-patterns
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import Pillbar from '@site/src/components/Pillbar';
+import { Checklist, ChecklistItem } from '@site/src/components/Checklist';
+
+# Design Patterns
+
+<Pillbar pills={[
+  { label: 'time', value: '4–6 hours' },
+  { label: 'scope', value: 'SOLID + 23 GoF + architectural' },
+  { label: 'pages', value: 5 },
+]} />
+
+A complete tour of the patterns Java and Spring engineers are expected to know cold: the five SOLID principles, the canonical Gang-of-Four patterns split into Creational / Structural / Behavioral, and the higher-level architectural patterns (MVC, hexagonal, CQRS, saga).
+
+<QuickNav items={[
+  { label: 'SOLID PRINCIPLES', href: '/learn/java/design-patterns/solid' },
+  { label: 'CREATIONAL PATTERNS', href: '/learn/java/design-patterns/creational' },
+  { label: 'STRUCTURAL PATTERNS', href: '/learn/java/design-patterns/structural' },
+  { label: 'BEHAVIORAL PATTERNS', href: '/learn/java/design-patterns/behavioral' },
+  { label: 'ARCHITECTURAL PATTERNS', href: '/learn/java/design-patterns/architectural' },
+]} />
+
+## What's in each page
+
+| Page | Covers | Pattern count |
+| --- | --- | --- |
+| [SOLID Principles](/learn/java/design-patterns/solid) | S · O · L · I · D, with code violation + fix per principle | 5 principles |
+| [Creational](/learn/java/design-patterns/creational) | Object creation hidden from the caller | 5 patterns |
+| [Structural](/learn/java/design-patterns/structural) | How objects compose | 7 patterns |
+| [Behavioral](/learn/java/design-patterns/behavioral) | How objects collaborate at runtime | 11 patterns |
+| [Architectural](/learn/java/design-patterns/architectural) | Higher-level: MVC, hexagonal, CQRS, saga, event-driven | 6 patterns |
+
+Every pattern page includes a **class diagram**, a **concrete code example**, **when to reach for it**, and **when not to**.
+
+---
+
+## Pattern selection guide
+
+The fastest way to recognize a pattern is by **the smell** that suggests it.
+
+| You hear / feel... | Reach for... | Family |
+| --- | --- | --- |
+| "Different algorithms for the same task" | Strategy | Behavioral |
+| "Create one of many concrete types" | Factory Method / Abstract Factory | Creational |
+| "Step-by-step construction with many optional parts" | Builder | Creational |
+| "One instance per JVM" | Singleton (sparingly — DI containers usually do this) | Creational |
+| "Need to add behaviour without changing the class" | Decorator | Structural |
+| "Wrap a complex subsystem" | Facade | Structural |
+| "Lazy / access control / interception" | Proxy | Structural |
+| "Notify listeners when something changes" | Observer | Behavioral |
+| "Sequence of handlers, each may handle or pass on" | Chain of Responsibility | Behavioral |
+| "State-dependent behaviour, lots of `if`s on a state field" | State | Behavioral |
+| "Need undo / redo or to queue actions" | Command | Behavioral |
+| "Encapsulate traversal" | Iterator | Behavioral |
+| "Centralize many-to-many coupling" | Mediator | Behavioral |
+| "Add an operation to a class hierarchy without modifying it" | Visitor | Behavioral |
+| "Capture and restore object state" | Memento | Behavioral |
+| "Treat individual objects and compositions uniformly" | Composite | Structural |
+
+---
+
+## Interview gotchas
+
+- **Strategy vs. State** look identical structurally — the difference is *intent*. Strategy is "pick one and stick with it for this call"; State is "the object's behaviour changes as it transitions."
+- **Decorator vs. Proxy** — Decorator adds *new* behaviour; Proxy controls *access* to the same behaviour.
+- **Singleton in tests** poisons isolation. Spring beans (singleton by default) are okay because the framework controls their lifecycle. Hand-rolled `INSTANCE` fields rarely are.
+- **Patterns aren't goals.** Name a pattern only when it makes the design clearer. "Forced pattern" is worse than "no pattern."
+- **Composition over inheritance** — most GoF patterns prefer composition because inheritance is a tight bind.
+
+---
+
+## Q&A quick reference
+
+| Question | Quick answer |
+| --- | --- |
+| Strategy vs. State? | Same shape, different intent: pick-once vs. mutate-over-time. |
+| Adapter vs. Decorator? | Adapter changes the interface; Decorator wraps the same interface. |
+| Why is Singleton an anti-pattern? | Global mutable state, hard to test. Spring beans are okay; hand-rolled rarely. |
+| What pattern does Spring `@Transactional` use? | Proxy. The bean call goes through a proxy that begins / commits the tx. |
+| Difference between Saga and 2PC? | 2PC blocks; Saga uses compensating actions — modern microservices answer. |
+| What's hexagonal architecture? | Domain depends on **ports**; **adapters** implement ports. Replaceable infra. |
+| Why prefer composition over inheritance? | Inheritance is a tight bind; composition gives runtime flexibility. |
+
+---
+
+## Checklist
+
+<Checklist>
+  <ChecklistItem id="java-design-patterns-index-0-can-name-and-apply-all-five-solid-princi">Can name and apply all five SOLID principles to a code review.</ChecklistItem>
+  <ChecklistItem id="java-design-patterns-index-0-implemented-at-least-one-of-strategy-fac">Implemented at least one of: Strategy, Factory, Builder.</ChecklistItem>
+  <ChecklistItem id="java-design-patterns-index-0-used-decorator-or-proxy-in-production">Used Decorator or Proxy in production.</ChecklistItem>
+  <ChecklistItem id="java-design-patterns-index-0-can-explain-why-singleton-is-an-anti-pat">Can explain why Singleton is an anti-pattern outside DI containers.</ChecklistItem>
+  <ChecklistItem id="java-design-patterns-index-0-recognize-state-vs-strategy-at-a-glance">Recognize **State** vs. **Strategy** at a glance.</ChecklistItem>
+  <ChecklistItem id="java-design-patterns-index-0-refactored-an-if-chain-on-a-state-field">Refactored an "if-chain on a state field" into proper State classes.</ChecklistItem>
+  <ChecklistItem id="java-design-patterns-index-0-can-name-three-architectural-patterns-an">Can name three architectural patterns and when each fits.</ChecklistItem>
+  <ChecklistItem id="java-design-patterns-index-0-written-a-hexagonal-style-service-with-c">Written a hexagonal-style service with clear ports / adapters.</ChecklistItem>
+</Checklist>

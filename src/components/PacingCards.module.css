@@ -1,0 +1,47 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin: 1.4rem 0 2rem;
+}
+
+.card {
+  padding: 20px;
+  background: var(--im-surface);
+  border: 1px solid var(--im-border);
+  border-radius: 14px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 3px;
+}
+.amber::before  { background: linear-gradient(90deg, #fbbf24, #d97706); }
+.iris::before   { background: linear-gradient(90deg, #a5b4fc, #4f46e5); }
+.mint::before   { background: linear-gradient(90deg, #6ee7b7, #10b981); }
+
+.profile {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 14px;
+}
+
+.cadence {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--im-accent-fg);
+  margin-bottom: 4px;
+}
+
+.hours {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85rem;
+  color: var(--im-muted);
+  letter-spacing: 0.02em;
+}

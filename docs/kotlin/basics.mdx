@@ -1,0 +1,116 @@
+---
+title: Basics & Null Safety
+description: "val/var, type inference, smart casts, and Kotlin's null-safe operators."
+sidebar_position: 1
+---
+
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Basics & Null Safety
+
+<Pillbar pills={[
+  { label: 'topic', value: 'kotlin basics' },
+  { label: 'reach for', value: 'every Kotlin file' },
+]} />
+
+## `val` vs `var`
+
+- `val` — **read-only reference** (analogue of `final` in Java). The underlying object can still be mutable; the binding can't be reassigned.
+- `var` — **mutable reference**.
+
+Default to `val`. Reach for `var` only when the binding genuinely needs to change.
+
+```kotlin
+val name = "Ada"        // String inferred, can't reassign
+var count = 0           // Int, can reassign
+count++                 // OK
+
+val list = mutableListOf(1, 2, 3)
+list.add(4)             // OK — the LIST is mutable, the binding isn't
+// list = mutableListOf() // compile error: val cannot be reassigned
+```
+
+## Type inference
+
+Kotlin infers types at every declaration with an initializer. Type annotations are still useful at **public API boundaries** where you want the type to be a contract, not a derivation.
+
+```kotlin
+val users: List<User> = repo.findAll()   // annotate at boundaries
+val now = Instant.now()                  // inference fine for locals
+```
+
+## Null safety
+
+Nullability is part of the type. `String` cannot be null; `String?` may be.
+
+```kotlin
+var a: String  = "hi"
+var b: String? = null
+
+a = null    // compile error
+b = null    // OK
+```
+
+### The four operators every Kotlin author knows
+
+| Operator | Meaning | Example |
+| --- | --- | --- |
+| `?.` | Safe call — returns `null` if receiver is `null` | `user?.name` |
+| `?:` | Elvis — replace `null` with a default | `user?.name ?: "anonymous"` |
+| `!!` | Force-unwrap — throws `NullPointerException` if null | `user!!.name` (avoid) |
+| `let` | Block that runs only if non-null | `user?.let { sendEmail(it) }` |
+
+**Idiomatic Kotlin almost never uses `!!`.** Treat it as a code smell — it announces "I'm asserting this can't be null and bypassing the type checker".
+
+### Smart casts
+
+After a null check, the type narrows automatically:
+
+```kotlin
+fun greet(name: String?) {
+  if (name == null) return
+  println(name.length)   // name is String here, not String?
+}
+```
+
+Same for `is` checks:
+
+```kotlin
+fun describe(x: Any) = when (x) {
+  is String -> "str of length ${x.length}"   // x is String
+  is Int    -> "int = ${x + 1}"              // x is Int
+  else      -> "other"
+}
+```
+
+## Strings & templates
+
+```kotlin
+val name = "Ada"
+val score = 97
+val msg = "$name scored $score"                 // simple interpolation
+val msg2 = "${name.uppercase()} (${score / 10})" // expressions need braces
+val raw = """
+  |Multi-line
+  |  preserves indent
+""".trimMargin()
+```
+
+## Common conversion gotchas (Java mental model)
+
+- **`Optional<T>` → `T?`**. Kotlin uses nullable types instead of `Optional`. Map at the boundary if you must.
+- **`String[]` → `Array<String>`**, but `List<String>` is much more idiomatic.
+- **Static fields** — Kotlin has no `static`; use a `companion object` and `@JvmStatic` when calling from Java.
+- **Checked exceptions** — Kotlin has none. Java's `throws IOException` is just informational from Kotlin's side.
+
+## Quick syntax map (Java → Kotlin)
+
+| Java | Kotlin |
+| --- | --- |
+| `final var s = "x";` | `val s = "x"` |
+| `String s = nullable ? null : "y";` | `val s: String? = if (nullable) null else "y"` |
+| `if (s != null) s.length()` | `s?.length` |
+| `Objects.requireNonNullElse(s, "fallback")` | `s ?: "fallback"` |
+| `String.format("%s = %d", k, v)` | `"$k = $v"` |
+| `record Point(int x, int y) {}` | `data class Point(val x: Int, val y: Int)` |

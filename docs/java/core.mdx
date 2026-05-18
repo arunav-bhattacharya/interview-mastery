@@ -1,0 +1,456 @@
+---
+title: Java Core
+description: "JVM, Collections, Streams, Exception Handling — Java fundamentals."
+sidebar_position: 2
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Java Core
+
+<Pillbar pills={[
+  { label: 'time', value: '2–3 hours' },
+  { label: 'covers', value: 'JVM · collections · streams · exceptions' },
+  { label: 'depth', value: 'senior fluency' },
+]} />
+
+The Java fundamentals every senior is expected to talk about fluently: how the JVM lays out memory and reclaims it, why each collection picks its data structure, how the stream pipeline actually executes, and where exceptions belong in your error model.
+
+<QuickNav items={[
+  { label: 'JVM FUNDAMENTALS', href: '#jvm-fundamentals' },
+  { label: 'COLLECTIONS & PERFORMANCE', href: '#collections--performance' },
+  { label: 'STREAMS & FUNCTIONAL JAVA', href: '#streams--functional-java' },
+  { label: 'EXCEPTION HANDLING', href: '#exception-handling' },
+]} />
+
+## JVM Fundamentals
+
+
+### Memory model
+
+| Region | Holds |
+| --- | --- |
+| Heap (Young: Eden + S0/S1) | Newly allocated objects; most die young |
+| Heap (Old / Tenured) | Long-lived objects |
+| Metaspace | Class metadata (off-heap since Java 8) |
+| Stack (per thread) | Method frames, local primitives |
+| PC register | Current instruction |
+| Native method stack | JNI calls |
+
+### Object allocation lifecycle
+
+```text
+new Foo() ──┐
+            ▼
+        TLAB-allocated in Eden          (fast, thread-local bump-pointer)
+            │
+            ▼ when Eden fills
+        Minor GC (Young GC)
+            │
+            ├── unreachable → freed
+            └── live → moved to Survivor (S0 / S1, ping-pong)
+                    │
+                    ▼ after N minor GCs (default tenuring threshold = 15)
+                Promoted to Old generation
+                    │
+                    ▼ when Old fills
+                Major GC / Full GC       (most expensive — keep rare)
+```
+
+Most objects die young — that's why generational GC is so effective. **TLAB** (Thread-Local Allocation Buffer) means each thread gets its own slab of Eden, removing the contention on `bump_pointer++`.
+
+### Garbage collection
+
+| Collector | Default in | Pause target | Best for | Key mechanism |
+| --- | --- | --- | --- | --- |
+| **Serial GC** | Single-CPU, small heap | Long (100s ms) | Tiny services, batch | Stop-the-world, single thread |
+| **Parallel GC** | Pre-Java 9 | Medium (~100 ms) | Throughput-first batch | Parallel threads, STW |
+| **G1 GC** | Java 9+ | ~10 – 200 ms | Most server apps | Region-based, mixed Young + Old |
+| **ZGC** | Latency-critical | < 1 ms | Trading, low-tail-latency | Concurrent, coloured pointers |
+| **Shenandoah** | OpenJDK 12+ | < 1 ms | Same niche as ZGC | Concurrent, Brooks forwarding pointers |
+| **Epsilon** | Specialised | n/a | Benchmarks, "no-op" GC | Allocates only; OOMs on first GC |
+
+#### G1 GC deep dive
+
+- **Regions** — heap is split into ~2048 small regions (typically 1–32 MB each). Eden, Survivor, Old, and **humongous** are all assigned per region.
+- **Young collection** — same as classical young GC but on a subset of regions.
+- **Concurrent marking** — runs alongside the app to find live objects across the old generation.
+- **Mixed collection** — reclaims old regions identified during marking, mixed in with young collections.
+- **Pause target** — `-XX:MaxGCPauseMillis=200` (default). G1 tunes the collection size to hit the target.
+- **Humongous objects** — single allocations larger than half a region; stored across consecutive regions. Avoid them in hot paths.
+- **Remembered sets (RSet)** — per-region structure tracking pointers *into* this region from elsewhere; makes partial collections possible.
+
+### JIT compilation tiers
+
+The HotSpot JIT compiles bytecode to native in **tiered compilation**:
+
+| Tier | Compiler | Optimisation | When |
+| --- | --- | --- | --- |
+| 0 | Interpreter | None | Cold code |
+| 1 | C1 | Light, fast | Slightly hot |
+| 2 | C1 | + Limited profiling | Warming up |
+| 3 | C1 | + Full profiling | Counting before C2 |
+| 4 | C2 | Aggressive (inlining, escape analysis, vectorisation) | Hot |
+
+- **On-stack replacement (OSR)** — a long-running loop can switch from interpreter to C2 mid-method without unwinding the stack.
+- **Deoptimisation** — when a C2 assumption is invalidated (e.g. a new subclass shows up), the JIT throws away the compiled code and falls back to the interpreter, then recompiles.
+- **Escape analysis** — proves an object never leaves its method scope; allows stack allocation or scalar replacement (no heap alloc at all).
+
+### `volatile` vs. `synchronized`
+
+- `volatile` — visibility guarantee, **not atomicity**. `volatile int counter; counter++;` is still racy.
+- `synchronized` — mutual exclusion + visibility.
+- `Atomic*` — CAS-based, lock-free, atomic read-modify-write.
+
+### Memory leaks in Java — and how to debug them
+
+"Java doesn't leak memory" is wrong in two ways. The GC reclaims **unreachable** objects, but plenty of code keeps objects reachable forever:
+
+| Leak pattern | What happens | Fix |
+| --- | --- | --- |
+| **Static collections that only grow** | `static Map<String, X> cache = new HashMap<>();` with no eviction | Use `WeakHashMap`, Caffeine with `maximumSize`, or explicit cleanup |
+| **Unclosed resources** | Streams / connections held open by exceptions | Try-with-resources |
+| **`ThreadLocal` not removed** in pooled threads | The value lives as long as the thread does — and pooled threads live forever | `ThreadLocal.remove()` in a `finally` |
+| **Listeners not deregistered** | Listener holds a reference to the parent | Pair every `addListener` with `removeListener`; use weak references |
+| **Inner classes holding outer refs** | Non-static inner class keeps the enclosing instance alive | Make it `static`; pass dependencies explicitly |
+| **Classloader leak** in app servers | Old WAR can't be unloaded because of a leaked classloader | Static fields holding references to app-classloader classes are the usual cause |
+
+#### Debugging workflow
+
+1. **Heap dump** — `jmap -dump:format=b,file=heap.bin <pid>` or `-XX:+HeapDumpOnOutOfMemoryError`.
+2. **Open in Eclipse MAT or JProfiler.** Look for the largest dominator tree.
+3. **Find the path-to-GC-root** for the suspected leak class — that path is the bug.
+4. **Use `jcmd <pid> GC.class_histogram`** for a live histogram without a full dump.
+
+#### JVM tools cheat-sheet
+
+| Tool | Purpose |
+| --- | --- |
+| `jmap` | Heap dump, histograms |
+| `jstack` | Thread dump (deadlock detection, stuck threads) |
+| `jstat` | GC statistics over time |
+| `jcmd` | Swiss-army CLI: heap dumps, flags, GC, NMT |
+| `jinfo` | Read / set JVM flags at runtime |
+| **VisualVM** | GUI for heap dumps, CPU/memory profiling |
+| **Eclipse MAT** | Heap analyser — best dominator tree visualisation |
+| **JFR (Flight Recorder)** | Continuous profiler — built into the JVM since 11; very low overhead |
+| **async-profiler** | Lock-free sampling profiler; flame graphs |
+| `-XX:NativeMemoryTracking=detail` | Native memory tracking — to find off-heap leaks |
+
+---
+
+---
+
+## Collections & Performance
+
+
+| Need | Pick | Why |
+| --- | --- | --- |
+| Ordered list, fast random access | `ArrayList` | `O(1)` index, cache-friendly |
+| Frequent middle insert / remove | `LinkedList` (rare in practice) | Doubly linked |
+| Unique unordered set | `HashSet` | `O(1)` avg |
+| Unique sorted set | `TreeSet` | `O(log n)`, in-order iteration |
+| Key-value, unordered | `HashMap` | `O(1)` avg |
+| Key-value, key-sorted | `TreeMap` | `floorKey`, `ceilingKey` |
+| Insertion-order map | `LinkedHashMap` | Predictable iteration |
+| Stack / queue | `ArrayDeque` | Faster than `Stack` / `LinkedList` |
+| Priority queue | `PriorityQueue` | Min-heap by default |
+
+### List implementations side-by-side
+
+| Feature | `ArrayList` | `LinkedList` |
+| --- | --- | --- |
+| Internal structure | Backing array | Doubly-linked nodes |
+| Random access `get(i)` | `O(1)` | `O(n)` |
+| Add / remove at end | Amortised `O(1)` | `O(1)` |
+| Add / remove at middle | `O(n)` (shift) | `O(1)` if you already have the iterator |
+| Memory overhead | Lower | Higher (~3× per element: prev / value / next) |
+| Cache friendliness | High (contiguous) | Low (pointer chasing) |
+| Best for | Default choice — random access, iteration | Rare. Maybe a queue, but `ArrayDeque` is better |
+
+### Set implementations side-by-side
+
+| Feature | `HashSet` | `TreeSet` | `LinkedHashSet` |
+| --- | --- | --- | --- |
+| Internal structure | `HashMap` | Red-black tree | `HashMap` + linked list |
+| Ordering | None | Sorted | Insertion order |
+| `add / remove / contains` | `O(1)` avg | `O(log n)` | `O(1)` avg |
+| Null elements | One null allowed | None (NPE) | One null allowed |
+| Best for | Default lookups | Ranges, sorted iteration | Predictable iteration order |
+
+### Map implementations side-by-side
+
+| Feature | `HashMap` | `TreeMap` | `LinkedHashMap` |
+| --- | --- | --- | --- |
+| Internal structure | Hash table | Red-black tree | Hash table + linked list |
+| Ordering | None | Key-sorted | Insertion or access order |
+| `get / put / remove` | `O(1)` avg | `O(log n)` | `O(1)` avg |
+| Null keys | One allowed | None (NPE) | One allowed |
+| Best for | Default | `floorKey` / `ceilingKey` / range | LRU cache (access-order mode) |
+
+### `HashMap` internals
+
+- Array of buckets, linked list per bucket.
+- When a bucket grows past **8 entries** with a sufficiently large table, that bucket promotes to a **balanced tree** (`TreeNode`). Worst-case `get` becomes `O(log n)`.
+- Load factor `0.75` triggers resize → doubles the table and rehashes everything.
+
+#### Performance characteristics (Java 8+)
+
+| Operation | Average | Worst (many collisions, pre-Java 8) | Worst (Java 8+ treeified) |
+| --- | --- | --- | --- |
+| `get(key)` | `O(1)` | `O(n)` | `O(log n)` |
+| `put(key, value)` | `O(1)` | `O(n)` | `O(log n)` |
+| `remove(key)` | `O(1)` | `O(n)` | `O(log n)` |
+| `containsKey` | `O(1)` | `O(n)` | `O(log n)` |
+| `containsValue` | `O(n)` | `O(n)` | `O(n)` |
+
+The Java 8 treeification fix saved many production systems from algorithmic DoS via hash collision attacks.
+
+#### Capacity & sizing best practice
+
+If you know how many entries you'll insert, **pre-size** to avoid resize storms:
+
+```java
+// Aim to never exceed 75% load
+int expected = 10_000;
+Map<String, User> users = new HashMap<>((int) (expected / 0.75f) + 1);
+```
+
+#### Why mutable keys break `HashMap`
+
+```java
+class Person { String name; int hashCode() { return name.hashCode(); } }
+Person p = new Person("Alice");
+map.put(p, "...");
+p.name = "Bob";       // hashCode changes!
+map.get(p);           // ← null. The bucket is computed from the NEW hash;
+                      //   the entry still lives in the OLD bucket.
+```
+
+**Rule: keys in any hash-based collection must be effectively immutable** (or at least, their `hashCode`/`equals` inputs must not change while in the map).
+
+### `ConcurrentHashMap` internals
+
+`ConcurrentHashMap` (Java 8+) is the thread-safe replacement for `Hashtable` and `Collections.synchronizedMap`. It is **not** the same as `HashMap` with a single lock.
+
+- **Per-bin locking.** Writes lock only the bucket head (`synchronized` on the bin head node) — different buckets can be updated concurrently.
+- **Lock-free reads.** `get()` walks a `volatile` linked list; no locks taken for read.
+- **Same tree-bin promotion** at 8 entries per bucket.
+- **`computeIfAbsent` / `merge` / `compute`** are atomic — the function is invoked under the bin lock. This is the right way to do "load or insert" without races.
+- **Iteration is weakly consistent.** It will not throw `ConcurrentModificationException`, but it may or may not see writes that happen during iteration.
+
+```java
+// Atomic "count by key" — no races, no Java 8 streams gotcha
+ConcurrentHashMap<String, AtomicLong> counters = new ConcurrentHashMap<>();
+counters.computeIfAbsent(key, k -> new AtomicLong()).incrementAndGet();
+```
+
+Pre-Java-8 used **segments** (an array of `Hashtable`-like locks). Java 8+ removed segments — the per-bin scheme scales much further on highly-contended workloads.
+
+### Fail-fast vs. fail-safe iterators
+
+| Type | Behaviour on concurrent modification | Examples |
+| --- | --- | --- |
+| **Fail-fast** | Throws `ConcurrentModificationException` (uses a `modCount` counter) | `ArrayList`, `HashMap`, `HashSet` iterators |
+| **Fail-safe** | Iterates over a snapshot or a weakly consistent view; no exception | `CopyOnWriteArrayList`, `ConcurrentHashMap.entrySet().iterator()` |
+
+Fail-fast is for **single-threaded correctness** — it tells you that some other code path mutated the collection mid-iteration. It's not a thread-safety mechanism.
+
+### `equals` and `hashCode`
+
+The contract: equal objects must have equal hash codes. If you override `equals`, **always override `hashCode`** — otherwise hash-based collections silently break.
+
+The full contract (`Object.equals`):
+
+1. **Reflexive** — `x.equals(x)` is true.
+2. **Symmetric** — `x.equals(y)` ⇒ `y.equals(x)`.
+3. **Transitive** — `x.equals(y) ∧ y.equals(z)` ⇒ `x.equals(z)`.
+4. **Consistent** — repeated calls return the same result if neither object changes.
+5. **Null-safe** — `x.equals(null)` is false.
+
+For `hashCode`: equal objects have equal hash codes; the converse is *not* required (collisions are allowed).
+
+**`record` classes** (Java 14+) generate canonical `equals` / `hashCode` / `toString` from the components — prefer them for value types.
+
+#### Contract violations and what they break
+
+| Violation | Consequence |
+| --- | --- |
+| Equal objects, different `hashCode`s | `HashMap.get` returns null for an object that "equals" something in the map |
+| `equals` not symmetric (`x.equals(y) ≠ y.equals(x)`) | `Set.contains` is order-dependent — chaos |
+| `equals` not transitive | Three-element comparison violates set semantics |
+| `equals` not consistent (mutates) | `Set` / `Map` operations lose elements silently |
+| Mutating `hashCode` after insertion | Entry is "in the map" but `get(key)` returns null |
+
+---
+
+---
+
+## Streams & Functional Java
+
+
+### Stream basics
+
+```java
+List<String> names = users.stream()
+    .filter(u -> u.isActive())
+    .map(User::getName)
+    .sorted()
+    .toList();   // Java 16+
+```
+
+Streams are **lazy** — nothing runs until a terminal operation (`collect`, `count`, `forEach`, `toList`).
+
+### Common operations
+
+| Operation | Effect |
+| --- | --- |
+| `filter` | Drop elements |
+| `map` / `flatMap` | Transform / flatten |
+| `reduce` | Combine to a single value |
+| `collect` | Materialize into a collection |
+| `peek` | Side effect mid-stream (debug only) |
+| `parallelStream` | Fork-join under the hood |
+
+### Parallel streams
+
+`stream().parallel()` uses the shared `ForkJoinPool.commonPool()`. Use with care:
+
+| Aspect | Details |
+| --- | --- |
+| **Underlying pool** | `ForkJoinPool.commonPool()` — shared with everything else in the JVM |
+| **When to use** | Large in-memory collection, CPU-bound element work, results order-independent |
+| **Pitfalls** | Blocking I/O inside parallel stream starves the whole common pool |
+| **Avoid when** | I/O-bound, small input, ordered output required, mutable shared state |
+| **Custom pool** | Wrap in a `forkJoinPool.submit(() -> stream.parallel()...).get()` to isolate |
+
+### Pitfalls
+
+- **Stateful lambdas** — capturing mutable state across `forEach` is undefined.
+- **Checked exceptions** in lambdas don't propagate from `Stream`. Wrap or use unchecked.
+- **Parallel streams** are slower for small input or for I/O. Profile before reaching for them.
+
+### Functional interfaces — the standard library
+
+A **functional interface** has exactly one abstract method. The `java.util.function` package gives you the standard set; nine times out of ten you don't need a custom interface.
+
+| Interface | Shape | Used for |
+| --- | --- | --- |
+| `Predicate<T>` | `T → boolean` | `filter`, `removeIf` |
+| `Function<T,R>` | `T → R` | `map`, transformations |
+| `BiFunction<T,U,R>` | `(T, U) → R` | Combining two inputs |
+| `Consumer<T>` | `T → void` | `forEach`, side effects |
+| `Supplier<T>` | `() → T` | Lazy values, factories |
+| `UnaryOperator<T>` | `T → T` | In-place transforms |
+| `BinaryOperator<T>` | `(T, T) → T` | `reduce` |
+| `Comparator<T>` | `(T, T) → int` | Sorting |
+
+Compose them with `andThen`, `compose`, `negate`, `or` / `and`. Annotate your own functional interfaces with `@FunctionalInterface` to lock in single-method shape.
+
+#### Lambda vs. method reference — the four flavours
+
+| Type | Example | Equivalent lambda |
+| --- | --- | --- |
+| **Static** | `Integer::parseInt` | `s -> Integer.parseInt(s)` |
+| **Instance (bound)** | `System.out::println` | `s -> System.out.println(s)` |
+| **Instance (unbound)** | `String::length` | `s -> s.length()` |
+| **Constructor** | `ArrayList::new` | `() -> new ArrayList<>()` |
+
+Method references are usually clearer when the lambda just *forwards* — reach for them whenever a lambda body is `target.method(args)` with no transformation.
+
+### `Optional` — when to use it
+
+`Optional<T>` is a return-type wrapper for "this might be absent." Use it for **return values**, not fields or parameters.
+
+**Good uses:**
+
+```java
+Optional<User> findById(long id) { ... }
+
+userRepo.findById(id)
+        .map(User::email)
+        .filter(s -> s.contains("@"))
+        .ifPresentOrElse(this::send, () -> log.warn("no user"));
+```
+
+**Anti-patterns:**
+
+| Anti-pattern | Why it's bad | Better alternative |
+| --- | --- | --- |
+| `opt.get()` without `isPresent()` | Throws `NoSuchElementException` — just NPE in disguise | `.orElse` / `.orElseGet` / `.orElseThrow` |
+| `Optional` as a method parameter | Caller is forced to wrap; defeats the point | Overload with / without the param |
+| `Optional` as a class field | Serialization grief; extra heap object per row | Use the underlying type, allow null with `@Nullable` |
+| `Optional.of(null)` | Throws NPE; you wanted `ofNullable` | `Optional.ofNullable(x)` |
+| `Optional<List<T>>` | The empty list already means "absent" | Return an empty list |
+| `opt.orElse(expensive())` | `expensive()` runs even when value is present | `opt.orElseGet(() -> expensive())` |
+
+---
+
+---
+
+## Exception Handling
+
+
+### Checked vs. unchecked
+
+| Aspect | Checked | Unchecked |
+| --- | --- | --- |
+| Superclass | `Exception` (not `RuntimeException`) | `RuntimeException` |
+| Compile-time enforcement | Yes — must catch or declare | No |
+| Examples | `IOException`, `SQLException`, `InterruptedException` | `NullPointerException`, `IllegalArgumentException`, `IllegalStateException` |
+| Represents | Recoverable, expected failure modes | Programming errors / unrecoverable |
+| When to use | Boundary layer (file, network, DB) **if the caller can meaningfully recover** | Internal services, business invariants, modern Java style |
+
+#### Decision guide
+
+- The condition is **part of the API contract** and the caller is expected to react → checked.
+- The condition is **a bug the caller can't sensibly recover from** → unchecked.
+
+Modern Java leans **unchecked** for the boundary between layers — exceptions become part of error-handling middleware rather than every method signature.
+
+### Try-with-resources
+
+```java
+try (BufferedReader r = Files.newBufferedReader(path)) {
+  return r.lines().count();
+}
+```
+
+Auto-closes the resource. Use it everywhere you'd otherwise write a `try / finally` for cleanup.
+
+#### Subtleties of try-with-resources
+
+- **Multiple resources** close in **reverse declaration order** — last declared is closed first.
+- If both the `try` block and the close throw, the **primary** exception is the one from the body; the close exception is attached as a **suppressed** exception (`ex.getSuppressed()`).
+- Java 9+ allows referencing an effectively-final variable declared outside the `try`:
+
+  ```java
+  Reader r = openSomething();
+  try (r) { ... }     // r is closed; no need to re-declare
+  ```
+
+### Error handling patterns
+
+- **Fail-fast** — validate at the boundary; throw on first invalid input rather than passing bad state deep into the system.
+- **Exception translation** — catch a low-level exception, wrap it in a higher-level domain one. `SQLException` → `OrderPersistenceException`. Preserve the cause.
+- **Top-level handler** — one place (a Spring `@ControllerAdvice`, a servlet filter, an `UncaughtExceptionHandler`) that turns *any* unhandled exception into a sensible response and logs the stack trace once.
+
+```java
+try {
+    orderRepo.save(order);
+} catch (DataAccessException e) {
+    throw new OrderPersistenceException("Failed to save order " + order.id(), e);
+}
+```
+
+Never swallow exceptions silently. The cardinal sin is `} catch (Exception e) { /* ignored */ }`.
+
+### Custom exceptions
+
+- Extend `RuntimeException` for "programmer error" (preconditions, invalid state).
+- Extend `Exception` (checked) for **recoverable** failures the caller is expected to handle.
+- Avoid using exceptions for flow control — they're expensive.
+
+---

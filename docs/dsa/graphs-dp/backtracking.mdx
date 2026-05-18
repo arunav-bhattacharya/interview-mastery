@@ -1,0 +1,127 @@
+---
+title: Backtracking
+sidebar_position: 4
+---
+
+import TreeViz from '@site/src/components/TreeViz';
+import BinarySearchViz from '@site/src/components/BinarySearchViz';
+import DPTableViz from '@site/src/components/DPTableViz';
+import GraphViz from '@site/src/components/GraphViz';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+
+# Backtracking
+
+### What is Backtracking?
+
+Systematic search through a tree of partial solutions. At each node, choose an option, recurse, and **undo** before trying the next. Pruning rules cut entire subtrees you know can't yield an answer.
+
+### Why Does It Work?
+
+Backtracking is DFS over the **solution space**. The tree of choices is implicit; you walk it depth-first, accumulating partial results in a path and pruning when a partial path violates the constraints. Correctness is from exhaustiveness; speed comes from pruning.
+
+### Mental Model
+
+```text
+backtrack(state):
+  if state is a complete solution: record it; return
+  for each choice c:
+    if c violates a constraint: skip   ← pruning
+    apply c
+    backtrack(state)
+    undo c
+```
+
+### When to Use
+
+- Enumerating permutations / combinations / subsets / partitions.
+- Constraint satisfaction (N-queens, Sudoku, word break).
+- Path enumeration with pruning (word search, palindrome partitioning).
+
+<div className="im-core-concept">
+
+### Core Concept
+
+The "apply → recurse → undo" idiom keeps mutable state cheap. The crucial design decisions are:
+
+1. **What's the state?** What does each recursive call need to know?
+2. **What's the choice set?** What branches off each node?
+3. **What's the pruning rule?** When can you abandon a subtree?
+
+</div>
+### Template Code
+
+<CodeTabs
+  title="Subsets"
+  java={`public List<List<Integer>> subsets(int[] nums) {
+  List<List<Integer>> ans = new ArrayList<>();
+  backtrack(nums, 0, new ArrayList<>(), ans);
+  return ans;
+}
+
+private void backtrack(int[] nums, int start, List<Integer> cur, List<List<Integer>> ans) {
+  ans.add(new ArrayList<>(cur));
+  for (int i = start; i < nums.length; i++) {
+    cur.add(nums[i]);
+    backtrack(nums, i + 1, cur, ans);
+    cur.remove(cur.size() - 1);
+  }
+}`}
+  kotlin={`fun subsets(nums: IntArray): List<List<Int>> {
+  val ans = mutableListOf<List<Int>>()
+  fun go(start: Int, cur: MutableList<Int>) {
+    ans += cur.toList()
+    for (i in start until nums.size) {
+      cur += nums[i]
+      go(i + 1, cur)
+      cur.removeAt(cur.size - 1)
+    }
+  }
+  go(0, mutableListOf())
+  return ans
+}`}
+  python={`def subsets(nums: list[int]) -> list[list[int]]:
+    ans: list[list[int]] = []
+    def go(start: int, cur: list[int]) -> None:
+        ans.append(cur[:])
+        for i in range(start, len(nums)):
+            cur.append(nums[i])
+            go(i + 1, cur)
+            cur.pop()
+    go(0, [])
+    return ans`}
+  go={`func subsets(nums []int) [][]int {
+  ans := [][]int{}
+  var go_ func(start int, cur []int)
+  go_ = func(start int, cur []int) {
+    ans = append(ans, append([]int{}, cur...))
+    for i := start; i < len(nums); i++ {
+      go_(i+1, append(cur, nums[i]))
+    }
+  }
+  go_(0, []int{})
+  return ans
+}`}
+/>
+
+### Key Problems to Master
+
+| # | Problem | Difficulty | Pattern | LeetCode |
+| - | --- | --- | --- | --- |
+| 1 | Subsets | <Difficulty>Medium</Difficulty> | Decision tree | [LC 78](https://leetcode.com/problems/subsets/) |
+| 2 | Permutations | <Difficulty>Medium</Difficulty> | Used-set | [LC 46](https://leetcode.com/problems/permutations/) |
+| 3 | Combination Sum | <Difficulty>Medium</Difficulty> | Sum target | [LC 39](https://leetcode.com/problems/combination-sum/) |
+| 4 | Word Search | <Difficulty>Medium</Difficulty> | Grid DFS + visited | [LC 79](https://leetcode.com/problems/word-search/) |
+| 5 | Palindrome Partitioning | <Difficulty>Medium</Difficulty> | Cut points | [LC 131](https://leetcode.com/problems/palindrome-partitioning/) |
+| 6 | N-Queens | <Difficulty>Hard</Difficulty> | Constraint board | [LC 51](https://leetcode.com/problems/n-queens/) |
+| 7 | Sudoku Solver | <Difficulty>Hard</Difficulty> | Constraint board | [LC 37](https://leetcode.com/problems/sudoku-solver/) |
+
+### Common Mistakes to Avoid
+
+- Forgetting the **undo** step — state leaks between branches.
+- Copying the partial path eagerly on every step instead of only when recording an answer.
+- Not pruning early when constraints already broken — costs exponentially more time.
+
+---

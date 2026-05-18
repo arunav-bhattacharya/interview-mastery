@@ -1,0 +1,123 @@
+---
+title: Fundamentals
+description: "What Quarkus is, build-time DI, dev mode, project layout."
+sidebar_position: 1
+---
+
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Quarkus Fundamentals
+
+<Pillbar pills={[
+  { label: 'topic', value: 'overview' },
+  { label: 'depth', value: 'orientation' },
+]} />
+
+## What it is
+
+Quarkus is a Jakarta-EE-compatible Java framework engineered around three ideas:
+
+1. **Build-time work.** Dependency injection, ORM mapping, configuration parsing, framework metadata — all moved from runtime startup into the build. The deployed app skips most of the bootstrap work Spring does on cold start.
+2. **GraalVM native image.** First-class support for compiling to a static binary. ~50 ms startup, ~30 MB RAM — viable for serverless.
+3. **Developer Joy.** `quarkus dev` gives you live reload on every save, no restart.
+
+## Build-time vs. runtime
+
+The Quarkus difference, in one bullet: **annotation processing + bytecode generation at compile time** replaces classpath scanning + reflection at startup.
+
+| | Spring Boot | Quarkus |
+| --- | --- | --- |
+| Classpath scan | Startup | Build |
+| Bean wiring | Startup (reflection) | Build (generated code) |
+| ORM metamodel | Startup | Build |
+| Native image | Difficult; needs Spring AOT (3.0+) | First-class; default option |
+| JVM-mode cold start | 2–5 s | 200–800 ms |
+| Native-mode cold start | n/a (or slow with AOT) | 30–80 ms |
+
+## Project layout
+
+A standard Maven layout:
+
+```
+pom.xml
+src/main/java/.../GreetingResource.java
+src/main/resources/application.properties
+src/test/java/...
+```
+
+Run in dev mode:
+
+```bash
+./mvnw quarkus:dev
+```
+
+Hot reload picks up changes on every file save — endpoint changes appear in the next HTTP request, with no restart.
+
+## Minimal endpoint
+
+<CodeTabs
+  title="GreetingResource"
+  java={`@Path("/hello")
+public class GreetingResource {
+
+  @GET
+  @Produces(MediaType.TEXT_PLAIN)
+  public String hello() {
+    return "Hello, Quarkus!";
+  }
+}`}
+  kotlin={`@Path("/hello")
+class GreetingResource {
+
+  @GET
+  @Produces(MediaType.TEXT_PLAIN)
+  fun hello() = "Hello, Quarkus!"
+}`}
+/>
+
+No `@SpringBootApplication`-style bootstrap class needed. The build wires everything; `./mvnw quarkus:dev` runs it.
+
+## Configuration
+
+`application.properties` (or `application.yaml`) with Quarkus-specific keys, plus standard environment-variable overrides.
+
+```properties
+quarkus.http.port=8080
+quarkus.datasource.db-kind=postgresql
+quarkus.datasource.username=app
+quarkus.datasource.password=${DB_PASSWORD:secret}
+quarkus.log.level=INFO
+%dev.quarkus.log.level=DEBUG       # profile-specific override
+```
+
+Profiles are prefix-based (`%dev`, `%test`, `%prod`). The current profile defaults to `prod` unless overridden by env / system property.
+
+## Extensions
+
+Capability comes via extensions. Each extension is a Maven dependency that hooks into the build to register beans, generate configuration metadata, and prepare native-image support.
+
+```bash
+./mvnw quarkus:add-extension -Dextensions="rest-jackson,hibernate-orm-panache,jdbc-postgresql"
+```
+
+Typical extensions you'll see in production:
+
+- `quarkus-rest` / `quarkus-rest-jackson` — REST + JSON.
+- `quarkus-hibernate-orm-panache` — ORM with Panache shortcuts.
+- `quarkus-smallrye-health` — `/q/health` + liveness/readiness.
+- `quarkus-micrometer` — metrics with Prometheus.
+- `quarkus-opentelemetry` — distributed tracing.
+- `quarkus-container-image-docker` / `-jib` — Docker image build.
+- `quarkus-kubernetes` — generated Kubernetes manifests on each build.
+
+## Health endpoints (out of the box)
+
+With `quarkus-smallrye-health`:
+
+- `/q/health` — combined
+- `/q/health/live` — liveness probe (process alive)
+- `/q/health/ready` — readiness probe (dependencies up)
+- `/q/health/started` — startup probe
+
+These are wired to your `@Liveness` / `@Readiness` checks automatically.

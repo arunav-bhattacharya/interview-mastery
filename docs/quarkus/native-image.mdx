@@ -1,0 +1,129 @@
+---
+title: Native Image
+description: "GraalVM compilation, reflection config, native testing."
+sidebar_position: 5
+---
+
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Native Image
+
+<Pillbar pills={[
+  { label: 'compiler', value: 'GraalVM native-image' },
+  { label: 'use case', value: 'serverless, scale-to-zero, edge' },
+]} />
+
+GraalVM's `native-image` ahead-of-time-compiles your JVM application to a **single static binary** — no JVM at runtime. Quarkus is built around this from day one.
+
+## What you get
+
+| Metric | JVM mode | Native mode |
+| --- | --- | --- |
+| Startup | 200–800 ms | 20–80 ms |
+| RSS at idle | 150–250 MB | 20–60 MB |
+| Peak throughput | Same | Same (after warmup) |
+| First-request latency | ms | µs (no JIT warmup) |
+| Build time | seconds | minutes |
+| Reflection / dynamic class load | free | requires config |
+
+The wins are **startup** and **memory**. Peak throughput is comparable once a JVM has warmed up — but on serverless platforms that scale to zero, there is no "after warmup".
+
+## Build
+
+```bash
+# JVM mode (default)
+./mvnw package
+java -jar target/quarkus-app/quarkus-run.jar
+
+# Native mode (needs GraalVM, or use a container build)
+./mvnw package -Pnative
+./target/my-app-1.0.0-runner
+
+# Container build (no GraalVM locally — uses a builder image)
+./mvnw package -Pnative -Dquarkus.native.container-build=true
+```
+
+The container build is the friendliest path on macOS / Windows where GraalVM setup is painful.
+
+## What the closed world means
+
+`native-image` does a **closed-world analysis**. It walks every reachable code path at build time, drops everything else, and produces a binary that can only do what it was statically proven to need. The consequence:
+
+- **Reflection**, **dynamic proxies**, **method handles**, and **resource loading via classpath strings** can't be discovered automatically.
+- The build has to be **told** which classes need reflection or dynamic proxy support.
+
+Frameworks like Quarkus, Spring (3.x AOT), and Micronaut do most of this for you — they emit the reachability metadata at build time. Your own code only needs config when you do something unusual.
+
+## Reflection config
+
+Two paths:
+
+1. **`@RegisterForReflection`** on a class — easy, Quarkus-native:
+
+   ```java
+   @RegisterForReflection
+   public class WireFormatDto {
+     public String name;
+     public int count;
+   }
+   ```
+
+2. **`reflect-config.json`** in `src/main/resources/META-INF/native-image/<group>/<artifact>/`:
+
+   ```json
+   [
+     {
+       "name": "com.example.WireFormatDto",
+       "allDeclaredFields": true,
+       "allDeclaredConstructors": true,
+       "allDeclaredMethods": true
+     }
+   ]
+   ```
+
+Use the annotation when you control the class; use JSON for third-party libraries you can't annotate.
+
+## Common native-image pitfalls
+
+- **`Class.forName(stringFromConfig)`** — the target class isn't statically reachable. Add it via reflect-config or refactor to direct references.
+- **Dynamic proxy** of an interface — register the interface list under `proxy-config.json`.
+- **JNI** — needs `jni-config.json`.
+- **Static initialisers that touch the network or filesystem** — they run **at build time** by default and capture wrong-state. Mark with `--initialize-at-run-time=com.your.Class`.
+- **SLF4J + Logback** has surprises in native mode. Quarkus's `jboss-logging` (default) just works.
+
+## Profile-guided optimization
+
+For peak throughput in native mode, use PGO:
+
+```bash
+# 1. Build instrumented binary
+./mvnw package -Pnative -Dquarkus.native.additional-build-args="--pgo-instrument"
+
+# 2. Run a representative workload to gather profile
+./target/app-runner   # then exit cleanly to write the profile
+
+# 3. Rebuild with profile
+./mvnw package -Pnative -Dquarkus.native.additional-build-args="--pgo=default.iprof"
+```
+
+The result is comparable to JVM peak throughput, with all the native-mode startup wins preserved.
+
+## Native testing
+
+Quarkus runs your tests against the native binary with one extension and an `IT` test class:
+
+```java
+@QuarkusIntegrationTest
+class GreetingResourceIT extends GreetingResourceTest { }
+```
+
+The IT class extends a normal JVM test class and reuses its body. Maven binds it to the `verify` phase so `./mvnw verify -Pnative` runs your full suite against the binary.
+
+## When NOT to bother with native
+
+- **CPU-bound workloads with long-running JVMs** — JIT will outperform AOT after warmup; native gives nothing here.
+- **Heavy reflection / dynamic codegen** (Drools, Groovy interpreters, etc.) — config burden is high.
+- **Quick prototypes** — JVM mode is fine; native build time is minutes.
+
+Reach for native when **startup latency or RAM footprint** matters: serverless functions, CLI tools, sidecars, on-demand workers, edge deployments.

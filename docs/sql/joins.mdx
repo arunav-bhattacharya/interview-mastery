@@ -1,0 +1,89 @@
+---
+title: Joins
+description: INNER, LEFT, RIGHT, FULL, CROSS, and self-joins — when to reach for each.
+sidebar_position: 3
+---
+
+import CodeTabs from '@site/src/components/CodeTabs';
+
+# Joins
+
+```text
+A ⋈ B  (INNER)  →  rows where the join key exists in BOTH
+A ⟕ B  (LEFT)   →  all of A; B columns NULL where no match
+A ⋊ B  (FULL)   →  everything from both; NULL where unmatched
+```
+
+## When to use each
+
+| Join | When |
+| --- | --- |
+| `INNER` | Only matching rows matter |
+| `LEFT` | "All A, with optional B" |
+| `RIGHT` | Same as `LEFT` with arguments swapped — rare |
+| `FULL` | "What's only in A? What's only in B?" |
+| `CROSS` | Cartesian product — rare; calendar / size-tables only |
+| `SELF` | Compare rows in the same table (hierarchies, pairs) |
+
+## Anti-join pattern — "customers who never ordered"
+
+```sql
+-- LEFT JOIN + IS NULL
+SELECT c.id, c.name
+FROM customers c
+LEFT JOIN orders o ON o.customer_id = c.id
+WHERE o.id IS NULL;
+
+-- NOT EXISTS (often clearer, often faster)
+SELECT c.id, c.name
+FROM customers c
+WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id);
+```
+
+## Self-join — "employees earning more than their manager"
+
+<CodeTabs
+  title="SelfJoin"
+  sql={`SELECT e.name AS employee
+FROM employees e
+JOIN employees m ON e.manager_id = m.id
+WHERE e.salary > m.salary;`}
+/>
+
+## Multi-join — "three-table query"
+
+```sql
+SELECT
+  c.name        AS customer,
+  o.id          AS order_id,
+  oi.product_id,
+  oi.quantity * p.price AS line_total
+FROM customers c
+JOIN orders o      ON o.customer_id = c.id
+JOIN order_items oi ON oi.order_id   = o.id
+JOIN products p    ON p.id           = oi.product_id
+WHERE o.status = 'fulfilled'
+  AND o.placed_at >= CURRENT_DATE - INTERVAL '30 days';
+```
+
+## CROSS JOIN with `generate_series` — date gap-fill
+
+When you need a row for every day, even days with zero orders, generate the dates and `LEFT JOIN` the data:
+
+```sql
+SELECT
+  d::date AS day,
+  COALESCE(SUM(amount), 0) AS revenue
+FROM generate_series('2024-01-01'::date, '2024-01-31'::date, '1 day') d
+LEFT JOIN orders o ON DATE(o.placed_at) = d::date
+GROUP BY d
+ORDER BY d;
+```
+
+## Gotchas
+
+- **`LEFT JOIN ... WHERE b.col = ...`** silently becomes an inner join (the `WHERE` filters out the NULL rows). Move the predicate into the `ON` clause to preserve "left-ness".
+- **`SELECT *` on a join** can blow up the result if both sides have many matching rows — always project explicitly.
+- **Join order doesn't matter for correctness** in INNER joins; the planner picks. For LEFT, order does matter.
+
+Next: [Aggregations](./aggregations.mdx).

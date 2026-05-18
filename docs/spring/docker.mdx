@@ -1,0 +1,123 @@
+---
+title: Docker & Containerization
+description: "Multi-stage Dockerfile + Kubernetes essentials for Spring Boot apps."
+sidebar_position: 8
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Docker & Containerization
+
+### Production Dockerfile
+
+```dockerfile
+# Build stage
+FROM eclipse-temurin:21-jdk-alpine AS build
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN ./mvnw clean package -DskipTests
+
+# Run stage
+FROM eclipse-temurin:21-jre-alpine
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app.jar"]
+```
+
+### Best practices
+
+- **Multi-stage build** to keep image small.
+- **Layer caching** — copy `pom.xml` / `build.gradle` first, then sources.
+- **Non-root user** for security.
+- **Read-only filesystem** when possible.
+- **Health check** for orchestrator restart logic.
+
+### Optimized multi-stage Dockerfile (cached dependencies + non-root)
+
+```dockerfile
+# ---- Stage 1: cache Maven deps ----
+FROM eclipse-temurin:21-jdk-alpine AS deps
+WORKDIR /app
+COPY pom.xml .
+COPY mvnw .
+COPY .mvn ./.mvn
+RUN ./mvnw -B -q dependency:go-offline
+
+# ---- Stage 2: build ----
+FROM eclipse-temurin:21-jdk-alpine AS build
+WORKDIR /app
+COPY --from=deps /root/.m2 /root/.m2
+COPY --from=deps /app /app
+COPY src ./src
+RUN ./mvnw -B -q clean package -DskipTests
+
+# ---- Stage 3: runtime ----
+FROM eclipse-temurin:21-jre-alpine
+RUN addgroup -S app && adduser -S app -G app
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+USER app
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s \
+    CMD wget -q --spider http://localhost:8080/actuator/health || exit 1
+ENTRYPOINT ["java","-XX:MaxRAMPercentage=75.0","-jar","/app/app.jar"]
+```
+
+Three stages → tiny final image (~200 MB), reused deps layer when only source changes, non-root user, healthcheck.
+
+### Docker Compose — local development
+
+```yaml
+services:
+  app:
+    build: .
+    ports: ["8080:8080"]
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/app
+      SPRING_DATASOURCE_USERNAME: app
+      SPRING_DATASOURCE_PASSWORD: app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 5s
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+```
+
+`docker compose up` → full local stack with Postgres + Redis + your app.
+
+### Java in containers — `MaxRAMPercentage`
+
+Java 11+ correctly detects cgroup memory limits. To give the heap a portion of the container's memory rather than a fixed `-Xmx`:
+
+```text
+-XX:MaxRAMPercentage=75.0
+```
+
+This lets the same image scale across small / large container sizes without rebuilding.
+
+### Kubernetes essentials
+
+- `Deployment` for stateless services.
+- `StatefulSet` for ordered, identity-bound pods (databases).
+- `Service` for stable internal endpoint.
+- `Ingress` / `Gateway` for external routing.
+- `ConfigMap` / `Secret` for configuration / credentials.
+- `HorizontalPodAutoscaler` for traffic-based scaling.
+
+---

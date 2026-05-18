@@ -1,0 +1,50 @@
+/* LeetCode-style difficulty pills.                                          */
+/* Easy = teal-green, Medium = amber, Hard = red — same hues as LeetCode.   */
+
+.pill {
+  display: inline-block;
+  padding: 0.18em 0.6em;
+  border-radius: 999px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.78em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  white-space: nowrap;
+  text-transform: none;
+  border: 1px solid transparent;
+}
+
+/* Light mode — soft tinted background, saturated text */
+.easy {
+  background: rgba(0, 184, 163, 0.16);
+  color: #00795f;
+  border-color: rgba(0, 184, 163, 0.30);
+}
+.medium {
+  background: rgba(255, 161, 22, 0.18);
+  color: #b65900;
+  border-color: rgba(255, 161, 22, 0.32);
+}
+.hard {
+  background: rgba(239, 71, 67, 0.16);
+  color: #b41f1f;
+  border-color: rgba(239, 71, 67, 0.32);
+}
+
+/* Dark mode — slightly more opacity, lighter foreground */
+:global([data-theme='dark']) .easy {
+  background: rgba(0, 184, 163, 0.18);
+  color: #2cdfca;
+  border-color: rgba(0, 184, 163, 0.40);
+}
+:global([data-theme='dark']) .medium {
+  background: rgba(255, 161, 22, 0.18);
+  color: #ffba49;
+  border-color: rgba(255, 161, 22, 0.40);
+}
+:global([data-theme='dark']) .hard {
+  background: rgba(239, 71, 67, 0.20);
+  color: #ff7a76;
+  border-color: rgba(239, 71, 67, 0.40);
+}

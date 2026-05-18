@@ -1,0 +1,53 @@
+---
+title: Java
+description: JVM, collections, streams, concurrency, modern Java, and design patterns — the senior Java interview track.
+sidebar_position: 1
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Java
+
+<Pillbar pills={[
+  { label: 'time', value: '5–6 hours' },
+  { label: 'depth', value: 'senior' },
+  { label: 'covers', value: 'JVM · collections · streams · concurrency · 17-21' },
+]} />
+
+A senior Java interview tests two things: *how deep* you understand the runtime and standard library, and *how cleanly* you can build concurrent and modern (Java 17–21) code with it. This section is the complete reference for both.
+
+<QuickNav items={[
+  { label: 'JAVA CORE', href: './core' },
+  { label: 'CONCURRENCY', href: './concurrency' },
+  { label: 'MODERN JAVA', href: './modern' },
+  { label: 'INTERVIEW Q&A', href: './interview-qa' },
+]} />
+
+## What each spoke covers
+
+| Spoke | Focus | When you reach for it |
+| --- | --- | --- |
+| [**Java Core**](./core.mdx) | JVM memory model, GC, JIT, collections, streams, exception handling | The fundamentals every senior is expected to fluently discuss |
+| [**Concurrency**](./concurrency.mdx) | Threads, executors, locks, JMM, atomics, virtual threads, `CompletableFuture` | The single biggest separator at senior level |
+| [**Modern Java**](./modern.mdx) | Records, sealed types, pattern matching, virtual threads, text blocks | Java 17–21 language features and when they replace older idioms |
+| [**Interview Q&A**](./interview-qa.mdx) | Curated Q&A across all topics + a self-assessment checklist | Last-mile prep and quick recall |
+
+For object-oriented design questions, see the [Design Patterns](/learn/java/design-patterns) section directly under Skills.
+
+## Suggested study order
+
+1. **Java Core** — make sure the JVM, GC, collections, streams baseline is solid.
+2. **Concurrency** — the area most senior candidates lose points on. Spend the most time here.
+3. **Modern Java** — learn the new language tools and what older patterns they replace.
+4. **Interview Q&A** — the last-mile drill before interviews.
+
+(Pair this with the **Design Patterns** section under Skills for OOD interview prep.)
+
+## Senior expectations — what an interviewer is listening for
+
+- **Trade-offs over recipes** — when asked "how would you do X", explain the *choice* between A and B, not just A.
+- **Production reality** — debugging stories beat textbook answers (memory leaks you traced, threading bugs you fixed, GC tuning you applied).
+- **Modern over legacy** — reach for records / sealed types / virtual threads where appropriate, not just because they're new.
+- **Failure thinking** — what happens when the disk is full, the heap is exhausted, two threads race, the connection drops?
+- **Communication** — speak the names: *happens-before*, *escape analysis*, *N+1*, *idempotent*, *contention*. Vocabulary signals depth.

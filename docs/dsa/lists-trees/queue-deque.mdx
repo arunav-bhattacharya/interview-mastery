@@ -1,0 +1,105 @@
+---
+title: Queue & Deque
+sidebar_position: 3
+---
+
+import LinkedListViz from '@site/src/components/LinkedListViz';
+import TreeViz from '@site/src/components/TreeViz';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+
+# Queue & Deque
+
+### What is a Queue / Deque?
+
+A queue is FIFO — push at one end, pop from the other. A **deque** ("double-ended queue") lets you push and pop at both ends in `O(1)`. Both are the underlying machinery for BFS and many sliding-window-with-extrema problems.
+
+### Why Does It Work?
+
+When the algorithm requires "first-seen, first-processed" — like BFS exploring the closest nodes first — a queue is the natural data structure. A deque adds the power to discard stale elements from either end while keeping `O(1)` operations.
+
+### Mental Model
+
+A waiting line: people join the back, leave the front. A deque is two waiting lines sharing the same line, which lets you also peek and remove from the back.
+
+### When to Use
+
+- BFS / level-order traversal.
+- Sliding-window maximum (monotonic deque).
+- Implementing rate limiters / event windows.
+- Round-robin scheduling.
+
+<div className="im-core-concept">
+
+### Core Concept
+
+The **monotonic deque** trick for sliding window max: store indices whose values are decreasing. The front of the deque is always the current window's max.
+
+</div>
+### Template Code
+
+<CodeTabs
+  title="SlidingWindowMax"
+  java={`public int[] maxSlidingWindow(int[] a, int k) {
+  Deque<Integer> dq = new ArrayDeque<>();
+  int[] ans = new int[a.length - k + 1];
+  for (int i = 0; i < a.length; i++) {
+    while (!dq.isEmpty() && dq.peekFirst() <= i - k) dq.pollFirst();
+    while (!dq.isEmpty() && a[dq.peekLast()] < a[i]) dq.pollLast();
+    dq.offerLast(i);
+    if (i >= k - 1) ans[i - k + 1] = a[dq.peekFirst()];
+  }
+  return ans;
+}`}
+  kotlin={`fun maxSlidingWindow(a: IntArray, k: Int): IntArray {
+  val dq: ArrayDeque<Int> = ArrayDeque()
+  val ans = IntArray(a.size - k + 1)
+  for (i in a.indices) {
+    while (dq.isNotEmpty() && dq.first() <= i - k) dq.removeFirst()
+    while (dq.isNotEmpty() && a[dq.last()] < a[i]) dq.removeLast()
+    dq.addLast(i)
+    if (i >= k - 1) ans[i - k + 1] = a[dq.first()]
+  }
+  return ans
+}`}
+  python={`from collections import deque
+
+def max_sliding_window(a: list[int], k: int) -> list[int]:
+    dq: deque[int] = deque()
+    ans: list[int] = []
+    for i, v in enumerate(a):
+        while dq and dq[0] <= i - k: dq.popleft()
+        while dq and a[dq[-1]] < v: dq.pop()
+        dq.append(i)
+        if i >= k - 1: ans.append(a[dq[0]])
+    return ans`}
+  go={`func maxSlidingWindow(a []int, k int) []int {
+  dq := []int{}
+  ans := make([]int, 0, len(a)-k+1)
+  for i, v := range a {
+    for len(dq) > 0 && dq[0] <= i-k { dq = dq[1:] }
+    for len(dq) > 0 && a[dq[len(dq)-1]] < v { dq = dq[:len(dq)-1] }
+    dq = append(dq, i)
+    if i >= k-1 { ans = append(ans, a[dq[0]]) }
+  }
+  return ans
+}`}
+/>
+
+### Key Problems to Master
+
+| # | Problem | Difficulty | Pattern | LeetCode |
+| - | --- | --- | --- | --- |
+| 1 | Sliding Window Maximum | <Difficulty>Hard</Difficulty> | Monotonic deque | [LC 239](https://leetcode.com/problems/sliding-window-maximum/) |
+| 2 | Implement Queue using Stacks | <Difficulty>Easy</Difficulty> | Two stacks | [LC 232](https://leetcode.com/problems/implement-queue-using-stacks/) |
+| 3 | Open the Lock | <Difficulty>Medium</Difficulty> | BFS | [LC 752](https://leetcode.com/problems/open-the-lock/) |
+| 4 | Rotting Oranges | <Difficulty>Medium</Difficulty> | Multi-source BFS | [LC 994](https://leetcode.com/problems/rotting-oranges/) |
+
+### Common Mistakes to Avoid
+
+- Using a linked list as a queue and getting `O(n)` operations on a poor implementation. Use `ArrayDeque` / `collections.deque`.
+- Forgetting to drop stale indices in the monotonic deque.
+
+---

@@ -1,0 +1,88 @@
+---
+title: Quarkus vs Spring Boot
+description: "Side-by-side comparison — DI, REST, data, observability, native image, ecosystem."
+sidebar_position: 6
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+
+# Quarkus vs Spring Boot
+
+<Pillbar pills={[
+  { label: 'topic', value: 'framework choice' },
+  { label: 'depth', value: 'senior interview' },
+]} />
+
+The honest comparison — what they share, what they don't, and when each is the right pick.
+
+## At a glance
+
+| Dimension | Spring Boot 3.x | Quarkus 3.x |
+| --- | --- | --- |
+| DI spec | Spring proprietary (`@Component`, `@Bean`) | Jakarta CDI (`@ApplicationScoped`, `@Produces`) |
+| REST stack | Spring MVC or WebFlux | RESTEasy Reactive on Vert.x |
+| Data | Spring Data JPA / R2DBC / Mongo | Hibernate ORM Panache / Hibernate Reactive |
+| Reactive primitive | Project Reactor (`Mono`, `Flux`) | Mutiny (`Uni`, `Multi`) |
+| Wiring time | Startup (with AOT in 3.x) | Build |
+| JVM cold start | 2–5 s (1–2 s with AOT) | 200–800 ms |
+| Native cold start | Slow, AOT-dependent | 30–80 ms |
+| Native RAM | 80–150 MB | 20–60 MB |
+| Live reload | Spring DevTools (restart) | `quarkus dev` (true hot reload, no restart) |
+| Ecosystem breadth | Vast — anything has a Spring integration | Smaller but production-ready (Hibernate, RESTEasy, Vert.x, Smallrye) |
+| Cloud-native posture | Improving with AOT, Spring Cloud | First-class from day one |
+| Common platform | Anywhere | Red Hat / OpenShift / Kubernetes typically |
+
+## Equivalent annotations
+
+| Concept | Spring | Quarkus |
+| --- | --- | --- |
+| Service bean | `@Service` / `@Component` | `@ApplicationScoped` |
+| Factory method | `@Bean` on `@Configuration` | `@Produces` |
+| REST controller | `@RestController` | `@Path` |
+| Request body | `@RequestBody` | (param — JAX-RS reads JSON by default) |
+| Path variable | `@PathVariable` | `@PathParam` |
+| Query parameter | `@RequestParam` | `@QueryParam` |
+| Transaction | `@Transactional` (Spring) | `@Transactional` (Jakarta) |
+| Config property | `@Value("${x}")` | `@ConfigProperty(name="x")` |
+| Profile-specific | `@Profile("dev")` | `@IfBuildProfile("dev")` |
+| Test annotation | `@SpringBootTest` | `@QuarkusTest` |
+
+## When to pick Quarkus
+
+- **Serverless / Lambda / Cloud Run** — cold-start latency is a hard requirement and you don't want to fight the JVM.
+- **Kubernetes scale-to-zero** — pods that start fresh on demand benefit from native binaries.
+- **Tight memory envelopes** — edge deployments, IoT, multi-tenant where RAM per app matters.
+- **Red Hat / OpenShift shops** — Quarkus is the recommended path.
+- **Developer experience first** — `quarkus dev` hot reload is uniquely satisfying.
+
+## When to pick Spring Boot
+
+- **You need a niche integration** — odds are someone wrote a Spring starter for it. The Quarkus ecosystem covers the essentials but is narrower.
+- **Existing team / codebase momentum** — every Java backend dev has touched Spring; ramp-up is faster.
+- **Heavy reflection / dynamic code generation libraries** — Spring's runtime model is more forgiving than native-image's closed-world.
+- **Long-running services where startup latency doesn't matter** — JVM peak throughput is the same; the Quarkus delta is gone after the first few seconds.
+
+## What they share
+
+Most of the senior-interview material is identical in both worlds:
+
+- **Constructor injection beats field injection** for testability and explicit dependencies.
+- **`@Transactional` is proxy-based** and the **self-call gotcha applies to both** — call across beans to ensure proxy interception.
+- **Repository pattern over Active Record** for testability (this matters more in Spring; Panache supports both).
+- **OAuth2 resource server pattern** with JWT validation, role-based method security.
+- **Testcontainers for integration tests**, slice tests for layer isolation.
+- **Distributed tracing via OpenTelemetry**, metrics via Micrometer.
+
+Senior interview tip: if the JD names a specific framework, lead with that framework's idioms — but answer questions in framework-agnostic terms ("any container that supports CDI / `@Transactional` has the same proxy-based self-call gotcha"). It signals you understand the underlying patterns, not just the syntax.
+
+## Migration mental model
+
+If you're moving a Spring service to Quarkus:
+
+1. Replace `@Service` / `@Component` with `@ApplicationScoped`.
+2. Replace `@RestController` + `@RequestMapping` with `@Path` and per-method `@GET`/`@POST`.
+3. Move `application.properties` to Quarkus-prefixed keys (`spring.datasource.url` → `quarkus.datasource.jdbc.url`).
+4. Replace Spring Data repositories with Panache repositories — JPA entity classes unchanged.
+5. Swap `@SpringBootTest` for `@QuarkusTest`; Testcontainers usage is identical.
+
+The bulk of the work is **search-and-replace + config migration**. Business logic carries over.

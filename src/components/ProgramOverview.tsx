@@ -4,52 +4,61 @@ import styles from './ProgramOverview.module.css';
 interface Pillar {
   key: string;
   title: string;
-  topics: number;
+  hours: string;
   description: string;
-  icon: string;
-  accent: 'amber' | 'iris' | 'mint' | 'rose';
+  accent: 'amber' | 'iris' | 'mint' | 'rose' | 'cyan';
 }
 
 const pillars: Pillar[] = [
   {
     key: 'dsa',
-    title: 'Data Structures & Algorithms',
-    topics: 9,
-    description: 'Patterns: linked lists, two-pointer, sliding window, BFS/DFS, DP, heap, trie, graphs.',
-    icon: '◑',
+    title: 'DSA',
+    hours: '30–40 hours',
+    description: 'Arrays & Strings · Lists & Trees · Heap & Trie · Graphs & DP · More Patterns · Problem Checklist · Practice Solutions.',
     accent: 'amber',
   },
   {
     key: 'sd',
     title: 'System Design',
-    topics: 3,
-    description: 'Fundamentals, scaling primitives, and end-to-end case studies.',
-    icon: '◈',
+    hours: '20–25 hours',
+    description: 'Fundamentals · Building Blocks · Advanced Patterns · 3 Case-Study sets · Low-Level Design.',
     accent: 'iris',
   },
   {
-    key: 'be',
-    title: 'Java · Spring · AWS',
-    topics: 3,
-    description: 'Modern Java, Spring Boot APIs, and the AWS services you need to talk about.',
-    icon: '◐',
+    key: 'java',
+    title: 'Java',
+    hours: '10–15 hours',
+    description: 'Core & Concurrency · Spring & Microservices · Design Patterns.',
+    accent: 'cyan',
+  },
+  {
+    key: 'sql',
+    title: 'SQL',
+    hours: '3–4 hours',
+    description: 'Joins · GROUP BY · subqueries · CTEs · window functions · query optimization.',
     accent: 'mint',
+  },
+  {
+    key: 'cloud',
+    title: 'Cloud',
+    hours: '5–6 hours',
+    description: 'AWS & Cloud Architecture · GenAI & LLM Engineering.',
+    accent: 'iris',
   },
   {
     key: 'beh',
     title: 'Behavioral',
-    topics: 2,
-    description: 'STAR method, common questions, and a story bank you can refine.',
-    icon: '◓',
+    hours: '3–4 hours',
+    description: 'STAR method · common questions · story bank · interview-day checklist.',
     accent: 'rose',
   },
 ];
 
 const stats = [
-  { value: '8', label: 'weeks' },
-  { value: '17', label: 'topics' },
-  { value: '60+', label: 'practice problems' },
-  { value: '∞', label: 'replays' },
+  { value: '6', label: 'pillars' },
+  { value: '20', label: 'lesson hubs' },
+  { value: '4', label: 'languages' },
+  { value: '100+', label: 'practice problems' },
 ];
 
 export default function ProgramOverview() {
@@ -68,10 +77,9 @@ export default function ProgramOverview() {
         {pillars.map(p => (
           <div key={p.key} className={`${styles.card} ${styles[p.accent]}`}>
             <div className={styles.cardHead}>
-              <span className={styles.icon} aria-hidden>{p.icon}</span>
-              <span className={styles.count}>{p.topics} topics</span>
+              <h3 className={styles.cardTitle}>{p.title}</h3>
+              <span className={styles.hours}>{p.hours}</span>
             </div>
-            <h3 className={styles.cardTitle}>{p.title}</h3>
             <p className={styles.cardDesc}>{p.description}</p>
           </div>
         ))}

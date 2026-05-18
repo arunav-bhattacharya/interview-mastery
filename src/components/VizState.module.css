@@ -1,0 +1,92 @@
+.state {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px 14px;
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--im-surface-2);
+  border: 1px solid var(--im-border);
+  border-radius: 10px;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.label {
+  margin: 0;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--im-muted);
+}
+
+.value {
+  margin: 0;
+  font-family: var(--ifm-font-family-monospace);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--im-fg);
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.accent  { color: var(--im-accent-fg); }
+.success { color: var(--im-success); }
+.warn    { color: var(--im-warn); }
+.muted   { color: var(--im-muted); }
+
+/* === Full-width narrative row ========================================== */
+.wideRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: var(--im-surface-2);
+  border: 1px solid var(--im-border);
+  border-radius: 10px;
+  font-family: var(--ifm-font-family-monospace);
+}
+
+.wideLabel {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--im-muted);
+}
+
+.wideValue {
+  flex: 1 1 auto;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--im-fg);
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Tone applied to the wide row colors the value */
+.wideRow.accent  .wideValue { color: var(--im-accent-fg); }
+.wideRow.accent  { border-left: 3px solid var(--im-accent); }
+.wideRow.success .wideValue { color: var(--im-success); }
+.wideRow.success { border-left: 3px solid var(--im-success); }
+.wideRow.warn    .wideValue { color: var(--im-warn); }
+.wideRow.warn    { border-left: 3px solid var(--im-warn); }
+.wideRow.muted   .wideValue { color: var(--im-fg-2); }
+
+@media (max-width: 640px) {
+  .wideValue { white-space: normal; text-overflow: clip; }
+}

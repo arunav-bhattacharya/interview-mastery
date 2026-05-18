@@ -1,0 +1,233 @@
+---
+title: Prefix Sum
+description: Precompute cumulative sums for O(1) range-sum queries and subarray-sum problems.
+sidebar_position: 4
+---
+
+import CodeTabs from '@site/src/components/CodeTabs';
+import Difficulty from '@site/src/components/Difficulty';
+import Pillbar from '@site/src/components/Pillbar';
+import { Checklist, ChecklistItem } from '@site/src/components/Checklist';
+
+# Prefix Sum
+
+<Pillbar pills={[
+  { label: 'when', value: 'range / subarray sums' },
+  { label: 'prep', value: 'O(n)' },
+  { label: 'query', value: 'O(1)' },
+]} />
+
+## What is Prefix Sum?
+
+A **prefix sum array** `P` is built so that `P[i]` equals the sum of `arr[0..i-1]`. Once you have `P`, the sum of any range `[l, r]` is `P[r+1] - P[l]` in `O(1)`.
+
+```text
+arr = [3, 1, 4, 1, 5, 9, 2, 6]
+P   = [0, 3, 4, 8, 9, 14, 23, 25, 31]
+        ↑
+        P[0] = 0  (empty prefix)
+
+sum(arr[2..5]) = P[6] - P[2] = 23 - 4 = 19
+```
+
+<div className="im-core-concept">
+
+**Core concept.** Trade `O(n)` setup for `O(1)` range queries. If you'll ask "what's the sum from i to j?" many times, prefix sums collapse it into a single subtraction.
+
+</div>
+
+## Why does it work?
+
+Two key insights:
+
+1. **Telescoping.** `sum(arr[l..r]) = sum(arr[0..r]) - sum(arr[0..l-1])`. Both right-hand terms are prefix sums.
+2. **Off-by-one fix.** Storing `P[0] = 0` and indexing `P[i] = sum(arr[0..i-1])` removes the need for a special case when `l = 0`.
+
+## Template — 1D Prefix Sum
+
+<CodeTabs
+  title="PrefixSum1D"
+  java={`int[] prefixSum(int[] arr) {
+    int n = arr.length;
+    int[] p = new int[n + 1];
+    for (int i = 0; i < n; i++) {
+        p[i + 1] = p[i] + arr[i];
+    }
+    return p;
+}
+
+// O(1) range sum query
+int rangeSum(int[] p, int l, int r) {     // inclusive [l, r]
+    return p[r + 1] - p[l];
+}`}
+  python={`def prefix_sum(arr):
+    p = [0] * (len(arr) + 1)
+    for i, v in enumerate(arr):
+        p[i + 1] = p[i] + v
+    return p
+
+def range_sum(p, l, r):     # inclusive [l, r]
+    return p[r + 1] - p[l]`}
+  kotlin={`fun prefixSum(arr: IntArray): IntArray {
+    val p = IntArray(arr.size + 1)
+    for (i in arr.indices) p[i + 1] = p[i] + arr[i]
+    return p
+}
+
+fun rangeSum(p: IntArray, l: Int, r: Int) = p[r + 1] - p[l]`}
+  go={`func prefixSum(arr []int) []int {
+    p := make([]int, len(arr)+1)
+    for i, v := range arr {
+        p[i+1] = p[i] + v
+    }
+    return p
+}
+
+func rangeSum(p []int, l, r int) int { return p[r+1] - p[l] }`}
+/>
+
+## Pattern: subarray sum with a target
+
+When you need to count or find subarrays whose sum equals a target `k`, combine prefix sums with a **hash map of seen prefix sums**.
+
+The trick: at index `i`, a subarray ending here with sum `k` exists iff `prefix[i] - k` has been seen before.
+
+### Subarray Sum Equals K — LeetCode 560
+
+<Difficulty>Medium</Difficulty>
+
+<CodeTabs
+  title="SubarraySumEqualsK"
+  java={`int subarraySum(int[] nums, int k) {
+    Map<Integer, Integer> seen = new HashMap<>();
+    seen.put(0, 1);     // empty prefix counts once
+    int sum = 0, count = 0;
+    for (int x : nums) {
+        sum += x;
+        count += seen.getOrDefault(sum - k, 0);
+        seen.merge(sum, 1, Integer::sum);
+    }
+    return count;
+}`}
+  python={`def subarraySum(nums, k):
+    seen = {0: 1}
+    s = count = 0
+    for x in nums:
+        s += x
+        count += seen.get(s - k, 0)
+        seen[s] = seen.get(s, 0) + 1
+    return count`}
+  kotlin={`fun subarraySum(nums: IntArray, k: Int): Int {
+    val seen = HashMap<Int, Int>()
+    seen[0] = 1
+    var sum = 0; var count = 0
+    for (x in nums) {
+        sum += x
+        count += seen.getOrDefault(sum - k, 0)
+        seen.merge(sum, 1, Int::plus)
+    }
+    return count
+}`}
+  go={`func subarraySum(nums []int, k int) int {
+    seen := map[int]int{0: 1}
+    sum, count := 0, 0
+    for _, x := range nums {
+        sum += x
+        count += seen[sum-k]
+        seen[sum]++
+    }
+    return count
+}`}
+/>
+
+**Why it works.** If two prefixes `P[i] < P[j]` differ by exactly `k`, then `arr[i..j-1]` sums to `k`. The hash map records how often each prefix sum value has occurred so far.
+
+## Pattern: 2D Prefix Sum
+
+For matrix range-sum problems, build a 2D prefix sum where `P[r][c]` is the sum of the rectangle `[0..r-1][0..c-1]`. The sum of any rectangle `[r1..r2][c1..c2]` is:
+
+```text
+P[r2+1][c2+1] - P[r1][c2+1] - P[r2+1][c1] + P[r1][c1]
+```
+
+(Inclusion–exclusion: subtract the two strips above and to the left, then add back the corner counted twice.)
+
+### Range Sum Query 2D — LeetCode 304
+
+<Difficulty>Medium</Difficulty>
+
+<CodeTabs
+  title="RangeSumQuery2D"
+  java={`class NumMatrix {
+    private final int[][] p;
+    public NumMatrix(int[][] m) {
+        int R = m.length, C = m[0].length;
+        p = new int[R + 1][C + 1];
+        for (int r = 0; r < R; r++)
+            for (int c = 0; c < C; c++)
+                p[r + 1][c + 1] = m[r][c]
+                                + p[r][c + 1]
+                                + p[r + 1][c]
+                                - p[r][c];
+    }
+    public int sumRegion(int r1, int c1, int r2, int c2) {
+        return p[r2 + 1][c2 + 1]
+             - p[r1][c2 + 1]
+             - p[r2 + 1][c1]
+             + p[r1][c1];
+    }
+}`}
+  python={`class NumMatrix:
+    def __init__(self, m):
+        R, C = len(m), len(m[0])
+        self.p = [[0]*(C+1) for _ in range(R+1)]
+        for r in range(R):
+            for c in range(C):
+                self.p[r+1][c+1] = (m[r][c]
+                                    + self.p[r][c+1]
+                                    + self.p[r+1][c]
+                                    - self.p[r][c])
+
+    def sumRegion(self, r1, c1, r2, c2):
+        p = self.p
+        return p[r2+1][c2+1] - p[r1][c2+1] - p[r2+1][c1] + p[r1][c1]`}
+/>
+
+## Pattern: difference array (the inverse)
+
+If you have many range **update** queries (`add v to arr[l..r]`) and a final read, use a **difference array** — the inverse trick:
+
+```text
+diff[l]   += v
+diff[r+1] -= v
+```
+
+Then `arr[i]` = prefix sum of `diff`. One pass at the end, no per-update O(n) cost.
+
+## Key problems to master
+
+- **Range Sum Query — Immutable** (LC 303) — <Difficulty>Easy</Difficulty> the warm-up.
+- **Subarray Sum Equals K** (LC 560) — <Difficulty>Medium</Difficulty> hash-map twist.
+- **Contiguous Array** (LC 525) — <Difficulty>Medium</Difficulty> map zeros to -1, then it's "longest subarray with sum 0".
+- **Range Sum Query 2D — Immutable** (LC 304) — <Difficulty>Medium</Difficulty> the 2D template.
+- **Product of Array Except Self** (LC 238) — <Difficulty>Medium</Difficulty> prefix + suffix products.
+- **Find Pivot Index** (LC 724) — <Difficulty>Easy</Difficulty> classic prefix-sum split.
+- **Maximum Size Subarray Sum Equals K** (LC 325) — <Difficulty>Medium</Difficulty> length variant.
+- **Minimum Operations to Reduce X to Zero** (LC 1658) — <Difficulty>Medium</Difficulty> reformulate as subarray-sum target.
+
+## Common mistakes to avoid
+
+- **Off-by-one in the range.** Always write down: "is `[l, r]` inclusive or exclusive?" before coding. The template above uses inclusive.
+- **Forgetting the `seen[0] = 1` seed.** Without it you miss subarrays that start at index 0.
+- **Mutating `arr` instead of building `P`.** Some interviewers want the original array preserved.
+- **Overflow.** Large arrays of positive ints can overflow `int` — use `long` in Java for the prefix.
+
+## Sub-checklist
+
+<Checklist>
+  <ChecklistItem id="dsa-prefix-sum-1d-template">Implemented the 1D prefix-sum template from memory.</ChecklistItem>
+  <ChecklistItem id="dsa-prefix-sum-subarray-k">Solved "Subarray Sum Equals K" using a prefix-sum hash map.</ChecklistItem>
+  <ChecklistItem id="dsa-prefix-sum-2d">Implemented the 2D prefix sum and its inclusion–exclusion query.</ChecklistItem>
+  <ChecklistItem id="dsa-prefix-sum-diff-array">Used the difference-array trick for many range updates.</ChecklistItem>
+  <ChecklistItem id="dsa-prefix-sum-product-except-self">Solved "Product of Array Except Self" using prefix + suffix.</ChecklistItem>
+</Checklist>

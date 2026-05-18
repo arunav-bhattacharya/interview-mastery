@@ -19,23 +19,23 @@ public int[] pairSum(int[] a, int target) {
 export default function Home() {
   return (
     <Layout
-      title="Interview Mastery — 8-Week Interview Preparation"
-      description="A visual, structured 8-week program covering DSA, system design, Java/Spring/AWS, and behavioral interviews."
+      title="Interview Mastery — Senior SWE Interview Preparation"
+      description="A structured interview-prep program covering DSA, system design, SQL, Java, cloud, GenAI, low-level design, and behavioral interviews."
     >
       <header className={styles.hero}>
         <div className={styles.heroInner}>
-          <span className={styles.eyebrow}>8-WEEK · STRUCTURED · VISUAL</span>
+          <span className={styles.eyebrow}>SENIOR · STRUCTURED · VISUAL</span>
           <h1 className={styles.title}>
             Interview prep that <span className={styles.highlight}>shows</span> you the answer.
           </h1>
           <p className={styles.subtitle}>
-            A focused 8-week plan covering data structures &amp; algorithms,
-            system design, the Java / Spring / AWS stack, and behavioral
-            interviews — with animated visualizers for every pattern.
+            A comprehensive program for senior software engineer interviews — DSA, system design,
+            low-level design, Java &amp; Spring, SQL, AWS &amp; GenAI, and behavioral interviews.
+            Every pattern ships with a visualizer and reference code in four languages.
           </p>
           <div className={styles.heroActions}>
-            <Link className={styles.primaryBtn} to="/overview">View the program →</Link>
-            <Link className={styles.ghostBtn} to="/learn/dsa/linked-list">Jump into DSA</Link>
+            <Link className={styles.primaryBtn} to="/learn/guide/master-guide">Open the Master Guide →</Link>
+            <Link className={styles.ghostBtn} to="/learn/dsa/arrays-strings">Jump into DSA</Link>
           </div>
 
           <div className={styles.codePeek}>
@@ -51,41 +51,65 @@ export default function Home() {
           <div className={styles.sectionHead}>
             <span className="im-accent-rule" />
             <h2>What you study</h2>
-            <p>Four pillars across eight weeks. Each topic ships with a visualizer, a Java reference implementation, and a short problem set.</p>
+            <p>Seven pillars. Each lesson is a hub with a Quick Navigation bar, multiple patterns, and runnable code in Java / Kotlin / Python / Go.</p>
           </div>
 
           <div className={styles.grid}>
             <TopicCard
               accent="amber"
-              icon="◑"
+
               title="Data Structures &amp; Algorithms"
-              summary="Patterns over problems: linked lists, two-pointer, sliding window, BFS/DFS, DP, heap, trie, graphs."
-              href="/learn/dsa/linked-list"
-              meta="9 topics"
+              summary="Arrays & Strings, Lists & Trees, Heap & Trie, Graphs & DP, More Patterns — plus Problem Checklist and Practice Solutions."
+              href="/learn/dsa/arrays-strings"
+              meta="5 hubs + 2 refs"
             />
             <TopicCard
               accent="iris"
-              icon="◈"
+
               title="System Design"
-              summary="Fundamentals, scaling primitives, and case studies framed for 45-minute interviews."
+              summary="Fundamentals, Building Blocks, Advanced Patterns, three Case Study sets, and Low-Level Design."
               href="/learn/system-design/fundamentals"
-              meta="3 topics"
+              meta="7 pages"
+            />
+            <TopicCard
+              accent="amber"
+
+              title="Java &amp; JVM"
+              summary="Java Core, Concurrency, Modern Java, Design Patterns. Plus Kotlin, Spring, Quarkus, Microservices."
+              href="/learn/java/core"
+              meta="4 sections"
             />
             <TopicCard
               accent="mint"
-              icon="◐"
-              title="Java · Spring · AWS"
-              summary="Modern Java, Spring Boot REST APIs, and the AWS services you'll actually be asked about."
-              href="/learn/java-spring-aws/java-essentials"
-              meta="3 topics"
+
+              title="SQL"
+              summary="JOINs, GROUP BY, subqueries, CTEs, window functions, query optimization — one comprehensive hub."
+              href="/learn/sql/practice"
+              meta="1 hub"
+            />
+            <TopicCard
+              accent="iris"
+
+              title="Cloud"
+              summary="AWS &amp; Cloud Architecture, plus GenAI &amp; LLM Engineering for production."
+              href="/learn/cloud/aws-architecture"
+              meta="2 pages"
             />
             <TopicCard
               accent="rose"
-              icon="◓"
+
               title="Behavioral"
-              summary="STAR method, a curated list of common prompts, and a workspace to build your story bank."
-              href="/learn/behavioral/star-method"
-              meta="2 topics"
+              summary="STAR method, common questions, story bank, interview tips, day-of checklist."
+              href="/learn/behavioral/prep"
+              meta="1 hub"
+            />
+            <TopicCard
+              accent="mint"
+
+              title="Master Guide"
+              summary="Program overview, study plan summary, daily schedule, flexible pacing, resources, success metrics."
+              href="/learn/guide/master-guide"
+              meta="hub"
             />
           </div>
         </section>
@@ -100,18 +124,18 @@ export default function Home() {
           <div className={styles.threeUp}>
             <div className={styles.feature}>
               <div className={styles.featureIcon}>⌧</div>
-              <h3>Visual first</h3>
-              <p>Every diagram on the original platform — Overview, Schedule, Study Plan, plus pattern-specific diagrams — has been replaced with a custom, animated React component.</p>
+              <h3>Hub pages with Quick Navigation</h3>
+              <p>Each lesson is a hub: a Quick Navigation pill bar at the top, followed by collapsible sections that walk you through each pattern using a consistent template.</p>
             </div>
             <div className={styles.feature}>
-              <div className={styles.featureIcon}>{`</>`}</div>
-              <h3>JetBrains Mono everywhere</h3>
-              <p>All code, all chips, all stats. Tuned line-height, ligatures on, zero letter-spacing — so nothing crowds the surrounding type.</p>
+              <div className={styles.featureIcon}>{`{ }`}</div>
+              <h3>Four languages, side by side</h3>
+              <p>Algorithm code in Java, Kotlin, Python, and Go. Pick once and the choice syncs across every lesson.</p>
             </div>
             <div className={styles.feature}>
               <div className={styles.featureIcon}>◷</div>
               <h3>Yours to pace</h3>
-              <p>Eight weeks if you grind, twelve if you don't. The Study Plan board and Progress page live entirely in your browser — no account, no telemetry.</p>
+              <p>Move at the speed that fits you. The Study Plan board and Progress page live entirely in your browser — no account, no telemetry.</p>
             </div>
           </div>
         </section>
@@ -119,10 +143,10 @@ export default function Home() {
         <section className={`${styles.section} ${styles.ctaSection}`}>
           <div className={styles.cta}>
             <h2 className={styles.ctaTitle}>Ready when you are.</h2>
-            <p className={styles.ctaSubtitle}>The first week is forty pages and a handful of problems. Start anywhere.</p>
+            <p className={styles.ctaSubtitle}>Start with the Master Guide for the bird's-eye view, or jump into DSA if you already know the shape.</p>
             <div className={styles.heroActions}>
-              <Link className={styles.primaryBtn} to="/schedule">See the schedule</Link>
-              <Link className={styles.ghostBtn} to="/study-plan">Open the study plan</Link>
+              <Link className={styles.primaryBtn} to="/learn/guide/master-guide">Open the Master Guide</Link>
+              <Link className={styles.ghostBtn} to="/study-plan">View Study Plan</Link>
             </div>
           </div>
         </section>

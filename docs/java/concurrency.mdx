@@ -1,0 +1,337 @@
+---
+title: Concurrency
+description: "Threads, executors, locks, JMM, atomics, virtual threads, CompletableFuture."
+sidebar_position: 3
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Concurrency
+
+<Pillbar pills={[
+  { label: 'time', value: '2–3 hours' },
+  { label: 'priority', value: 'senior-critical' },
+  { label: 'covers', value: 'threads · locks · JMM · atomics · virtual threads' },
+]} />
+
+Concurrency is the single biggest separator at senior level. The candidates who succeed can think clearly about visibility, happens-before, executor sizing, and why their seemingly-correct code corrupts a `HashMap` under load.
+
+<QuickNav items={[
+  { label: 'THREADS & LIFECYCLE', href: '#threads--lifecycle' },
+  { label: 'EXECUTORS & POOLS', href: '#executors--thread-pools' },
+  { label: 'SYNCHRONISATION', href: '#synchronisation' },
+  { label: 'JAVA MEMORY MODEL', href: '#java-memory-model' },
+  { label: 'COMPLETABLEFUTURE', href: '#completablefuture--composable-async' },
+  { label: 'CONCURRENT COLLECTIONS', href: '#concurrent-collections' },
+  { label: 'PITFALLS', href: '#common-pitfalls' },
+]} />
+
+## Threads & lifecycle
+
+### Process vs. thread
+
+| Aspect | Process | Thread |
+| --- | --- | --- |
+| Memory | Isolated address space | Shared address space within a process |
+| Creation cost | High (OS-level) | Low (within JVM) |
+| Communication | IPC (pipes, sockets, shared mem) | Direct memory access |
+| Isolation | Strong (a crash kills only this process) | Weak (one thread can crash the whole JVM) |
+
+### Thread lifecycle
+
+The six states defined by `Thread.State`:
+
+| State | Entered when |
+| --- | --- |
+| `NEW` | Thread object created, not yet started |
+| `RUNNABLE` | `start()` called; either running or runnable on the OS scheduler |
+| `BLOCKED` | Waiting to acquire a monitor lock (e.g. blocked on `synchronized`) |
+| `WAITING` | `wait()`, `join()`, or `LockSupport.park()` without timeout |
+| `TIMED_WAITING` | `sleep(ms)`, `wait(ms)`, `join(ms)`, parked with timeout |
+| `TERMINATED` | `run()` returned or threw |
+
+### Runnable vs. Callable
+
+| Aspect | `Runnable` | `Callable<V>` |
+| --- | --- | --- |
+| Return value | None | `V` |
+| Checked exceptions | None — must wrap | Declares `throws Exception` |
+| Usage | `Thread`, `ExecutorService.execute` | `ExecutorService.submit` → `Future<V>` |
+
+### Thread pool sizing — the formulas
+
+| Workload | Formula | Rationale |
+| --- | --- | --- |
+| **CPU-bound** | `pool = cores` (or `cores + 1`) | Avoid context-switch tax |
+| **I/O-bound** | `pool = cores × (1 + wait/compute)` | Each thread is mostly waiting; oversubscribe |
+| **Mixed** | Tune by measurement | Profile actual P95 and CPU utilisation |
+
+Always **bound** the pool. `Executors.newCachedThreadPool()` is unbounded and can be a denial-of-service waiting to happen.
+
+## Executors & thread pools
+
+### Reference: the primitives
+
+- `Thread` directly — almost never in production.
+- `ExecutorService` — bounded thread pools (`Executors.newFixedThreadPool(n)`).
+- `ThreadPoolExecutor` — full control over queue, rejection policy, keep-alive.
+- **Virtual threads (Java 21+)** — millions per JVM, cheap blocking I/O.
+
+### Executor types — the factory methods
+
+| Factory | Type | Pool size | Queue | Best for |
+| --- | --- | --- | --- | --- |
+| `newFixedThreadPool(n)` | Bounded | `n` (fixed) | Unbounded `LinkedBlockingQueue` | Steady, predictable load |
+| `newCachedThreadPool()` | Unbounded | `0..Integer.MAX_VALUE` | `SynchronousQueue` (zero-capacity) | Short-lived bursts ⚠️ DoS risk |
+| `newSingleThreadExecutor()` | Single | 1 | Unbounded | Strict serialisation |
+| `newScheduledThreadPool(n)` | Scheduled | `n` | Delayed queue | Cron / delayed tasks |
+| `newWorkStealingPool()` | Fork/Join | `cores` | Per-thread deque | Recursive, divide-and-conquer |
+| `newVirtualThreadPerTaskExecutor()` *(Java 21)* | Virtual | Effectively unlimited | None | Blocking I/O — millions per JVM |
+
+Most production code should reach for `ThreadPoolExecutor` directly so you can set the queue, rejection policy, and thread factory explicitly.
+
+### `ThreadPoolExecutor` — full configuration
+
+```java
+new ThreadPoolExecutor(
+    corePoolSize,                  // always-warm threads
+    maximumPoolSize,               // burst cap
+    keepAliveTime, TimeUnit,       // idle thread reaper
+    workQueue,                     // bounded vs unbounded
+    threadFactory,                 // name threads, set daemon flag
+    rejectedExecutionHandler       // what to do when queue is full
+);
+```
+
+**Task submission flow:** if `< corePoolSize` threads exist, spawn one. Else enqueue. If the queue is full, spawn up to `maximumPoolSize`. If still no room, apply the rejection policy.
+
+Rejection policies:
+
+| Policy | Behaviour |
+| --- | --- |
+| `AbortPolicy` (default) | Throws `RejectedExecutionException` |
+| `CallerRunsPolicy` | Caller thread runs the task — natural backpressure |
+| `DiscardPolicy` | Silently drops the task |
+| `DiscardOldestPolicy` | Drops the oldest queued task to make room |
+
+## Synchronisation
+
+### Synchronisation primitives
+
+| Tool | Provides |
+| --- | --- |
+| `synchronized` | Monitor lock, simple |
+| `ReentrantLock` | Same semantics + `tryLock`, fairness, conditions |
+| `ReadWriteLock` | Many readers OR one writer |
+| `StampedLock` | Optimistic read |
+| `Semaphore` | Bounded concurrent access |
+| `CountDownLatch` | "Wait for N events" |
+| `CyclicBarrier` | "All threads meet here" |
+| `Phaser` | More flexible barrier with dynamic registration |
+| `Atomic*` / `LongAdder` | Lock-free CAS |
+
+#### `synchronized` vs. `ReentrantLock`
+
+| Feature | `synchronized` | `ReentrantLock` |
+| --- | --- | --- |
+| Lock / unlock | Implicit (block scope) | Explicit (`lock()` / `unlock()` — use `try`/`finally`) |
+| Fairness | No | Optional (`new ReentrantLock(true)`) |
+| `tryLock` | No | `tryLock()` / `tryLock(timeout)` |
+| Interruptible while waiting | No | `lockInterruptibly()` |
+| Multiple conditions | One implicit | `newCondition()` — N independent queues |
+| When to use | Default, simple code | Need fairness, try-lock, interruptible wait, or multiple conditions |
+
+#### `ReadWriteLock` — concurrent reads
+
+```java
+ReadWriteLock rw = new ReentrantReadWriteLock();
+rw.readLock().lock();   try { /* many concurrent readers */ } finally { rw.readLock().unlock(); }
+rw.writeLock().lock();  try { /* exclusive writer */ }       finally { rw.writeLock().unlock(); }
+```
+
+Wins when reads dominate by ≥10:1. Writers starve under sustained read load unless you use a fair lock.
+
+### Deadlock — the Coffman conditions
+
+A deadlock requires **all four** simultaneously:
+
+1. **Mutual exclusion** — resources cannot be shared.
+2. **Hold and wait** — a thread holds a lock and waits for another.
+3. **No preemption** — locks are released voluntarily.
+4. **Circular wait** — `A → B → C → A`.
+
+**Prevention:** break any one condition. The simplest is to **always acquire locks in a fixed global order** (kill circular wait). When you can't, use `tryLock(timeout)` and back off on contention.
+
+## Concurrent collections
+
+- `ConcurrentHashMap` — replaces `Hashtable`; segmented CAS internally.
+- `CopyOnWriteArrayList` — reads are cheap, writes copy. Good for "rare write, many read" lists (event listeners).
+- `BlockingQueue` (`ArrayBlockingQueue`, `LinkedBlockingQueue`) — for producer/consumer.
+
+## Sample: bounded blocking buffer
+
+<CodeTabs
+  title="BoundedBuffer"
+  java={`class BoundedBuffer<T> {
+  private final Object[] buf;
+  private int head, tail, count;
+  private final Lock lock = new ReentrantLock();
+  private final Condition notFull  = lock.newCondition();
+  private final Condition notEmpty = lock.newCondition();
+
+  BoundedBuffer(int cap) { buf = new Object[cap]; }
+
+  public void put(T v) throws InterruptedException {
+    lock.lock();
+    try {
+      while (count == buf.length) notFull.await();
+      buf[tail] = v;
+      tail = (tail + 1) % buf.length;
+      count++;
+      notEmpty.signal();
+    } finally { lock.unlock(); }
+  }
+
+  @SuppressWarnings("unchecked")
+  public T take() throws InterruptedException {
+    lock.lock();
+    try {
+      while (count == 0) notEmpty.await();
+      T v = (T) buf[head];
+      buf[head] = null;
+      head = (head + 1) % buf.length;
+      count--;
+      notFull.signal();
+      return v;
+    } finally { lock.unlock(); }
+  }
+}`}
+/>
+
+## Java Memory Model
+
+### What the JMM is
+
+The JMM defines **what one thread is guaranteed to see** of another thread's writes — without explicit synchronisation, the answer is "nothing guaranteed."
+
+The core relation is **happens-before** (`hb`). If `a hb b`, then `b` sees everything `a` did. The relation is built from these rules:
+
+- Program order within one thread.
+- An unlock of a monitor `hb` every subsequent lock of the same monitor.
+- A write to a `volatile` field `hb` every subsequent read of that field.
+- `Thread.start()` `hb` the run() body of the started thread.
+- The run() body of a thread `hb` the return of `Thread.join()`.
+- `hb` is transitive.
+
+### `volatile` — what it does and doesn't
+
+- ✅ Guarantees **visibility** (reads see the latest write).
+- ✅ Guarantees **ordering** — reads/writes of `volatile` are not reordered with surrounding ops.
+- ❌ Does **not** make compound operations atomic. `count++` is still broken on `volatile int count`.
+
+```java
+private volatile boolean stopped = false;     // visible across threads ✓
+private volatile int counter = 0;             // counter++ still races ✗
+```
+
+For atomic compound operations, use the `Atomic*` family or a lock.
+
+### When to use `volatile`
+
+- **Stop-flag pattern** — one thread sets `stopped = true`, others poll it.
+- **Lazy initialisation with double-checked locking** — needs `volatile` to prevent the partially-constructed object from leaking.
+- **Single-writer status fields** — one writer, many readers, no compound ops.
+
+If you have multiple writers or compound ops, reach for `AtomicReference` / `synchronized` / `LongAdder` instead.
+
+### Happens-before relationships
+
+Action | Establishes happens-before with
+--- | ---
+`synchronized` unlock | every subsequent acquire of the same monitor
+`volatile` write | every subsequent read of the same field
+`Thread.start()` | the run() body of the started thread
+`Thread.join()` | actions in the thread that just terminated
+`ExecutorService.submit()` | execution of the submitted task
+Task completion | `Future.get()` return
+
+### Atomic classes and CAS
+
+Lock-free alternatives to `synchronized` when you only need atomicity on a single variable.
+
+| Class | For |
+| --- | --- |
+| `AtomicInteger` / `AtomicLong` | Counters, ID generators |
+| `AtomicReference<T>` | Whole-object swap, lock-free stack |
+| `AtomicBoolean` | Once-flags, toggles |
+| `LongAdder` / `LongAccumulator` | Many threads writing, occasional read — outperforms `AtomicLong` under contention |
+
+Under the hood: **Compare-And-Swap (CAS)**. `var.compareAndSet(expected, newValue)` is a single CPU instruction that succeeds only if the current value still equals `expected`.
+
+```java
+private final AtomicReference<Stack<String>> top = new AtomicReference<>();
+
+void push(String item) {
+    Stack<String> prev, next;
+    do {
+        prev = top.get();
+        next = new Stack<>(item, prev);
+    } while (!top.compareAndSet(prev, next));   // retry on lost race
+}
+```
+
+Pros: no blocking, no deadlock. Cons: starvation under heavy contention (the **ABA problem** if you're not careful — use `AtomicStampedReference`).
+
+### When to use atomics
+
+| Use case | Pick |
+| --- | --- |
+| Simple incrementing counter | `AtomicInteger` / `AtomicLong` |
+| Boolean flag (set / clear) | `AtomicBoolean` |
+| Atomic reference swap | `AtomicReference<T>` |
+| Multiple fields updated together | `AtomicReference<RecordType>` + immutable record |
+| **Very high-contention counter** | `LongAdder` (sharded internally) — outperforms `AtomicLong` 10–100× under contention |
+| Pointer with version | `AtomicStampedReference` (avoids ABA) |
+
+## CompletableFuture — composable async
+
+`CompletableFuture<T>` is Java's primary tool for non-blocking pipelines. The shape:
+
+```java
+CompletableFuture
+    .supplyAsync(() -> fetchUser(id), executor)
+    .thenApply(user -> enrichWithOrders(user))           // sync transform
+    .thenCompose(user -> CompletableFuture.supplyAsync(  // chain a futur
+        () -> sendWelcome(user), executor))
+    .exceptionally(ex -> {
+        log.error("pipeline failed", ex);
+        return DEFAULT_USER;
+    })
+    .thenAccept(user -> response.send(user));            // terminal
+```
+
+| API | Behaviour |
+| --- | --- |
+| `thenApply(fn)` | Synchronous transform of the result |
+| `thenApplyAsync(fn, exec)` | Same but on a different executor |
+| `thenCompose(fn)` | Chain another `CompletableFuture` (flatMap) |
+| `thenCombine(other, fn)` | Combine two futures' results |
+| `allOf(a, b, c)` | Wait for all to complete |
+| `anyOf(a, b, c)` | Complete when first finishes |
+| `exceptionally(fn)` | Recover from a failure |
+| `handle((v, ex) -> ...)` | Handle both success and failure |
+
+**Always pass an explicit executor.** The default `ForkJoinPool.commonPool()` is shared with everything else in the JVM; saturating it stalls unrelated work.
+
+## Common pitfalls
+
+- **Double-checked locking** without `volatile` is broken — the partially-constructed object can leak before the constructor completes.
+- **Deadlock** — always acquire locks in a fixed order; consider `tryLock(timeout)` for cycles you can't statically order.
+- **Visibility** — without `volatile` or proper synchronization, a write in one thread is **not** guaranteed to be visible to another.
+- **Spurious wakeups** — use `while (...) cond.await();` not `if`.
+- **`ForkJoinPool.commonPool()` saturation** — blocking calls inside parallel streams or default `CompletableFuture` chains starve the whole JVM. Provide your own executor.
+- **`InterruptedException` swallowed** — either rethrow or set `Thread.currentThread().interrupt()`. Silent catches hide cancellation.
+
+---

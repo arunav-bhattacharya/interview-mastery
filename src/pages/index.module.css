@@ -2,8 +2,8 @@
   position: relative;
   padding: 90px 16px 60px;
   background:
-    radial-gradient(60% 60% at 80% 10%, rgba(217, 119, 6, 0.16), transparent 70%),
-    radial-gradient(60% 60% at 10% 90%, rgba(99, 102, 241, 0.16), transparent 70%);
+    radial-gradient(60% 60% at 80% 10%, rgba(79, 70, 229, 0.18), transparent 70%),
+    radial-gradient(60% 60% at 10% 90%, rgba(8, 145, 178, 0.14), transparent 70%);
   border-bottom: 1px solid var(--im-border);
   overflow: hidden;
 }
@@ -31,7 +31,7 @@
 }
 
 .highlight {
-  background: linear-gradient(90deg, #fbbf24, #d97706);
+  background: linear-gradient(90deg, #6366f1, #0891b2);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -65,10 +65,16 @@
 
 .primaryBtn {
   background: var(--im-accent);
-  color: #1a1a1a;
+  color: #ffffff;
   border: 1px solid var(--im-accent);
 }
-.primaryBtn:hover { transform: translateY(-1px); text-decoration: none; color: #1a1a1a; }
+.primaryBtn:hover {
+  transform: translateY(-1px);
+  text-decoration: none;
+  color: #ffffff;
+  background: var(--ifm-color-primary-dark);
+  border-color: var(--ifm-color-primary-dark);
+}
 
 .ghostBtn {
   background: transparent;
@@ -107,7 +113,7 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
 }
 
@@ -145,7 +151,8 @@
 
 .cta {
   background:
-    radial-gradient(50% 80% at 80% 0%, rgba(217, 119, 6, 0.16), transparent 60%),
+    radial-gradient(50% 80% at 80% 0%, rgba(79, 70, 229, 0.18), transparent 60%),
+    radial-gradient(50% 80% at 20% 100%, rgba(8, 145, 178, 0.14), transparent 60%),
     var(--im-surface);
   border: 1px solid var(--im-border);
   border-radius: 24px;

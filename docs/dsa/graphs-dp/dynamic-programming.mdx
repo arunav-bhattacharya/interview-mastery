@@ -1,0 +1,117 @@
+---
+title: Dynamic Programming
+sidebar_position: 3
+---
+
+import TreeViz from '@site/src/components/TreeViz';
+import BinarySearchViz from '@site/src/components/BinarySearchViz';
+import DPTableViz from '@site/src/components/DPTableViz';
+import GraphViz from '@site/src/components/GraphViz';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+
+# Dynamic Programming
+
+### What is DP?
+
+DP is recursion that **remembers**. You define an answer in terms of smaller versions of itself; you notice the smaller versions repeat; you cache each result the first time you compute it.
+
+Two styles:
+
+- **Memoization** (top-down) — write the recursion, add a cache.
+- **Tabulation** (bottom-up) — fill a table from base cases up.
+
+### Why Does It Work?
+
+Two properties make DP applicable:
+
+1. **Optimal substructure** — the optimal answer is built from optimal answers to subproblems.
+2. **Overlapping subproblems** — naïve recursion solves the same subproblems many times.
+
+When both hold, caching turns an exponential tree of calls into a polynomial DAG of unique subproblems.
+
+### Mental Model
+
+<DPTableViz />
+
+`dp[state]` is a notebook. The recurrence is the rule for filling row `i` from earlier rows. The dependency pattern tells you the **fill order**.
+
+### When to Use
+
+- Brute force is **exponential** and the recursive calls overlap.
+- The problem says **count / minimum / maximum** and you can define a state on prefixes, suffixes, indices, or a remaining budget.
+- The state space is discrete and small enough to tabulate.
+
+<div className="im-core-concept">
+
+### Core Concept
+
+A four-step recipe:
+
+1. **State** — name the variables that distinguish subproblems.
+2. **Transition** — `dp[state] = combine(dp[smaller])`.
+3. **Base cases** — the smallest subproblems.
+4. **Order** — topological order of subproblems.
+
+| Family | Examples |
+| --- | --- |
+| 1D linear | Climbing stairs, house robber, coin change |
+| 2D grid | Unique paths, min path sum, edit distance, LCS |
+| Knapsack | 0/1, unbounded, partition equal subset sum |
+| Interval | Matrix chain, burst balloons |
+| State machine | Stock buy/sell with cooldown |
+
+</div>
+### Template Code
+
+<CodeTabs
+  title="ClimbingStairs"
+  java={`public int climb(int n) {
+  if (n <= 2) return n;
+  int a = 1, b = 2;
+  for (int i = 3; i <= n; i++) { int c = a + b; a = b; b = c; }
+  return b;
+}`}
+  kotlin={`fun climb(n: Int): Int {
+  if (n <= 2) return n
+  var a = 1; var b = 2
+  for (i in 3..n) { val c = a + b; a = b; b = c }
+  return b
+}`}
+  python={`def climb(n: int) -> int:
+    if n <= 2: return n
+    a, b = 1, 2
+    for _ in range(3, n + 1): a, b = b, a + b
+    return b`}
+  go={`func climb(n int) int {
+  if n <= 2 { return n }
+  a, b := 1, 2
+  for i := 3; i <= n; i++ { a, b = b, a+b }
+  return b
+}`}
+/>
+
+### Key Problems to Master
+
+| # | Problem | Difficulty | Family | LeetCode |
+| - | --- | --- | --- | --- |
+| 1 | Climbing Stairs | <Difficulty>Easy</Difficulty> | 1D linear | [LC 70](https://leetcode.com/problems/climbing-stairs/) |
+| 2 | House Robber | <Difficulty>Medium</Difficulty> | 1D take-skip | [LC 198](https://leetcode.com/problems/house-robber/) |
+| 3 | Coin Change | <Difficulty>Medium</Difficulty> | 1D unbounded knapsack | [LC 322](https://leetcode.com/problems/coin-change/) |
+| 4 | Longest Common Subsequence | <Difficulty>Medium</Difficulty> | 2D | [LC 1143](https://leetcode.com/problems/longest-common-subsequence/) |
+| 5 | Edit Distance | <Difficulty>Hard</Difficulty> | 2D, three operations | [LC 72](https://leetcode.com/problems/edit-distance/) |
+| 6 | 0/1 Knapsack | — | 2D capacity | — |
+| 7 | Word Break | <Difficulty>Medium</Difficulty> | 1D + dictionary | [LC 139](https://leetcode.com/problems/word-break/) |
+| 8 | Best Time to Buy/Sell Stock with Cooldown | <Difficulty>Medium</Difficulty> | State machine | [LC 309](https://leetcode.com/problems/best-time-to-buy-and-sell-stock-with-cooldown/) |
+
+### Common Mistakes to Avoid
+
+- A state that doesn't actually distinguish subproblems → wrong answers.
+- Off-by-one in base cases. Walk through `dp[0]` and `dp[1]` by hand.
+- Wrong fill order — cell depends on cells you haven't filled yet.
+- Confusing 0/1 knapsack with unbounded — the inner loop direction differs.
+- Reaching for DP when the right tool is search with pruning.
+
+---

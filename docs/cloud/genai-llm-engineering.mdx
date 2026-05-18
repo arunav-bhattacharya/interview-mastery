@@ -1,0 +1,667 @@
+---
+title: GenAI & LLM Engineering
+description: LLM fundamentals, prompt engineering, RAG, reliability, multi-model — production-grade GenAI for senior engineers.
+sidebar_position: 2
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import { Checklist, ChecklistItem } from '@site/src/components/Checklist';
+
+# GenAI & LLM Engineering
+
+<Pillbar pills={[
+  { label: 'time', value: '3–4 hours' },
+  { label: 'focus', value: 'production engineering' },
+]} />
+
+Production-focused GenAI knowledge for senior engineers — architecture, reliability, and practical engineering.
+
+<QuickNav items={[
+  { label: 'TOPIC 1: LLM FUNDAMENTALS', href: '#topic-1-llm-fundamentals' },
+  { label: 'TOPIC 2: PROMPT ENGINEERING', href: '#topic-2-prompt-engineering' },
+  { label: 'TOPIC 3: RAG', href: '#topic-3-rag-retrieval-augmented-generation' },
+  { label: 'TOPIC 4: RELIABILITY & COST CONTROL', href: '#topic-4-reliability--cost-control' },
+  { label: 'TOPIC 5: MULTI-MODEL ORCHESTRATION', href: '#topic-5-multi-model-orchestration' },
+  { label: 'TOPIC 6: FINE-TUNING & CUSTOMIZATION', href: '#topic-6-fine-tuning--customization' },
+  { label: 'INTERVIEW Q&A', href: '#genai-interview-qa--quick-reference' },
+  { label: 'SYSTEM DESIGN SCENARIOS', href: '#system-design--genai-scenarios' },
+  { label: 'CHECKLIST', href: '#checklist' },
+]} />
+
+## Topic 1: LLM Fundamentals
+
+### What an LLM is
+
+A large language model is a (decoder-only) Transformer trained to predict the next token. At inference, it does the same in a loop, sampling one token at a time until end-of-sequence.
+
+| Term | Meaning |
+| --- | --- |
+| **Token** | Atomic unit. ~4 chars of English per token. |
+| **Context window** | Max input + output tokens per call. |
+| **Temperature** | Randomness knob. `0` = deterministic, `1` = lively. |
+| **Top-p (nucleus)** | Sample from the smallest set whose cumulative probability ≥ p. |
+| **System / user / assistant** | Conversation roles. System sets persona / rules. |
+
+### Key parameters — what each knob does
+
+| Parameter | Range | Effect | Production default |
+| --- | --- | --- | --- |
+| **Temperature** | 0–2 | Higher = more random / creative | 0.0–0.3 for factual; 0.7+ for creative |
+| **Top-p (nucleus)** | 0–1 | Limits sampling to top probability mass | 0.9 |
+| **Top-k** | int | Limits sampling to top-k tokens | 40 (when used) |
+| **Max tokens** | int | Hard cap on output length | Set per use case |
+| **Frequency penalty** | -2..2 | Penalise repeating tokens | 0 |
+| **Presence penalty** | -2..2 | Penalise reusing any token already seen | 0 |
+| **Stop sequences** | array | Strings that abort generation | Format markers, role tags |
+
+Rule of thumb: tune one parameter at a time. **Temperature** dominates; everything else is fine-tuning around it.
+
+### Inference — how generation works
+
+1. **Tokenise** the prompt → list of token IDs.
+2. Forward pass through the Transformer → distribution over next token.
+3. Sample one token (using temperature / top-p / top-k).
+4. Append to the sequence; go to step 2.
+5. Stop when end-of-sequence, max-tokens, or a stop sequence appears.
+
+The cost is **per token generated** — output is what's expensive in autoregressive generation.
+
+### Attention & KV cache
+
+The Transformer's attention mechanism is `O(n²)` over the context. To avoid recomputing on every new token, the model caches **K** (keys) and **V** (values) for already-seen tokens — the **KV cache**.
+
+- **KV cache** is what makes long contexts memory-bound.
+- **Speculative decoding** uses a small draft model to propose multiple tokens, then verifies with the big model — 2–3× throughput.
+- **Prefix caching** reuses the KV cache for common prompt prefixes (e.g. shared system prompt).
+
+### Model selection guide
+
+| Model | Strengths | Weaknesses | Best for |
+| --- | --- | --- | --- |
+| **GPT-4o** | Strong general reasoning, vision, tool use | Cost, rate limits | Complex agents, multi-modal |
+| **GPT-4o-mini** | Fast, cheap, decent quality | Less nuanced reasoning | Bulk inference, simple agents |
+| **Claude 3.5 Sonnet** | Code, long-context (200k), nuanced writing | Conservative outputs | Code, legal, analysis |
+| **Claude 3 Haiku** | Very fast & cheap, 200k context | Simpler reasoning | Classification, summarisation, search |
+| **Llama 3 / 3.1 (open)** | Self-hostable, no per-token fees | Operational cost | On-prem, customised fine-tuning |
+| **Gemini 1.5 Pro** | Massive context (1M+), multi-modal | Variable quality | Long-doc Q&A, video / audio |
+| **Mistral / Mixtral** | MoE — cost-efficient open | Less polished prompting | Self-hosted, Euro deployments |
+| **Phi-3 (Microsoft)** | Tiny but capable; runs on-device | Limited context | Edge / offline use |
+
+### Cost fundamentals
+
+LLM API pricing is per-million tokens (input and output separately). Output is typically 3–5× the cost of input. Cost-efficiency knobs:
+
+- **Shorter prompts** — trim every irrelevant token.
+- **Cheaper model where possible** — `mini` / `haiku` tiers absorb most "simple" requests.
+- **Cache** — system prompts, common queries, embeddings.
+- **Batch** — non-interactive jobs can use batch APIs (50% off).
+
+### Latency dimensions
+
+| Dimension | What it is | Tunable by |
+| --- | --- | --- |
+| **Time-to-first-token (TTFT)** | Network + prefill of input tokens | Smaller input, prompt caching |
+| **Time-per-output-token (TPOT)** | How fast output streams | Model size, batch, speculative decoding |
+| **Total latency** | TTFT + output tokens × TPOT | All of the above |
+
+For UX, optimise **TTFT** (use streaming) — users perceive responsiveness from the first token, not the last.
+
+### How the API call really looks
+
+<CodeTabs
+  title="ClaudeChat"
+  python={`import anthropic
+
+client = anthropic.Anthropic()  # uses ANTHROPIC_API_KEY env var
+
+resp = client.messages.create(
+    model="claude-sonnet-4-6",
+    max_tokens=512,
+    temperature=0.3,
+    system="You are a concise senior engineer.",
+    messages=[{"role": "user", "content": "Explain GC in 3 sentences."}],
+)
+print(resp.content[0].text)`}
+  typescript={`import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic();
+
+const resp = await client.messages.create({
+  model: "claude-sonnet-4-6",
+  max_tokens: 512,
+  temperature: 0.3,
+  system: "You are a concise senior engineer.",
+  messages: [{ role: "user", content: "Explain GC in 3 sentences." }],
+});
+console.log(resp.content[0].type === "text" ? resp.content[0].text : "");`}
+/>
+
+### What LLMs are bad at
+
+- Exact arithmetic.
+- Fresh facts (post-training-cutoff).
+- Following deterministic procedures perfectly.
+- Long-horizon planning without scaffolding.
+
+Hand these to real code (tool use) and let the LLM orchestrate.
+
+---
+
+## Topic 2: Prompt Engineering
+
+### The three layers of a prompt
+
+1. **Persona / role** — sets vocabulary and authority.
+2. **Task** — explicit success criteria.
+3. **Format** — what shape the output takes (JSON, markdown, bullets).
+
+When output is wrong, almost always one of these three is vague.
+
+### Techniques, ranked by impact
+
+| Technique | When |
+| --- | --- |
+| Role + clear task | Always |
+| Output format (JSON schema, sample) | When format matters |
+| Few-shot (1–3 examples) | When the model drifts off-task |
+| Constraints (length, vocabulary, must-not) | Tightening output |
+| Step-by-step / chain-of-thought | Complex reasoning |
+| Self-check / verify | After-the-fact validation |
+
+### Forcing JSON output
+
+<CodeTabs
+  title="StructuredExtraction"
+  python={`SYSTEM = """You extract bug-report fields from raw user feedback.
+Always respond with valid JSON matching:
+{
+  "title": string (under 80 chars),
+  "severity": "low" | "medium" | "high" | "critical",
+  "affected_areas": string[]
+}
+If a field cannot be determined, use an empty string or empty array."""
+
+resp = client.messages.create(
+    model="claude-sonnet-4-6",
+    max_tokens=256,
+    temperature=0,
+    system=SYSTEM,
+    messages=[{"role": "user", "content": "<feedback text>"}],
+)`}
+/>
+
+### Prompting techniques — full reference
+
+| Technique | Description | When to use |
+| --- | --- | --- |
+| **Zero-shot** | Just describe the task | Default; simple tasks |
+| **Few-shot** | 1-3 input/output examples | Format-sensitive tasks |
+| **Chain-of-Thought (CoT)** | Ask the model to "think step by step" | Multi-step reasoning, math, code |
+| **Role-based** | "You are a senior engineer …" | Stylistic / persona constraints |
+| **Structured output** | JSON schema, regex, or tool-call format | When you'll parse the output |
+| **Self-consistency** | Generate N times, take majority answer | High-stakes reasoning |
+| **ReAct** (Reason + Act) | Alternate "thought" and "action" tokens with tools | Agents that call tools |
+| **Tree-of-Thought** | Branch reasoning paths, evaluate each | Hard search problems |
+
+### Prompt injection — attack vectors and defences
+
+**Attack vectors:**
+
+- **Direct injection** — user message contains `"Ignore previous instructions and …"`.
+- **Indirect injection** — the model reads a document / web page that contains injection.
+- **Goal hijacking** — exfiltrate the system prompt or override the task.
+- **Output manipulation** — trick the model into emitting markup that the downstream UI renders.
+
+**Defences:**
+
+| Defence | How |
+| --- | --- |
+| **Separate trust levels** | System prompt is always-trust; user / document is never-trust |
+| **Input sanitisation** | Strip / escape suspicious patterns |
+| **Allow-list outputs** | Validate against schema; reject anything else |
+| **Sandboxed tool use** | Tools require allow-list + per-call confirmation |
+| **Content security policy** | Sanitise model output before rendering as HTML |
+| **Don't echo secrets** | Never put long-lived credentials in the prompt |
+
+### Common pitfalls
+
+- **Vague "be smart" instructions** → measurable constraints work better.
+- **Stuffing the system prompt with every requirement ever** → maximize prompt cache hits with stable preambles.
+- **No format anchor** → always describe the shape.
+- **Hard-coding the model identity** ("You are GPT-4...") → models change.
+
+---
+
+## Topic 3: RAG (Retrieval-Augmented Generation)
+
+### The pattern
+
+```text
+ingest    → chunk → embed → store in vector DB
+retrieve  → embed query → top-K nearest chunks
+generate  → prompt = (system + retrieved chunks + user question)
+```
+
+### Five design knobs
+
+1. **Chunking** — 200–1000 tokens with overlap; preserve semantic units (sentences, paragraphs).
+2. **Embedding model** — Voyage, OpenAI text-embedding-3, Cohere Embed, or domain-tuned.
+3. **Vector DB** — Postgres `pgvector` (small scale), Pinecone / Weaviate / Qdrant (managed).
+4. **Retrieval** — dense vector only, or **hybrid** (dense + BM25) — hybrid wins on technical corpora.
+5. **Reranking** — top-K bi-encoder retrieval reordered by a cross-encoder (Cohere, Jina). Big quality jump.
+
+### Pipeline sketch
+
+<CodeTabs
+  title="RAGPipeline"
+  python={`def answer(question: str) -> str:
+    q_vec = embed(question)
+    rows = db.query(
+      "SELECT content FROM chunks ORDER BY embedding <=> %s LIMIT 5", (q_vec,)
+    )
+    context = "\\n\\n---\\n\\n".join(r.content for r in rows)
+    resp = client.messages.create(
+      model="claude-sonnet-4-6",
+      max_tokens=512,
+      temperature=0.1,
+      system="Answer using ONLY the provided context. Cite [doc#chunk] for each claim. If unsure, say 'I don't know'.",
+      messages=[{"role": "user", "content": f"Context:\\n{context}\\n\\nQuestion: {question}"}],
+    )
+    return resp.content[0].text`}
+/>
+
+### Common RAG failures
+
+- **Bad retrieval** — most quality issues are retrieval, not LLM. Debug there first.
+- **No citations** — without explicit citation rule, the model paraphrases sources unverifiably.
+- **Stale index** — plan for incremental update / re-embed on schema change.
+- **Cross-tenant leakage** — every retrieval must filter on ACL / tenant.
+
+### RAG vs. fine-tuning — decision matrix
+
+| Criterion | RAG | Fine-tuning | Both |
+| --- | --- | --- | --- |
+| **Knowledge updates** | Fast (re-index) | Slow (re-train) | Combine — fine-tune for style, RAG for facts |
+| **Cost** | Inference only | Training + inference | Training + inference |
+| **Latency** | +50-200 ms (retrieval) | Same as base | Same as RAG |
+| **Use case** | Facts, docs, regulations | Style, tone, format | Customer-facing chatbot with company docs |
+| **Data privacy** | Data stays in your store | Baked into the model | Best of both |
+| **Accuracy** | Up to date | Strong on trained patterns | Strongest |
+| **Freshness** | Real-time | Frozen at training | Hybrid |
+
+### Chunking strategies
+
+| Strategy | Description | Best for | Typical size |
+| --- | --- | --- | --- |
+| **Fixed-size** | Cut every N tokens | Logs, uniform docs | 200-500 tokens |
+| **Sentence-based** | One sentence per chunk | Q&A on prose | 1-3 sentences |
+| **Recursive** | Hierarchical: paragraphs → sentences → words | General docs | 500-1000 tokens |
+| **Semantic** | Cut on topic shifts (cosine similarity) | Long-form articles | Variable |
+| **Document-aware** | Respect headings, sections | Structured docs | Per-section |
+| **Parent-child** | Embed small (precise retrieval), inject large (context) | Best quality | Small 100t, large 1000t |
+
+**Parent-child** is the advanced default — retrieve on tight chunks but pass larger surrounding context to the LLM.
+
+### Vector database selection
+
+| Database | Type | Strengths | Weaknesses |
+| --- | --- | --- | --- |
+| **pgvector** | Postgres extension | Use existing DB; SQL + filters; transactional | Slower at huge scale |
+| **Pinecone** | Managed | Easy ops, fast | Vendor lock-in, cost |
+| **Weaviate** | Open source + managed | Hybrid search (vector + keyword); good filters | Operational overhead self-hosted |
+| **Qdrant** | Open source | Fast, written in Rust; rich filters | Smaller ecosystem |
+| **Chroma** | Open source | Simplest dev experience | Less mature for scale |
+| **Milvus** | Open source | Built for very large scale | Heavy to operate |
+| **FAISS** | Library (in-process) | Fastest in-memory | No server, no filtering |
+
+For most teams: start with **pgvector** (reuse your DB), graduate to Pinecone / Qdrant / Weaviate when scale or features demand it.
+
+### Indexing pipeline vs. query pipeline
+
+```text
+INDEXING (offline, batch)
+  Documents → Loader → Preprocess → Chunk → Embed → Vector DB (+ metadata)
+
+QUERY (online, real-time)
+  User query → Embed → ANN search → Re-rank → Inject context → LLM → Citation
+```
+
+Two different SLAs:
+
+- **Indexing** can be slow and batched; throughput matters.
+- **Query** must be sub-second; latency matters.
+
+---
+
+## Topic 4: Reliability & Cost Control
+
+### Tools to layer
+
+| Tool | What it gives you |
+| --- | --- |
+| **Prompt caching** | Cached input billed at ~10% of normal. Stable preambles are essentially free on repeated calls. |
+| **Streaming** | First token in tens of ms; UI feels instant. |
+| **Function calling** | Structured output; reliable typed args. |
+| **Guardrails / output validation** | Reject malformed responses; retry with feedback. |
+| **Fallback chain** | Try cheaper model first, escalate on failure. |
+| **Budget per request** | `max_tokens` cap + total spend ceiling per user / org. |
+| **Evals** | Curated set + scoring harness; run before every prompt or model change. |
+
+### Common failure modes
+
+- **Hallucination** — model invents. Fix with retrieval (RAG), citation rules, "say I don't know."
+- **Schema drift** — model returns invalid JSON. Add a validator + retry.
+- **Latency tail** — P99 is much worse than P50. Bound with timeouts; degrade to a cheaper model.
+- **Rate limits** — surface them as 429 to your callers; back off.
+- **Cost spikes** — runaway recursion / loops. Per-request and per-user budget caps.
+
+### Hallucination mitigation — what actually works
+
+| Strategy | How it works | Effectiveness |
+| --- | --- | --- |
+| **RAG grounding** | Inject relevant retrieved context | High — biggest single lever |
+| **Low temperature** | Reduce randomness | Medium |
+| **Citation requirement** | "Cite source chunk IDs in [brackets]" | High — also catches users out |
+| **Confidence scoring** | Ask the model to rate its own confidence | Medium (self-reported, noisy) |
+| **Structured output** | JSON schema with `nullable` for "unknown" | High for factual extraction |
+| **Human-in-the-loop** | Critical decisions require approval | Highest (slow) |
+| **Fact-checking chain** | Second LLM verifies the first's claims against retrieved sources | High (doubles cost) |
+| **Output validation** | Programmatic checks (regex, schema, domain rules) | High for structured output |
+
+### Cost reduction strategies — ranked
+
+| Strategy | Typical savings | Complexity |
+| --- | --- | --- |
+| **Model tiering** | 50-80% | Medium — needs a router |
+| **Response caching** | 30-60% on repeated queries | Low |
+| **Prompt caching** | 50-90% on input tokens | Low (provider feature) |
+| **Token budgeting** | 10-30% | Low (`max_tokens`, prompt trimming) |
+| **Batch processing** | 50% | Low for non-interactive jobs |
+| **Prompt optimisation** | 20-50% | Medium (test, measure) |
+| **Self-hosted models** | 60-90% at scale | High operational cost |
+
+### Model tiering (router pattern)
+
+```text
+Request → Classifier (small model or rules)
+              │
+              ├── Simple → cheap model (Haiku / GPT-4o-mini)   [70%]
+              ├── Medium → mid model (Sonnet)                   [25%]
+              └── Hard   → flagship (Opus / GPT-4o)             [5%]
+```
+
+The router is a small model or a heuristic — token count, intent keywords, prior conversation depth.
+
+### Latency optimisation techniques
+
+| Technique | Impact |
+| --- | --- |
+| **Streaming** | TTFT in tens of ms; perceived latency drops dramatically |
+| **Smaller models** | 2-10× faster |
+| **Shorter prompts** | Linear with input size |
+| **Parallel retrieval** | Multiple sources in parallel, not sequential |
+| **Edge deployment** | Eliminates network RTT |
+| **KV cache reuse** | Prompt caching keeps the prefix warm |
+| **Speculative decoding** | Small draft model + large verifier; 2-3× throughput |
+
+### Fallback strategies — what to do when
+
+| Scenario | Strategy |
+| --- | --- |
+| **Rate-limit hit** | Exponential backoff + retry on a peer provider |
+| **Timeout** | Cancel, retry with a smaller / faster model |
+| **Quality degradation** | Pre-built canned responses for top intents |
+| **Circuit breaker open** | Skip LLM, return cached or static response |
+| **Multi-provider** | Round-robin or weighted across OpenAI, Anthropic, Bedrock |
+
+### Caching architecture
+
+Aggressive prompt caching saves dramatic cost. Put stable instructions and reference documents at the top of the system prompt; the volatile user query at the bottom. Most providers cache the **prefix**.
+
+### Evaluation strategies
+
+| Method | Quality | Cost | Speed | Best for |
+| --- | --- | --- | --- | --- |
+| **Automated rubrics** | Medium | Low | Fast | Format / schema / containment checks |
+| **LLM-as-judge** | High for nuance | Per-eval inference | Fast | Subjective qualities (helpfulness, tone) |
+| **Human evaluation** | Highest | Slow + expensive | Slow | Launch criteria, golden sets |
+
+#### LLM-as-judge pattern
+
+A second LLM scores the first's output against a rubric. Tricks for reliability:
+
+- **Use a *different* model** as judge (avoid self-preference bias).
+- **Score on multiple axes** (correctness, completeness, format) rather than one global score.
+- **Pairwise A/B comparison** beats absolute scoring for stability.
+- **Calibrate** against human labels on a sample.
+
+#### Evaluation pipeline
+
+```text
+Golden set (100-1000 examples)
+        │
+        ├──→ run on candidate prompt / model
+        │       │
+        │       └──→ LLM-judge scores per axis
+        │               │
+        │               └──→ aggregate → "promote / regress" decision
+        │
+        └──→ run on production prompt (control)
+```
+
+Run this on every prompt / model / pipeline change. Treat it like CI for LLMs.
+
+---
+
+## Topic 5: Multi-Model Orchestration
+
+### Why use more than one model
+
+- **Cost** — route simple queries to cheaper models (Haiku); reserve flagship (Opus) for hard ones.
+- **Latency** — smaller models stream first tokens faster.
+- **Specialization** — different models excel at different tasks (code, vision, multilingual).
+
+### Routing strategies
+
+| Strategy | How |
+| --- | --- |
+| **Static** | Hard-code per endpoint |
+| **Heuristic** | Token count / language / domain detection |
+| **Classifier** | A small model decides which big model to call |
+| **Cascade** | Try cheap first; escalate if confidence low |
+
+### Tools that orchestrate
+
+- **LangChain / LlamaIndex** — Python frameworks for pipelines.
+- **AWS Bedrock** — Anthropic / Cohere / Mistral behind one API.
+- **Azure AI Foundry / Vertex AI** — same on Azure / GCP.
+
+### Orchestration patterns
+
+| Pattern | Description | Example |
+| --- | --- | --- |
+| **Cost routing** | Cheaper model first, escalate on low confidence | Triage → flagship |
+| **Capability matching** | Route by required skill (vision, code, math) | Image → GPT-4o; SQL → Claude |
+| **Fallback chains** | If primary fails / hits limit, try peers | OpenAI → Anthropic → Bedrock |
+| **Ensemble / voting** | Multiple models, majority vote | High-stakes classification |
+| **Pipeline** | Sequence: extract → analyse → write | RAG → summarise → critique |
+| **Verification** | Second model checks the first's output | Fact-check chain |
+
+### Observability for GenAI — what to log per request
+
+| Field | Why |
+| --- | --- |
+| **Request ID** | Trace across services |
+| **Timestamp** | Latency analysis |
+| **User ID / tenant ID** | Per-user cost, abuse detection |
+| **Model name + version** | Compare model regressions |
+| **Full prompt (or stable hash)** | Debug + replay; redact PII |
+| **Full response** | Quality audit, regression set |
+| **Input tokens** | Cost attribution |
+| **Output tokens** | Cost attribution |
+| **Latency: TTFT and total** | User-experience metric |
+| **Temperature, top-p** | Reproducibility |
+| **Retrieved chunks (RAG)** | Why did the model say X? |
+| **Quality score** (if eval'd) | Track drift over time |
+| **User feedback** (thumbs / regen) | Real-world signal |
+| **Error (if any)** | Reliability metric |
+
+#### Metrics dashboard essentials
+
+- **Cost per request** (rolling 1-day, 7-day, 30-day).
+- **TTFT and total latency** P50 / P95 / P99.
+- **Token usage per user / per feature.**
+- **Error rate by category** (rate limit, timeout, safety filter, invalid output).
+- **Hallucination / quality score** when an evaluator is wired in.
+
+#### Drift detection
+
+- **Prompt drift** — system prompt changes silently break things; treat prompts like code.
+- **Model drift** — providers ship silent updates; alert on quality score regression.
+- **Data drift** — user queries change shape; embedding distribution monitoring helps.
+
+### Production architecture decisions
+
+| Decision | Considerations |
+| --- | --- |
+| **Sync vs async** | UI = sync streaming; batch jobs = async with queues |
+| **Stateless vs stateful** | Stateless when possible; conversation history in DB |
+| **Single vs multi-tenant** | Per-tenant rate limits + cost attribution |
+| **Retry budget** | Cap retries (e.g. 3 across whole request); avoid runaway loops |
+
+### Legacy patterns (still useful)
+
+- **Planner / executor** — one model plans steps, others execute.
+- **Critic** — a second model reviews the first's output.
+- **Ensemble** — call N models, vote.
+
+### Champion-Challenger pattern
+
+Run two models side-by-side in production:
+
+- **Champion** — the current production model, serves 100% of traffic with the response shown to users.
+- **Challenger** — a candidate (new model, new prompt, new RAG index) that *also* generates a response for some sample of requests, but **doesn't ship it to the user**.
+
+Score both offline against your eval set (or human raters) on the same requests. Promote the challenger when it wins consistently; demote when it doesn't. The architecture:
+
+```text
+Request
+   │
+   ├──→ Champion ──→ User
+   │
+   └──→ Challenger (sampled X%) ──→ Eval log (not user-facing)
+```
+
+Why not A/B-test directly? Because user-visible regressions during the test are real harm. Champion-challenger keeps the user safe while you measure.
+
+### Agentic patterns (emerging)
+
+LLM "agents" loop **plan → act → observe → repeat** until they've completed a task. Patterns you'll see in interviews:
+
+| Pattern | Idea |
+| --- | --- |
+| **ReAct** (Reason + Act) | The model alternates "thought" and "action" tokens; tools execute the actions and feed observations back |
+| **Tool use / function calling** | Model returns a JSON call to a registered function; runtime executes; result is fed back as context |
+| **Reflection** | After producing an answer, the model critiques its own output and revises |
+| **Multi-agent** | Several specialised models cooperate (planner / coder / reviewer) |
+
+Production reality: keep the loop bounded (`max_iters = 10`), require tool calls to be allow-listed, and log every step for audit. Frameworks: LangGraph, AutoGen, CrewAI, Anthropic's MCP for tool registration.
+
+---
+
+## Topic 6: Fine-Tuning & Customization
+
+### When to fine-tune vs. prompt vs. RAG
+
+| Need | Reach for |
+| --- | --- |
+| Inject new facts | RAG |
+| Match a tone / format reliably | Few-shot or fine-tune |
+| Improve task accuracy | Fine-tune on labeled task examples |
+| Domain vocabulary | Fine-tune or domain-tuned embedder |
+| Reduce latency / cost | Distill to smaller model |
+
+### Methods
+
+- **Full fine-tuning** — updates all weights. Expensive, rarely needed.
+- **LoRA / QLoRA** — train low-rank adapters; cheap and the default for most tasks.
+- **Instruction tuning** — sample pairs of (instruction, ideal response).
+- **RLHF / DPO** — preference data ("response A better than B"). Used by frontier labs; expensive.
+
+### Practical advice
+
+- Try **better prompts + few-shot + RAG** before fine-tuning. Most "we need a fine-tune" turns out to be a prompting problem.
+- Curate the eval set first. Without it, you can't tell if the fine-tune helps.
+- Watch for catastrophic forgetting — fine-tunes can degrade general capability.
+
+---
+
+## GenAI Interview Q&A — Quick Reference
+
+**Q: Token vs. character?**
+A: A token is the model's atomic unit (~4 chars English per token). Pricing is per token.
+
+**Q: When is temperature = 0?**
+A: When you need deterministic, repeatable output — extraction, classification, formatting.
+
+**Q: When use RAG vs. fine-tune?**
+A: RAG for fresh / private knowledge. Fine-tune for **behavioural** changes (tone, format reliability, narrow task accuracy).
+
+**Q: How do you reduce hallucination?**
+A: Provide grounded context (RAG), force citations, require "say I don't know" when unsure, lower temperature, validate against an eval set.
+
+**Q: Why stream a response?**
+A: First-token latency is what users feel. Streaming reduces perceived latency by 90%.
+
+**Q: What's a vector database?**
+A: A store that indexes high-dimensional vectors for approximate-nearest-neighbour search. Postgres `pgvector`, Pinecone, Weaviate, Qdrant.
+
+**Q: How do you evaluate an LLM app?**
+A: Curate an eval set of ~50–500 (input, ideal output) pairs. Score with LLM-as-judge or rule-based. Run on every prompt or model change.
+
+---
+
+## System Design — GenAI Scenarios
+
+### 1. Customer support chatbot
+
+- RAG over your help center + ticket history.
+- Tools: search internal KB, look up customer profile, escalate to human.
+- Guardrails: must cite sources; refuse out-of-scope.
+- Cost control: route simple FAQs to cheap model, complex to flagship.
+
+### 2. Code-review assistant
+
+- Diff in context window.
+- Tools: read file, run tests in sandbox.
+- Eval set of (diff, expected feedback) pairs.
+- Hybrid: deterministic linters first, LLM only for "would a senior reviewer comment?"
+
+### 3. Document summarization at scale
+
+- Stream long docs through chunked summarization + final reduce.
+- Batch ingestion off-peak.
+- Prompt caching for the reduction template.
+
+### 4. Personalized recommendation
+
+- Embed user history + content; recommend nearest matches.
+- Use LLM only for **why** explanations, not the ranking.
+- A/B test against a non-LLM baseline.
+
+---
+
+## Checklist
+
+<Checklist>
+  <ChecklistItem id="cloud-genai-llm-engineering-0-built-an-end-to-end-rag-pipeline-chunk-e">Built an end-to-end RAG pipeline (chunk → embed → retrieve → answer).</ChecklistItem>
+  <ChecklistItem id="cloud-genai-llm-engineering-0-wrote-a-json-schema-enforced-extraction">Wrote a JSON-schema-enforced extraction prompt.</ChecklistItem>
+  <ChecklistItem id="cloud-genai-llm-engineering-0-set-up-prompt-caching-for-stable-preambl">Set up prompt caching for stable preambles.</ChecklistItem>
+  <ChecklistItem id="cloud-genai-llm-engineering-0-streamed-responses-to-a-ui">Streamed responses to a UI.</ChecklistItem>
+  <ChecklistItem id="cloud-genai-llm-engineering-0-built-an-eval-set-for-at-least-one-llm-e">Built an eval set for at least one LLM endpoint.</ChecklistItem>
+  <ChecklistItem id="cloud-genai-llm-engineering-0-implemented-tool-use-function-calling-wi">Implemented tool use (function calling) with at least two tools.</ChecklistItem>
+  <ChecklistItem id="cloud-genai-llm-engineering-0-set-per-request-and-per-user-budget-caps">Set per-request and per-user budget caps.</ChecklistItem>
+  <ChecklistItem id="cloud-genai-llm-engineering-0-routed-across-at-least-two-models-cascad">Routed across at least two models (cascade or classifier).</ChecklistItem>
+</Checklist>

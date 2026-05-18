@@ -1,0 +1,925 @@
+---
+title: AWS & Cloud Architecture
+description: VPC, IAM, compute, storage, databases, messaging, HA/DR, DevOps — comprehensive cloud architecture reference.
+sidebar_position: 1
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import { Checklist, ChecklistItem } from '@site/src/components/Checklist';
+
+# AWS & Cloud Architecture — Interview Prep Guide
+
+<Pillbar pills={[
+  { label: 'time', value: '5–6 hours' },
+  { label: 'scope', value: 'AWS-led, transferable to Azure/GCP' },
+]} />
+
+Comprehensive reference for cloud architecture interviews covering compute, networking, security, storage, messaging, monitoring, cost optimization, HA/DR, DevOps, and the Well-Architected Framework.
+
+<QuickNav items={[
+  { label: '1. ARCHITECTURE FUNDAMENTALS', href: '#1-architecture-fundamentals' },
+  { label: '2. COMPUTE', href: '#2-compute' },
+  { label: '3. NETWORKING', href: '#3-networking' },
+  { label: '4. IAM & SECURITY', href: '#4-iam--security' },
+  { label: '5. STORAGE & DATABASES', href: '#5-storage--databases' },
+  { label: '6. MESSAGING & EVENT-DRIVEN', href: '#6-messaging--event-driven-architecture' },
+  { label: '7. MONITORING & OBSERVABILITY', href: '#7-monitoring--observability' },
+  { label: '8. COST OPTIMIZATION', href: '#8-cost-optimization' },
+  { label: '9. HA & DR', href: '#9-high-availability--disaster-recovery' },
+  { label: '10. DEVOPS & IAC', href: '#10-devops--infrastructure-as-code' },
+  { label: '11. WELL-ARCHITECTED', href: '#11-well-architected-framework' },
+  { label: '12. INTERVIEW Q&A', href: '#12-interview-qa--15-scenario-questions' },
+  { label: '13. CHECKLIST', href: '#13-interview-checklist' },
+]} />
+
+## 1. Architecture Fundamentals
+
+### Regions, AZs, and edge
+
+- **Region** — geographic area (`us-east-1`). Pricing and service availability vary.
+- **Availability Zone (AZ)** — isolated datacenter within a region. Multi-AZ deployments survive a datacenter outage.
+- **Edge / POP** — global locations for CDN (CloudFront) and DNS (Route 53).
+
+### Service models
+
+| Model | You manage | Provider manages |
+| --- | --- | --- |
+| **IaaS** (EC2) | OS, runtime, code, data | Hardware, hypervisor, network |
+| **PaaS** (App Runner, Elastic Beanstalk) | Code, config, data | Runtime, OS, hardware |
+| **Serverless** (Lambda) | Code, data | Everything else |
+| **SaaS** | Data, users | Everything else |
+
+### Stateless vs. stateful architecture
+
+| Aspect | Stateless | Stateful |
+| --- | --- | --- |
+| **Session data** | Externalised (Redis, DynamoDB) | Held locally |
+| **Scaling** | Trivial — any instance handles any request | Hard — needs sticky sessions or sharded routing |
+| **Fault tolerance** | Drop and replace any instance | Failover requires state replication |
+| **Load balancing** | Any LB strategy works | Sticky sessions or consistent hashing |
+| **Examples** | API servers, Lambdas, web tier | Databases, in-memory caches, WebSocket servers |
+
+**Best practice:** keep stateless wherever possible; push state to dedicated stateful systems.
+
+### Auto Scaling — scaling policy types
+
+| Policy | How it works | Use case |
+| --- | --- | --- |
+| **Target Tracking** | Maintain a target metric (e.g. 50% CPU) — AWS adjusts capacity automatically | Default — most workloads |
+| **Step Scaling** | Add / remove N instances when metric crosses thresholds | Predictable traffic bursts |
+| **Scheduled** | Scale up at a known time (`cron`) | Office-hours apps, batch jobs |
+| **Predictive** | ML-based forecasting on historical patterns | Stable but cyclical workloads |
+| **Simple** | Single-threshold step — superseded by step scaling | Avoid |
+
+**Best practice:** Target Tracking with multiple metrics (CPU + request count) as a safety net.
+
+### ASG configuration parameters
+
+| Parameter | Default | Recommended |
+| --- | --- | --- |
+| **Min capacity** | 1 | Set to your minimum HA requirement (2+ for multi-AZ) |
+| **Max capacity** | 1 | Plan for peak × 1.5 |
+| **Desired capacity** | min | Steady-state target |
+| **Cooldown period** | 300 s | 60-300 s — prevent thrashing |
+| **Health check grace period** | 0 s | 60-300 s — wait for app startup |
+
+### Health checks
+
+| Type | Performed by | Default | Behaviour |
+| --- | --- | --- | --- |
+| **EC2 Status Check** | EC2 hypervisor | On by default | Hardware / network reachability |
+| **ELB Health Check** | Load balancer | Configurable | App-level (HTTP path, port) |
+| **Custom Health Check** | Your code | Off | Business-logic readiness |
+
+**Common ELB settings:** interval 30 s, timeout 5 s, unhealthy threshold 2, healthy threshold 5.
+
+### Deployment strategies
+
+| Strategy | How | Downtime | Rollback | Cost | Risk | Best for |
+| --- | --- | --- | --- | --- | --- | --- |
+| **Rolling** | Replace instances in batches | Brief per batch | Slow (reverse rollout) | Low | Medium | Most apps |
+| **Rolling + extra batch** | Add a fresh batch *before* removing old | None | Medium | +1 batch worth | Lower | Capacity-sensitive |
+| **Blue/Green** | Stand up parallel environment, swap traffic | None | Instant (swap back) | Double during cutover | Lowest | Database-stable apps |
+| **Canary** | Send 1–5% traffic to new version, ramp | None | Instant | Slight overhead | Lowest | High-blast-radius services |
+
+---
+
+## 2. Compute
+
+| Service | When to pick |
+| --- | --- |
+| **EC2** | Full OS control, legacy software, specialized hardware |
+| **ECS** | AWS-native containers |
+| **EKS** | Managed Kubernetes — when portability matters |
+| **Fargate** | Serverless containers, no node management |
+| **Lambda** | Event-driven, short-lived (≤ 15 min), stateless |
+| **App Runner / Beanstalk** | Single-binary web app, opinionated PaaS |
+
+**Rule of thumb**: ephemeral events → Lambda; steady-state services → containers; legacy / GPU → EC2.
+
+### EC2 instance families
+
+Naming convention: `[family][generation].[size]` — e.g. `m6i.large` = general-purpose, 6th gen Intel, large.
+
+| Family | Optimised for | Example use cases |
+| --- | --- | --- |
+| **M** | General balanced | Web servers, small DBs |
+| **C** | Compute-optimised | Batch processing, ML inference, gaming servers |
+| **R** | Memory-optimised | In-memory caches, large DBs |
+| **X** | Extreme memory | SAP HANA, in-memory analytics |
+| **I** | Local NVMe storage | NoSQL DBs, search engines |
+| **D** | Dense HDD storage | MapReduce, data warehouses |
+| **P** | GPU (training) | ML training, HPC |
+| **G** | GPU (inference) | ML inference, video encoding |
+| **Inf** | Inferentia chip | Cost-effective inference |
+| **T** | Burstable CPU | Dev, low-traffic services (CPU credits) |
+
+### EC2 pricing models
+
+| Model | Discount vs On-Demand | Commitment | Best for |
+| --- | --- | --- | --- |
+| **On-Demand** | 0% | None | Spiky, unpredictable |
+| **Reserved (Standard)** | Up to 72% | 1 / 3 years, fixed instance | Steady baseline |
+| **Reserved (Convertible)** | Up to 54% | 1 / 3 years, can swap family | Need flexibility |
+| **Savings Plans (Compute)** | Up to 66% | $/hr over 1 / 3 years, any region/family | Most flexible discount |
+| **Savings Plans (EC2)** | Up to 72% | $/hr, region-locked, family-locked | Like RIs but easier |
+| **Spot Instances** | Up to 90% | None — can be reclaimed in 2 min | Fault-tolerant batch, CI |
+| **Dedicated Hosts** | n/a | Reserved physical host | Compliance / BYOL |
+| **Capacity Reservations** | n/a | Reserve capacity, pay On-Demand | Disaster recovery slots |
+
+**Interview tip:** "Use Reserved / Savings Plans for the baseline, On-Demand for headroom, Spot for fault-tolerant batch."
+
+### EC2 placement groups
+
+| Type | Behaviour | Use case |
+| --- | --- | --- |
+| **Cluster** | Pack instances in a single AZ for low-latency, high-bandwidth | HPC, tight-coupled cluster |
+| **Spread** | Distribute across distinct hardware (max 7 per AZ) | Small critical instances needing isolation |
+| **Partition** | Group into logical partitions on separate racks | Distributed apps (HDFS, Cassandra) |
+
+### Lambda concerns
+
+- **Cold start** — first invocation after idle costs latency. Provisioned concurrency mitigates.
+- **15-minute max** runtime.
+- **Concurrency limits** — per-region quota; can throttle bursts.
+- **Stateless** — no local disk, no in-memory across invocations.
+
+### Lambda limits (defaults)
+
+| Resource | Default limit | Notes |
+| --- | --- | --- |
+| **Memory** | 128 MB – 10 GB | Sets CPU too (proportional) |
+| **Timeout** | 3 s default, 900 s max | Sync invokes capped at 30 s by API Gateway |
+| **Deployment package** | 50 MB zipped / 250 MB unzipped (layers + code) | 10 GB if container image |
+| `/tmp` storage | 512 MB – 10 GB | Configurable since 2022 |
+| **Concurrent executions** | 1000 per region (soft) | Request raise |
+| **Burst concurrency** | 500-3000 depending on region | Throttles above this |
+| **Environment variables** | 4 KB total | Use Parameter Store for more |
+| **Layers** | 5 layers per function | 250 MB unzipped total |
+
+### Lambda cold start — causes and mitigation
+
+| Factor | Impact | Mitigation |
+| --- | --- | --- |
+| Container init | 100 ms – several seconds | Provisioned concurrency |
+| Package size | Larger = slower | Trim deps, use layers wisely |
+| VPC attach | +1 s historically (ENI), now ~100 ms | Avoid VPC if not needed |
+| Cold runtime (Java, .NET) | 1-5 s | SnapStart (Java 11+ corretto), GraalVM native image |
+
+### ECS vs. EKS vs. Fargate
+
+| Aspect | ECS | EKS | Fargate |
+| --- | --- | --- | --- |
+| **What** | AWS-native container orchestrator | Managed Kubernetes | Serverless container runtime |
+| **Control plane** | AWS-managed (free) | AWS-managed ($0.10/hr) | n/a |
+| **Data plane** | EC2 nodes you manage | EC2 nodes you manage | AWS-managed |
+| **Portability** | AWS-only | Cloud-agnostic | AWS-only |
+| **Best for** | Simple container apps, deep AWS integration | Multi-cloud, K8s ecosystem | No node ops, variable workloads |
+
+ECS and EKS can both **run on Fargate** as the data plane — best of both worlds for many.
+
+---
+
+## 3. Networking
+
+### VPC
+
+- A **Virtual Private Cloud** is your private network in AWS.
+- Subnets are AZ-scoped CIDR ranges, either **public** (have a route to internet gateway) or **private**.
+- **NAT Gateway** lets private subnets reach the internet.
+- **VPC Endpoints** (Gateway and Interface) keep traffic to AWS services off the public internet.
+
+### Security groups vs. NACLs
+
+| Security Group | NACL |
+| --- | --- |
+| Stateful (return traffic implicit) | Stateless (rules per direction) |
+| Attached to ENIs | Attached to subnets |
+| Allow rules only | Allow + deny rules |
+| Default deny | Numbered rules |
+
+### CIDR basics
+
+| CIDR block | Usable IPs | Typical use |
+| --- | --- | --- |
+| `/16` | 65 531 | Whole VPC |
+| `/20` | 4 091 | Large subnet |
+| `/24` | 251 | Standard subnet |
+| `/28` | 11 | Small subnet (Lambda ENIs, VPN endpoints) |
+
+**AWS reserves 5 IPs per subnet** (network, VPC router, DNS, future, broadcast).
+
+### VPC components
+
+| Component | Purpose | Key detail | Cost |
+| --- | --- | --- | --- |
+| **Internet Gateway (IGW)** | Public internet access for VPC | One per VPC, horizontally scaled | Free |
+| **NAT Gateway** | Egress from private subnets | One per AZ for HA; managed | $0.045/hr + data |
+| **NAT Instance** | DIY NAT on EC2 | Cheaper, but you manage HA | EC2 price |
+| **Route Tables** | Direct traffic per subnet | Implicit local route is always present | Free |
+| **VPC Endpoints (Gateway)** | Private route to S3, DynamoDB | Free, no data charges | Free |
+| **VPC Endpoints (Interface)** | Private ENI to other AWS services | PrivateLink under the hood | $0.01/hr + data |
+| **VPC Peering** | Connect two VPCs | 1:1, no transitive routing | Data transfer only |
+| **Transit Gateway** | Hub for many VPCs | Transitive routing | $0.05/attachment-hr + data |
+| **VPN Gateway** | Site-to-site IPSec VPN | Encrypted over internet | $0.05/hr |
+| **Direct Connect** | Dedicated private fibre | Predictable bandwidth | Port-hour + data |
+| **Elastic IP** | Static public IPv4 | Free if attached; $0.005/hr unattached | Mostly free |
+
+### VPC Peering vs. Transit Gateway
+
+| Aspect | VPC Peering | Transit Gateway |
+| --- | --- | --- |
+| **Topology** | Full mesh (`n*(n-1)/2` connections) | Hub-and-spoke |
+| **Transitive routing** | No | Yes |
+| **Max connections** | 125 per VPC | 5 000 attachments |
+| **Cross-region** | Yes | Yes |
+| **Bandwidth** | No limit | 50 Gbps per attachment |
+| **Cost** | Data transfer only | Hourly + data |
+| **Best for** | 2-3 VPCs | 5+ VPCs, hybrid networks |
+
+### Security Groups vs. NACLs (full comparison)
+
+| Feature | Security Groups | NACLs |
+| --- | --- | --- |
+| **Level** | Instance (ENI) | Subnet |
+| **State** | Stateful | Stateless |
+| **Rules** | Allow only | Allow + Deny |
+| **Rule evaluation** | All rules evaluated | Lowest rule number first |
+| **Default** | Deny inbound, allow outbound | Allow all |
+| **Association** | Multiple SGs per ENI | One NACL per subnet |
+| **Reference other SGs** | Yes (powerful for tiered apps) | No (CIDR only) |
+| **Use case** | Per-app firewall | Subnet-level coarse blocks (compliance, DDoS) |
+
+### ALB vs. NLB
+
+| Feature | ALB (Application) | NLB (Network) |
+| --- | --- | --- |
+| **OSI layer** | L7 (HTTP/HTTPS, gRPC, WebSocket) | L4 (TCP, UDP, TLS) |
+| **Routing** | Path, host, header, query, source IP | 5-tuple hash |
+| **Latency** | ~ms | ~µs |
+| **Static IP** | No (CNAME only) | Yes (one per AZ) |
+| **TLS termination** | Yes | Yes (passthrough also supported) |
+| **WebSockets** | Yes | Yes |
+| **HTTP/2, gRPC** | Yes | gRPC only over TLS |
+| **Best for** | Web apps, microservices | High-throughput TCP, real-time gaming, financial |
+
+### Route 53 routing policies
+
+| Policy | Description | Use case |
+| --- | --- | --- |
+| **Simple** | One value, no health check | Static record |
+| **Weighted** | Split traffic by weight | A/B test, canary |
+| **Latency** | Route to lowest-latency region | Global low-latency |
+| **Failover** | Active → standby on health-check fail | Primary/DR |
+| **Geolocation** | Route by user country | Regulatory routing |
+| **Geoproximity** | Bias toward / away from a region | Traffic-flow tuning |
+| **Multivalue** | Up to 8 healthy values, randomised | Simple HA without LB |
+
+**Alias vs. CNAME:** Alias is AWS-specific, free, works at zone apex (`example.com`), resolves to AWS resources. CNAME costs per query and can't be at the apex.
+
+### Front door
+
+- **Route 53** — DNS with policy routing (latency, weighted, failover, geo).
+- **CloudFront** — CDN at edge POPs.
+- **API Gateway** — REST / HTTP / WebSocket entry, JWT, rate-limit, request transform.
+- **Application Load Balancer** — L7 routing on host, path, header.
+- **Network Load Balancer** — L4 high-throughput, static IPs.
+
+---
+
+## 4. IAM & Security
+
+### Principals
+
+- **User** — long-lived identity. **Avoid** — use SSO + roles.
+- **Role** — temporary credentials, attached to services or assumed by users.
+- **Group** — collection of users with shared policies.
+
+### Policies
+
+JSON documents that **allow** or **deny** actions on resources, optionally with conditions.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": ["s3:GetObject", "s3:PutObject"],
+    "Resource": "arn:aws:s3:::my-bucket/*",
+    "Condition": { "StringEquals": { "aws:RequestedRegion": "us-east-1" } }
+  }]
+}
+```
+
+### IAM policy evaluation logic
+
+When AWS receives a request, it walks this decision tree:
+
+```text
+1. Explicit Deny anywhere?         → DENY (final)
+2. Service Control Policy (SCP) allows? → continue, else DENY
+3. Resource-based policy allows?   → ALLOW (independent grant)
+4. Permission boundary allows?     → continue, else DENY
+5. Identity-based policy allows?   → continue, else DENY
+6. Session policy allows?          → continue, else DENY
+7. Default                         → DENY
+```
+
+Key rule: **explicit deny always wins**. Use SCPs at the org level for guardrails, identity policies for normal grants, resource policies for cross-account access.
+
+### Secrets Manager vs. Parameter Store vs. KMS
+
+| Feature | Secrets Manager | Parameter Store | KMS |
+| --- | --- | --- | --- |
+| **Purpose** | Rotating secrets (DB passwords, API keys) | Config, feature flags, plaintext + encrypted | Encryption keys |
+| **Auto-rotation** | Yes — Lambda hook | No (manual) | Auto-rotate every year (managed keys) |
+| **Cost** | $0.40 / secret / month + $0.05 / 10k API calls | Free (Standard) / $0.05 / advanced param | $1 / CMK / month + $0.03 / 10k requests |
+| **Max value size** | 64 KB | 4 KB (Std) / 8 KB (Adv) | Used for keys, not data |
+| **Cross-account** | Yes (resource policy) | Yes | Yes (key policy + grants) |
+| **Versioning** | Yes | Standard (last only) / Advanced (full history) | Key versions on rotation |
+| **Best for** | Production DB credentials, API tokens | App config, env-specific values | Backing encryption |
+
+### Encryption — at rest and in transit
+
+| Where | Mechanism |
+| --- | --- |
+| **At rest** | S3 SSE-S3 / SSE-KMS / SSE-C; EBS volume encryption (default since 2022); RDS / Aurora storage encryption |
+| **In transit** | TLS 1.2+ everywhere; VPC traffic encrypted via Nitro for many instance types |
+| **Client-side** | Encrypt before upload; AWS Encryption SDK |
+
+### Shared responsibility model
+
+| AWS responsibility — "of the cloud" | Customer responsibility — "in the cloud" |
+| --- | --- |
+| Physical datacenter security | OS / runtime patching (EC2) |
+| Hardware and global infrastructure | App code, data classification |
+| Managed-service patching (Lambda, RDS, etc.) | IAM users, roles, policies |
+| Network infrastructure | Network configuration (Security Groups, NACLs) |
+| Hypervisor / virtualisation | Encryption configuration, key management |
+| Edge locations | Customer data |
+
+### Best practices
+
+- **Least privilege** — start with deny, add narrow allows.
+- **Roles, not keys** — never check long-lived access keys into source.
+- **MFA** on every human account.
+- **Secrets Manager** / **SSM Parameter Store** for credentials and config.
+- **CloudTrail** logs every API call — enable in every account.
+- **AWS Organizations + SCPs** — guardrails across many accounts.
+
+---
+
+## 5. Storage & Databases
+
+### Object / block / file
+
+| Service | Type | When |
+| --- | --- | --- |
+| **S3** | Object | Almost everything: assets, backups, data lakes |
+| **EBS** | Block | EC2's "hard disk" |
+| **EFS** | File | Multi-attach NFS for shared file workloads |
+| **FSx** | File | Windows / Lustre / OpenZFS managed file systems |
+
+### Database picker
+
+| Service | Type | Use for |
+| --- | --- | --- |
+| **RDS** | Managed Postgres / MySQL / Oracle | Relational, single primary |
+| **Aurora** | RDS-compatible storage rewrite | Faster failover, multi-AZ default |
+| **DynamoDB** | KV / document NoSQL | Single-digit ms, horizontal scale |
+| **DocumentDB** | MongoDB-compatible | Existing MongoDB workloads |
+| **ElastiCache** | Redis / Memcached | Cache, session, leaderboards |
+| **Neptune** | Graph | Social, knowledge graphs |
+| **Timestream** | Time-series | Metrics, IoT |
+| **Redshift** | Columnar DW | Analytics on terabytes |
+| **OpenSearch** | Search / logs | Log search, autocomplete |
+
+### DynamoDB success factors
+
+- **Partition key distribution** — hot partitions silently throttle.
+- **On-demand vs. provisioned** — on-demand absorbs bursts; provisioned is cheaper at scale.
+- **Global Tables** for active-active multi-region.
+
+### S3 storage classes
+
+| Class | Durability | Availability | Min duration | Retrieval fee | Use case |
+| --- | --- | --- | --- | --- | --- |
+| **S3 Standard** | 11 9s | 99.99% | None | None | Hot data |
+| **S3 Intelligent-Tiering** | 11 9s | 99.9% | 30 days | None | Unknown / changing access patterns |
+| **S3 Standard-IA** | 11 9s | 99.9% | 30 days | Per-GB | Backups, infrequent access |
+| **S3 One Zone-IA** | 11 9s | 99.5% | 30 days | Per-GB | Reproducible secondary copies |
+| **S3 Glacier Instant** | 11 9s | 99.9% | 90 days | Per-GB | Archival with ms retrieval |
+| **S3 Glacier Flexible** | 11 9s | 99.99% | 90 days | Per-GB, mins–hours | Audit, compliance archive |
+| **S3 Glacier Deep Archive** | 11 9s | 99.99% | 180 days | Per-GB, ~12 hours | Long-term records |
+
+### S3 features
+
+| Feature | Details |
+| --- | --- |
+| **Lifecycle policies** | Auto-tier older data to cheaper classes; expire after N days |
+| **Versioning** | Keep object history; protects against accidental delete |
+| **Cross-Region Replication (CRR)** | Async copy to a bucket in another region |
+| **Same-Region Replication (SRR)** | Compliance / aggregation across accounts |
+| **Object Lock** | WORM (write-once-read-many) for compliance |
+| **Transfer Acceleration** | Upload via CloudFront edge for faster uploads |
+| **Event notifications** | S3 → SNS / SQS / Lambda on PUT, DELETE |
+| **S3 Select** | SQL-like queries against CSV/JSON/Parquet in place |
+| **Pre-signed URLs** | Time-limited URL for direct client upload/download |
+| **Multipart upload** | Required for files > 5 GB; resumable; up to 10 000 parts |
+
+### S3 security
+
+- **Block Public Access** — set at account or bucket level; default since 2023.
+- **Bucket policies** — JSON, resource-based; preferred over ACLs.
+- **ACLs** — legacy; avoid.
+- **Encryption** — SSE-S3 (AWS-managed), SSE-KMS (CMK + audit), SSE-C (customer-supplied key).
+- **VPC Endpoints** — keep S3 traffic off the public internet.
+- **Access Points** — per-application access policies on the same bucket.
+
+### RDS vs. Aurora
+
+| Feature | RDS | Aurora |
+| --- | --- | --- |
+| **Engines** | Postgres, MySQL, MariaDB, Oracle, MS SQL | Postgres-compatible, MySQL-compatible |
+| **Storage** | EBS, fixed up to 64 TB | Shared cluster storage, auto-grows to 128 TB |
+| **Read replicas** | Up to 5 | Up to 15, sub-10ms lag |
+| **Failover** | 60-120 s (Multi-AZ) | 30 s typical |
+| **Performance** | Single-instance | Up to 5× MySQL, 3× Postgres |
+| **Backups** | Automated, point-in-time | Continuous (separate of compute) |
+| **Multi-AZ** | Standby replica | Storage replicated across 3 AZs by default |
+| **Serverless** | RDS Proxy | Aurora Serverless v2 — scales seconds |
+| **Global** | Cross-region read replica | Aurora Global Database, < 1 s lag |
+| **Cost** | Lower | ~20% higher list, often cheaper at scale |
+
+### DynamoDB concepts
+
+| Concept | Description |
+| --- | --- |
+| **Partition Key (PK)** | Hash key; determines partition. Must be high-cardinality |
+| **Sort Key (SK)** | Composite key for ordering within a PK |
+| **Item** | Row equivalent (max 400 KB) |
+| **GSI (Global Secondary Index)** | Different PK / SK; eventually consistent; ✗ across-table transactions |
+| **LSI (Local Secondary Index)** | Same PK, different SK; created at table creation only |
+| **Streams** | Change feed (24 h retention) — Lambda triggers |
+| **TTL** | Auto-expire items at a timestamp |
+| **DAX** | In-memory cache, microsecond reads |
+
+### ElastiCache: Redis vs. Memcached
+
+| Feature | Redis | Memcached |
+| --- | --- | --- |
+| **Data types** | Strings, lists, sets, sorted sets, hashes, streams | Strings only |
+| **Persistence** | Optional (RDB / AOF) | None |
+| **Replication** | Primary + read replicas, automatic failover | None |
+| **Clustering** | Redis Cluster, automatic sharding | Client-side sharding |
+| **Multi-AZ** | Yes (Cluster mode) | No |
+| **Pub/Sub** | Yes | No |
+| **Threading** | Mostly single-threaded | Multi-threaded |
+| **Best for** | Most use cases; sessions, leaderboards, queues | Pure KV cache, multi-threaded scaling |
+
+---
+
+## 6. Messaging & Event-Driven Architecture
+
+| Service | Semantics | Use for |
+| --- | --- | --- |
+| **SQS** | At-least-once queue, FIFO option | Decouple async work |
+| **SNS** | Pub/sub fan-out | Notify many subscribers |
+| **EventBridge** | Event bus + rules | Cross-account, scheduled, transformations |
+| **Kinesis Data Streams** | Ordered, replayable shards | Real-time analytics, audit logs |
+| **MSK** | Managed Kafka | Existing Kafka workloads |
+
+### Patterns
+
+- **Queue + worker** — SQS + Lambda / ECS workers.
+- **Fan-out** — SNS → many SQS.
+- **CDC** — DynamoDB Streams → Lambda for change capture.
+- **Saga** — orchestrated via Step Functions or choreographed via EventBridge.
+
+### Messaging services — side-by-side
+
+| Feature | SQS | SNS | EventBridge | Kinesis Data Streams |
+| --- | --- | --- | --- | --- |
+| **Pattern** | Queue (1:1) | Pub/sub (1:many) | Event bus with rules | Append-only log |
+| **Delivery** | At-least-once | At-least-once | At-least-once | Exactly-once (with seq#) |
+| **Ordering** | FIFO option, per message group | No (Standard) | No | Strict per shard |
+| **Retention** | Up to 14 days | n/a (push) | 24h replay buffer | 1-365 days |
+| **Throughput** | Effectively unlimited | High | Medium (300/s default per bus) | Per shard: 1 MB/s in, 2 MB/s out |
+| **Consumers** | Pull | Push (HTTP, Lambda, SQS, email) | Push to many AWS services | Pull, parallel via shard |
+| **Message size** | 256 KB | 256 KB | 256 KB | 1 MB |
+| **Filtering** | No (consumer-side) | Subscription filter | Pattern matching | Consumer-side |
+| **Dead letter** | Yes | Yes (per subscription) | Yes | n/a (you replay) |
+| **Best for** | Decouple async work | Fan-out notifications | Cross-account, scheduled events | Real-time analytics, audit log |
+
+### SQS Standard vs. FIFO
+
+| Feature | Standard | FIFO |
+| --- | --- | --- |
+| **Throughput** | Unlimited | 300 msg/s without batching, 3 000 with |
+| **Ordering** | Best-effort | Strict per message group |
+| **Delivery** | At-least-once (duplicates possible) | Exactly-once within 5-minute window |
+| **Deduplication** | No | Yes (content hash or explicit ID) |
+| **Queue name** | Any | Must end in `.fifo` |
+| **Use case** | Generic async work | Order processing, financial events |
+
+### Fan-out patterns
+
+```text
+SNS + SQS fan-out:
+  Event → SNS topic ──┬→ SQS queue A → Worker A
+                      ├→ SQS queue B → Worker B
+                      └→ SQS queue C → Worker C
+
+EventBridge fan-out:
+  Event → Event bus ──[rule match]──┬→ Lambda
+                                    ├→ SQS
+                                    ├→ Step Functions
+                                    └→ Cross-account event bus
+```
+
+### Idempotency is mandatory
+
+At-least-once means duplicates happen. Use `event_id` keys; track processed IDs in DynamoDB with TTL.
+
+---
+
+## 7. Monitoring & Observability
+
+| Tool | Role |
+| --- | --- |
+| **CloudWatch Logs** | Centralized logs |
+| **CloudWatch Metrics** | Custom + service metrics |
+| **CloudWatch Alarms** | Alert on metric thresholds |
+| **X-Ray** | Distributed tracing |
+| **CloudTrail** | API audit log |
+| **AWS Config** | Resource configuration history |
+
+For production-grade observability, pair CloudWatch with **OpenTelemetry** and a vendor (Datadog, Honeycomb) — CloudWatch search is slow at scale.
+
+### CloudWatch components in detail
+
+| Component | Purpose | Key detail |
+| --- | --- | --- |
+| **Metrics** | Time-series numerics | Built-in per service; custom metrics via PutMetricData |
+| **Alarms** | Trigger action on threshold | Single, multi-metric, anomaly-based |
+| **Logs** | Append-only log streams | Retention from 1 day to ∞ |
+| **Logs Insights** | SQL-like query language | Pay per GB scanned |
+| **Dashboards** | Mixed widgets | Cross-region, cross-account |
+| **Events / EventBridge** | Cron + event-pattern triggers | Replaces legacy CloudWatch Events |
+| **Composite alarms** | AND/OR multiple alarms | Reduces alert fatigue |
+| **Anomaly detection** | ML baseline on metrics | Auto-adjusts to weekly patterns |
+| **Contributor Insights** | Top-N over high-cardinality logs | "Which IP made most 5xx?" |
+| **ServiceLens** | Tie X-Ray traces to logs + metrics | Single pane of glass |
+
+### Key metrics per service
+
+| Service | Critical metrics |
+| --- | --- |
+| **EC2** | CPUUtilization, NetworkIn/Out, StatusCheckFailed, DiskReadBytes |
+| **RDS** | CPUUtilization, DatabaseConnections, FreeableMemory, ReplicaLag, WriteIOPS |
+| **ALB** | TargetResponseTime, HTTPCode_Target_5XX_Count, ActiveConnectionCount |
+| **Lambda** | Duration, Errors, Throttles, ConcurrentExecutions, IteratorAge (streams) |
+| **SQS** | ApproximateNumberOfMessagesVisible, ApproximateAgeOfOldestMessage |
+| **DynamoDB** | ReadThrottleEvents, WriteThrottleEvents, SystemErrors, ConsumedReadCapacityUnits |
+
+### AWS X-Ray
+
+| Feature | Detail |
+| --- | --- |
+| **Purpose** | End-to-end request tracing across services |
+| **Traces** | One per request; collection of segments |
+| **Segments** | One per service the request touches |
+| **Subsegments** | Per downstream call inside a service |
+| **Service Map** | Visual graph of dependencies + latency / error rates |
+| **Annotations** | Indexed key-value (filterable) |
+| **Metadata** | Non-indexed, larger payloads |
+| **Sampling** | 1 req / s + 5% — tunable |
+| **Integration** | SDK auto-instruments AWS SDK calls, HTTP clients, JDBC |
+
+#### X-Ray vs. CloudTrail vs. CloudWatch Logs
+
+| Aspect | CloudTrail | CloudWatch Logs | X-Ray |
+| --- | --- | --- | --- |
+| **What it records** | AWS API calls | App logs | Request traces |
+| **Granularity** | API event | Log line | Per-request span tree |
+| **Use for** | Audit, security forensics | Debugging app behaviour | Latency / dependency analysis |
+| **Retention** | 90 days (events history) / forever (logs to S3) | Configurable | 30 days |
+
+### AWS CloudTrail
+
+| Event type | Captures | Use case |
+| --- | --- | --- |
+| **Management events** | AWS API calls that change resources | Audit, compliance (default ON) |
+| **Data events** | S3 object-level, Lambda invokes, DynamoDB item reads | Forensics (high volume — extra cost) |
+| **Insights events** | Anomalous activity ML detection | Detect unusual API call patterns |
+
+**Retention:** 90 days in the event history (free). Ship to S3 + Athena for unlimited retention and query.
+
+---
+
+## 8. Cost Optimization
+
+- **Reserved Instances / Savings Plans** — 30–70% off for committing 1–3 years.
+- **Spot instances** — 70–90% off for interruptible workloads (batch, CI, dev).
+- **Right-sizing** — use Compute Optimizer; many `m5.xlarge`s could be `t3.large`s.
+- **S3 lifecycle** — move cold data to Glacier; delete old log objects.
+- **Tag everything** — split bills by team, project, env.
+- **Egress cost is real** — cross-region and cross-cloud traffic adds up fast.
+
+A useful interview number: cross-AZ data transfer ~$0.01 / GB; cross-region ~$0.02 / GB; egress to internet ~$0.09 / GB.
+
+### Data-transfer cost hierarchy (cheapest → expensive)
+
+| Path | Cost |
+| --- | --- |
+| Within same AZ | Free |
+| VPC Endpoint → S3 same region | Free |
+| Cross-AZ same region | ~$0.01 / GB |
+| Cross-region | ~$0.02 / GB |
+| Internet inbound | Free |
+| Internet outbound | ~$0.09 / GB (first 10 TB) |
+| CloudFront → internet | ~$0.085 / GB (cheaper than direct EC2) |
+
+### Cost optimisation tools
+
+| Tool | Purpose |
+| --- | --- |
+| **Cost Explorer** | Visualise & break down spend; predict next month |
+| **AWS Budgets** | Threshold alerts on cost / usage |
+| **Trusted Advisor** | Pre-built best-practice checks (idle resources, underutilised RIs) |
+| **Compute Optimizer** | Right-sizing recommendations based on CloudWatch metrics |
+| **Cost Anomaly Detection** | ML alerts on unusual spend patterns |
+| **Savings Plans recommendations** | Suggested commitments based on history |
+| **S3 Storage Lens** | Org-wide S3 usage and recommendations |
+| **Cost and Usage Report (CUR)** | Lowest-level CSV/Parquet for custom analysis (Athena/QuickSight) |
+
+### Cost optimisation strategies — savings potential
+
+| Strategy | Savings potential | Effort |
+| --- | --- | --- |
+| Right-sizing instances | 20–50% | Low (Compute Optimizer) |
+| Reserved Instances / Savings Plans | 30–70% | Low (1-3 year commit) |
+| Spot instances (fault-tolerant) | 60–90% | Medium (handle interruption) |
+| S3 lifecycle policies | 50–80% on storage | Low |
+| Delete unused resources (snapshots, idle ELBs) | Variable | Low (Trusted Advisor) |
+| VPC Endpoints (avoid NAT charges) | Variable | Low |
+| Caching (CloudFront, ElastiCache) | DB cost ↓, latency ↓ | Medium |
+| Auto Scaling (off-hours scale-down) | 20–40% on compute | Medium |
+| Graviton (ARM) instances | 20–40% vs x86 | Low (most workloads) |
+
+---
+
+## 9. High Availability & Disaster Recovery
+
+| Strategy | RTO / RPO | Cost |
+| --- | --- | --- |
+| **Backup & restore** | Hours / hours | Lowest |
+| **Pilot light** | Tens of minutes / minutes | Low |
+| **Warm standby** | Minutes / minutes | Medium |
+| **Multi-region active-active** | Seconds / near-zero | Highest |
+
+- **RTO** (Recovery Time Objective) — how long can we be down?
+- **RPO** (Recovery Point Objective) — how much data can we lose?
+
+### Multi-AZ vs. multi-region
+
+| Aspect | Multi-AZ | Multi-Region |
+| --- | --- | --- |
+| **Purpose** | Datacenter-level resilience | Regional resilience + global low-latency |
+| **Scope** | Within one region | Across regions |
+| **Latency** | < 5 ms between AZs | 50-300 ms cross-region |
+| **Data replication** | Synchronous (RDS Multi-AZ) | Async (Aurora Global, DynamoDB Global Tables) |
+| **Cost** | ~2× single-AZ | ~3-4× single-region |
+| **Failover** | Automatic, < 60 s | Manual or via Route 53, minutes |
+| **Complexity** | Low | High (state sync, traffic shift) |
+| **Protects against** | AZ outage | Regional outage, geographic disasters |
+| **Examples** | RDS Multi-AZ, ELB across AZs | Aurora Global, DynamoDB Global, S3 CRR |
+
+### DR strategy details
+
+| Strategy | What runs in DR region | Failover action |
+| --- | --- | --- |
+| **Backup & Restore** | Nothing (just data backups) | Spin up infra from scratch, restore data — hours |
+| **Pilot Light** | Core data tier replicating; minimal compute | Scale up compute, switch traffic — tens of minutes |
+| **Warm Standby** | Smaller working copy of full stack | Scale up, switch traffic — minutes |
+| **Active-Active** | Full identical stack serving traffic | Just shift % via Route 53 — seconds |
+
+### Key services for DR
+
+| Service | DR capability |
+| --- | --- |
+| **Route 53** | Failover routing on health checks |
+| **S3** | Cross-Region Replication (CRR) |
+| **RDS** | Cross-region read replicas; promote on failover |
+| **Aurora** | Aurora Global Database (< 1 s RPO) |
+| **DynamoDB** | Global Tables (active-active, eventual consistency) |
+| **CloudFormation** | Stack templates that can be applied in any region |
+| **AWS Backup** | Cross-region, cross-account backup orchestration |
+
+### HA architecture patterns per tier
+
+| Tier | Pattern |
+| --- | --- |
+| **Stateless app** | Multi-AZ ASG behind ALB; health checks remove unhealthy |
+| **Database** | RDS Multi-AZ (sync standby) or Aurora cluster |
+| **Cache** | ElastiCache Multi-AZ with automatic failover |
+| **Static content** | S3 + CloudFront (multi-region cache) |
+| **DNS** | Route 53 (already multi-AZ and multi-region by AWS) |
+| **Queueing** | SQS / SNS / EventBridge (multi-AZ by default) |
+| **Secrets** | Secrets Manager (replicate to multiple regions) |
+
+---
+
+## 10. DevOps & Infrastructure as Code
+
+### IaC choices
+
+| Tool | Notes |
+| --- | --- |
+| **CloudFormation** | AWS-native, YAML/JSON |
+| **CDK** | TypeScript / Python over CloudFormation |
+| **Terraform** | Multi-cloud, HCL |
+| **Pulumi** | Multi-cloud, real programming languages |
+
+Pick one, commit. The worst IaC is a half-finished migration between two tools.
+
+### Terraform concepts
+
+| Concept | Description |
+| --- | --- |
+| **Providers** | Plugins for each platform (AWS, GCP, Azure, Kubernetes, ...) |
+| **Resources** | Declarative blocks that map to API objects (`aws_s3_bucket`) |
+| **Data sources** | Read-only lookups of existing resources |
+| **Variables** | Inputs to a module (with optional defaults) |
+| **Outputs** | Values exported by a module for use elsewhere |
+| **State** | Terraform's record of what it manages; should live in S3 + DynamoDB lock |
+| **Modules** | Reusable bundles of resources |
+| **Workspaces** | Multiple state files for the same module (dev/stage/prod) |
+
+### Terraform commands
+
+| Command | Purpose |
+| --- | --- |
+| `terraform init` | Download providers, configure backend |
+| `terraform plan` | Show what will change |
+| `terraform apply` | Make the changes |
+| `terraform destroy` | Tear down everything |
+| `terraform fmt` | Auto-format `.tf` files |
+| `terraform validate` | Syntax + type check |
+| `terraform import` | Bring an existing resource under management |
+| `terraform state` | Inspect / surgically edit state |
+
+### Terraform vs. CloudFormation
+
+| Aspect | Terraform | CloudFormation |
+| --- | --- | --- |
+| **Provider** | Multi-cloud (Cloud-agnostic) | AWS-only |
+| **Language** | HCL (or JSON) | YAML / JSON / CDK (TS/Py) |
+| **State** | External file (S3 + DynamoDB lock) | AWS-managed |
+| **Drift detection** | `terraform plan` | StackSets drift detection |
+| **Modularity** | First-class modules + registry | Nested stacks |
+| **Community** | Huge (Hashicorp + community modules) | AWS-only |
+| **Rollback** | Manual (re-apply prior state) | Automatic on stack failure |
+
+### CI/CD
+
+- **CodePipeline / CodeBuild / CodeDeploy** — AWS-native; integrates well with IAM.
+- **GitHub Actions / GitLab CI** — most teams.
+- **Argo CD / Flux** — GitOps for Kubernetes.
+
+### AWS CI/CD services
+
+| Service | Purpose | Key features |
+| --- | --- | --- |
+| **CodeCommit** | Managed Git | Private repos; IAM-integrated; superseded by GitHub for most |
+| **CodeBuild** | Build runner | Pay-per-minute; YAML buildspec |
+| **CodeDeploy** | Deployment automation | EC2, ECS, Lambda; integrated with rolling / blue-green |
+| **CodePipeline** | Orchestrator | Chains Source → Build → Test → Deploy stages |
+| **CodeArtifact** | Package registry | Maven, npm, PyPI, NuGet; proxy + private |
+
+### CodeDeploy deployment types
+
+| Type | Target | Strategies available |
+| --- | --- | --- |
+| In-place | EC2 / on-prem | Rolling, all-at-once |
+| Blue/Green | EC2 / ECS / Lambda | Linear (canary), all-at-once |
+| Lambda | Lambda function | Canary 10% → 100% / Linear / All-at-once |
+| ECS | ECS service | Blue/Green via ALB target group swap |
+
+### Sample Terraform — S3 bucket with safe defaults
+
+<CodeTabs
+  title="S3SafeDefaults"
+  terraform={`resource "aws_s3_bucket" "data" {
+  bucket = "my-app-data-prod"
+}
+
+resource "aws_s3_bucket_versioning" "data" {
+  bucket = aws_s3_bucket.data.id
+  versioning_configuration { status = "Enabled" }
+}
+
+resource "aws_s3_bucket_public_access_block" "data" {
+  bucket = aws_s3_bucket.data.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "data" {
+  bucket = aws_s3_bucket.data.id
+  rule { apply_server_side_encryption_by_default { sse_algorithm = "AES256" } }
+}`}
+  bash={`aws s3 mb s3://my-app-data-prod
+aws s3api put-bucket-versioning \\
+  --bucket my-app-data-prod \\
+  --versioning-configuration Status=Enabled
+aws s3api put-public-access-block \\
+  --bucket my-app-data-prod \\
+  --public-access-block-configuration \\
+    BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true`}
+/>
+
+---
+
+## 11. Well-Architected Framework
+
+AWS's six pillars (memorize the names):
+
+| Pillar | Focus | Key principles | Key services |
+| --- | --- | --- | --- |
+| **Operational Excellence** | Run and monitor systems to deliver business value | IaC, frequent small changes, learn from failures, anticipate failure | CloudFormation, Systems Manager, X-Ray |
+| **Security** | Protect information, systems, and assets | Least privilege, defence in depth, traceability, encryption | IAM, KMS, GuardDuty, Security Hub |
+| **Reliability** | Recover from disruption, meet demand, mitigate disruptions | Auto-recovery, horizontal scaling, capacity from data, automation of recovery | Auto Scaling, Route 53, Multi-AZ |
+| **Performance Efficiency** | Use resources efficiently and adapt to change | Democratise advanced tech, go global in minutes, serverless, experimentation | Lambda, CloudFront, ElastiCache |
+| **Cost Optimization** | Avoid unnecessary cost | Pay-as-you-go, measure efficiency, analyse expenditure, managed services | Cost Explorer, Compute Optimizer, Savings Plans |
+| **Sustainability** | Minimise environmental impact | Right-size, use Graviton, schedule for off-peak, fewer copies of data | Graviton instances, S3 lifecycle |
+
+### Design principles across all pillars
+
+- Stop guessing capacity — auto-scale.
+- Test systems at production scale — chaos engineering.
+- Automate to make architectural experimentation easier.
+- Allow for evolutionary architectures.
+- Drive architecture using data.
+- Improve through game days.
+
+In interviews, cite a pillar when you make a tradeoff that touches it.
+
+---
+
+## 12. Interview Q&A — 15 Scenario Questions
+
+1. **Design a low-cost static website.** — S3 + CloudFront + ACM. Versioned filenames; long max-age.
+2. **API behind authentication.** — API Gateway + Cognito (or your IdP). Lambda authorizer for custom rules.
+3. **At-least-once async work.** — SQS + Lambda. Idempotent consumer; DLQ after N retries.
+4. **Pub/sub fan-out.** — SNS or EventBridge.
+5. **Ordered event stream with replay.** — Kinesis / MSK.
+6. **Multi-region active-active KV.** — DynamoDB Global Tables.
+7. **Schedule a cron in the cloud.** — EventBridge Scheduler → Lambda.
+8. **Secrets management.** — Secrets Manager + IAM role; rotate via Lambda.
+9. **Survive an AZ outage.** — Multi-AZ ALB + at least two app instances per AZ.
+10. **Survive a region outage.** — Active-active or warm-standby; Route 53 health-check failover.
+11. **Reduce S3 cost on cold data.** — Lifecycle rules → Infrequent Access → Glacier.
+12. **Trace a slow request across services.** — X-Ray (or OpenTelemetry to Honeycomb / Datadog).
+13. **Locked-down database access.** — Private subnet, security group from app only, no public IP.
+14. **Why not store secrets in env vars?** — They land in CloudFormation history, logs, and process listings.
+15. **Choose between EC2, ECS, EKS, Lambda for a new service.** — Discuss tradeoffs of cold start, runtime length, ops budget, portability.
+
+---
+
+## 13. Interview Checklist
+
+<Checklist>
+  <ChecklistItem id="cloud-aws-architecture-0-can-name-10-aws-services-and-one-trade-o">Can name 10 AWS services and one trade-off for each.</ChecklistItem>
+  <ChecklistItem id="cloud-aws-architecture-0-can-sketch-a-multi-az-web-architecture">Can sketch a multi-AZ web architecture.</ChecklistItem>
+  <ChecklistItem id="cloud-aws-architecture-0-know-the-difference-between-security-gro">Know the difference between security groups and NACLs.</ChecklistItem>
+  <ChecklistItem id="cloud-aws-architecture-0-wrote-a-terraform-module-from-scratch-at">Wrote a Terraform module from scratch at least once.</ChecklistItem>
+  <ChecklistItem id="cloud-aws-architecture-0-used-lambda-sqs-in-production">Used Lambda + SQS in production.</ChecklistItem>
+  <ChecklistItem id="cloud-aws-architecture-0-tagged-everything-for-cost-attribution">Tagged everything for cost attribution.</ChecklistItem>
+  <ChecklistItem id="cloud-aws-architecture-0-know-the-well-architected-pillar-names">Know the Well-Architected pillar names.</ChecklistItem>
+  <ChecklistItem id="cloud-aws-architecture-0-read-a-cloudtrail-or-aws-config-log-to-i">Read a CloudTrail or AWS Config log to investigate an incident.</ChecklistItem>
+</Checklist>

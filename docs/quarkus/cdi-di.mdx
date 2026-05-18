@@ -1,0 +1,151 @@
+---
+title: CDI & Dependency Injection
+description: "Jakarta CDI in Quarkus — @Inject, scopes, qualifiers, producers."
+sidebar_position: 2
+---
+
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# CDI & Dependency Injection
+
+<Pillbar pills={[
+  { label: 'spec', value: 'Jakarta CDI' },
+  { label: 'depth', value: 'senior baseline' },
+]} />
+
+Quarkus uses **CDI Lite (ArC)** — a Jakarta-CDI-compatible container that wires beans at build time. The annotations look familiar; the timing of the wiring is what changes.
+
+## Constructor injection (idiomatic)
+
+<CodeTabs
+  title="ConstructorInjection"
+  java={`@ApplicationScoped
+public class OrderService {
+
+  private final UserService users;
+  private final InventoryClient inventory;
+
+  public OrderService(UserService users, InventoryClient inventory) {
+    this.users = users;
+    this.inventory = inventory;
+  }
+}`}
+  kotlin={`@ApplicationScoped
+class OrderService(
+  private val users: UserService,
+  private val inventory: InventoryClient,
+)`}
+/>
+
+Quarkus prefers constructor injection over field injection for the same reasons Spring does — explicit, testable, immutable.
+
+## Scopes
+
+| Scope | Lifecycle |
+| --- | --- |
+| `@ApplicationScoped` (typical) | One instance per application — singleton-like |
+| `@Singleton`           | Eager singleton (no proxy; cheaper but no AOP) |
+| `@RequestScoped`       | One per HTTP request |
+| `@SessionScoped`       | One per HTTP session (Servlet only) |
+| `@Dependent`           | A fresh instance per injection point |
+
+**Rule of thumb**: `@ApplicationScoped` for services. `@Singleton` only when you're sure you'll never need a proxy (no transactions, no interceptors). `@RequestScoped` for per-request state.
+
+## Producers
+
+When you can't (or shouldn't) annotate the class itself — third-party types, complex factory logic — use a producer method:
+
+```java
+@ApplicationScoped
+public class HttpClientProducer {
+
+  @Produces
+  @ApplicationScoped
+  public HttpClient http() {
+    return HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(2))
+        .build();
+  }
+}
+```
+
+Anyone with `@Inject HttpClient http` gets the produced instance.
+
+## Qualifiers
+
+When two beans implement the same interface, qualify the injection point:
+
+```java
+public interface NotificationSender {
+  void send(String to, String body);
+}
+
+@ApplicationScoped @Email   class EmailSender implements NotificationSender { ... }
+@ApplicationScoped @Sms     class SmsSender   implements NotificationSender { ... }
+
+// Custom qualifier:
+@Qualifier
+@Retention(RUNTIME)
+@Target({TYPE, METHOD, FIELD, PARAMETER})
+public @interface Email {}
+```
+
+Inject by qualifier:
+
+```java
+public class CheckoutService {
+  public CheckoutService(@Email NotificationSender email) { ... }
+}
+```
+
+## Interceptors (light AOP)
+
+CDI interceptors are how transactions, metrics, fault tolerance, etc. are wired. You can write your own:
+
+```java
+@Interceptor
+@Audited
+@Priority(Interceptor.Priority.APPLICATION)
+public class AuditInterceptor {
+
+  @AroundInvoke
+  Object around(InvocationContext ctx) throws Exception {
+    String name = ctx.getMethod().getName();
+    long start = System.nanoTime();
+    try {
+      return ctx.proceed();
+    } finally {
+      Log.infof("call %s took %d ns", name, System.nanoTime() - start);
+    }
+  }
+}
+
+@Qualifier @Retention(RUNTIME) @Target({TYPE, METHOD})
+public @interface Audited {}
+```
+
+Apply with `@Audited` on a class or method.
+
+## Build-time discovery
+
+Quarkus discovers beans during the build. To register a class as a bean:
+
+- Annotate it with a CDI scope (`@ApplicationScoped`, `@Singleton`, …), **or**
+- Put it on a class that has CDI-annotated members.
+
+Unlike Spring's component-scan default ("scan everything under base package"), Quarkus is **strict**: it only treats classes with scope annotations as beans. Library classes need either a CDI annotation or an explicit `META-INF/beans.xml` declaration.
+
+## Comparison: CDI vs Spring DI
+
+| | Spring | Quarkus / CDI |
+| --- | --- | --- |
+| Stereotype | `@Component` / `@Service` | `@ApplicationScoped` |
+| Configuration | `@Configuration` + `@Bean` | `@Produces` on a method |
+| Qualifier | `@Qualifier("name")` | custom `@Qualifier` annotation |
+| Eager singleton | `@Lazy(false)` | `@Singleton` |
+| Per-request | `@Scope("request")` | `@RequestScoped` |
+| Wiring time | Startup | Build |
+| Spec | Spring proprietary | Jakarta standard |
+
+The mental model is the same — services, scopes, qualifiers. The big shift is that scanning + resolution happen during `./mvnw package`, not at app startup.

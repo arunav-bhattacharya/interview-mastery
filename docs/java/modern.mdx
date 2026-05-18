@@ -1,0 +1,143 @@
+---
+title: Modern Java
+description: "Java 17–21: records, sealed types, pattern matching, virtual threads, text blocks."
+sidebar_position: 4
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Modern Java
+
+<Pillbar pills={[
+  { label: 'time', value: '1 hour' },
+  { label: 'covers', value: 'Java 14–21 language features' },
+  { label: 'signal', value: 'shows you stay current' },
+]} />
+
+The language features that landed between Java 14 and 21 are not just syntactic sugar — they replace longstanding idioms (DTO boilerplate, defensive casting, OS-thread pool sizing) with cleaner, safer, and often faster alternatives. Reaching for the right one in an interview signals that you actively follow the language.
+
+<QuickNav items={[
+  { label: 'RECORDS', href: '#records-java-14' },
+  { label: 'SEALED TYPES', href: '#sealed-types-java-17' },
+  { label: 'PATTERN MATCHING', href: '#pattern-matching' },
+  { label: 'VIRTUAL THREADS', href: '#virtual-threads-java-21' },
+  { label: 'TEXT BLOCKS', href: '#text-blocks-java-15' },
+]} />
+
+## Records (Java 14+)
+
+```java
+record Point(int x, int y) { }
+```
+
+Generates constructor, accessors, `equals`, `hashCode`, `toString`. **Immutable**; perfect for DTOs.
+
+#### When records are the right tool
+
+| Use case | Record? | Why |
+| --- | --- | --- |
+| DTO / API response | ✅ | Immutable, canonical equality, less boilerplate |
+| Value object (Money, Coordinate) | ✅ | Equality by value is what you want |
+| Tuple from a stream / pattern match | ✅ | The natural shape |
+| JPA `@Entity` | ❌ | Entities need mutability + identity by ID, not value equality |
+| When you need inheritance | ❌ | Records are implicitly `final` |
+| When you need a builder | ❌ (mostly) | Records don't replace `Builder`; use both if you have many optional fields |
+
+## Sealed types (Java 17)
+
+```java
+sealed interface Shape permits Circle, Square, Triangle { }
+```
+
+Restricts who can implement / extend → enables exhaustive switch.
+
+## Pattern matching
+
+### `instanceof` with binding (Java 16+)
+
+The old `instanceof + cast` pattern collapses into one expression:
+
+```java
+if (obj instanceof String s && s.length() > 3) {
+    return s.toUpperCase();   // s is in scope and typed as String
+}
+```
+
+### Switch with patterns (Java 21)
+
+```java
+return switch (shape) {
+  case Circle c   -> Math.PI * c.radius() * c.radius();
+  case Square s   -> s.side() * s.side();
+  case Triangle t -> 0.5 * t.base() * t.height();
+};
+```
+
+Combined with sealed types, the compiler **proves exhaustiveness** — adding a new `Shape` subtype is a compile error in every `switch` that hasn't been updated. That's a refactor superpower.
+
+### Guarded patterns (Java 21)
+
+```java
+return switch (event) {
+  case Login l when l.failedAttempts() > 5 -> "lockout";
+  case Login l                              -> "ok";
+  case Logout x                             -> "session ended";
+};
+```
+
+The `when` clause is a guard on the binding; cases are tried in order, first match wins.
+
+### Virtual threads (Java 21)
+
+```java
+try (var pool = Executors.newVirtualThreadPerTaskExecutor()) {
+  for (int i = 0; i < 10_000; i++) {
+    pool.submit(() -> {
+      Thread.sleep(Duration.ofSeconds(1));   // cheap blocking
+      return null;
+    });
+  }
+}
+```
+
+10,000 cheap blocking tasks on a few platform threads. Game-changer for blocking I/O.
+
+#### Platform vs. virtual threads
+
+| Aspect | Platform thread | Virtual thread |
+| --- | --- | --- |
+| **Managed by** | OS kernel | JVM runtime |
+| **Creation cost** | ~1 MB stack, hundreds of µs | ~few KB stack, nanoseconds |
+| **Max realistic count** | ~10,000 per JVM | Millions per JVM |
+| **Blocking I/O** | Blocks the OS thread → expensive at scale | Unmounted from its carrier thread → cheap |
+| **CPU-bound work** | Same throughput | Same throughput — virtual threads don't help here |
+| **Best for** | CPU-bound, native-blocking ops | Blocking I/O, fan-out request handling |
+
+#### How they work — carrier threads and mounting
+
+A virtual thread runs on a small pool of **carrier threads** (platform threads, default `cores`). When the virtual thread blocks on JVM I/O, the JVM **unmounts** it from its carrier and the carrier can run another virtual thread. When the I/O completes, the virtual thread is remounted on whatever carrier is free.
+
+#### Gotchas — pinning
+
+A virtual thread can't be unmounted if it's inside a `synchronized` block or holding native code on the stack. It **pins** the carrier thread, defeating the purpose. Fixes:
+
+- Replace `synchronized` with `ReentrantLock` (which doesn't pin).
+- Avoid `synchronized` around blocking I/O.
+- Use `-Djdk.tracePinnedThreads=full` to find the culprits.
+
+Also: don't use `ThreadLocal` heavily — every virtual thread is a separate map and the memory adds up. Prefer `ScopedValue` (preview in 21, stable later).
+
+### Text blocks (Java 15)
+
+```java
+String json = """
+    {
+      "name": "Alice",
+      "role": "engineer"
+    }
+    """;
+```
+
+---

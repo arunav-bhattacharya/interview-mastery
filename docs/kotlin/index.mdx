@@ -1,0 +1,32 @@
+---
+title: Kotlin
+description: "Kotlin essentials for backend engineers — null safety, data classes, coroutines, functional features, Java interop."
+sidebar_position: 1
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+
+# Kotlin
+
+<Pillbar pills={[
+  { label: 'time', value: '3–4 hours' },
+  { label: 'target', value: 'JDK 17+ / Kotlin 1.9+' },
+  { label: 'depth', value: 'senior interview' },
+]} />
+
+Kotlin essentials, calibrated for Java-fluent backend engineers. Focus is on what changes the way you write code (and what shows up in interviews) — not language tourism.
+
+- **[Basics & Null Safety](./basics.mdx)** — `val`/`var`, types, smart casts, the `?` / `!!` / `?.` / `?:` family.
+- **[Data, Sealed & Enum Classes](./data-sealed.mdx)** — DTOs, exhaustive `when`, algebraic data types.
+- **[Coroutines](./coroutines.mdx)** — structured concurrency, `suspend`, scopes, dispatchers, `Flow`.
+- **[Functional Features](./functional.mdx)** — lambdas, higher-order functions, scope functions, sequences.
+- **[Java Interop & Idioms](./java-interop.mdx)** — `@JvmStatic`, `@JvmField`, platform types, idiomatic conversions.
+
+## Why Kotlin (for senior interviews)
+
+- **Null safety at the type level** — kills entire bug classes the JVM compiler never caught.
+- **Data classes + sealed interfaces** — algebraic data modelling without ceremony; perfect for DTOs, results, and state.
+- **Coroutines** — the most pleasant concurrency model on the JVM, especially with structured-concurrency `coroutineScope`.
+- **First-class interop with Java** — you can adopt Kotlin module-by-module in a Spring codebase.
+
+If you're interviewing for a backend role that mentions "Kotlin/JVM", expect questions on **coroutines vs. virtual threads**, **null safety vs. Optional**, and **data classes vs. records**.

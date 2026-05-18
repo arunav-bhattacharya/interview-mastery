@@ -1,0 +1,114 @@
+---
+title: Mental Model
+description: "One-glance recall card for all ten Behavioral patterns + Interpreter — trigger words, mnemonics, and when to reach for each."
+sidebar_position: 0
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+
+# Behavioral — Mental Model
+
+<Pillbar pills={[
+  { label: 'role', value: 'recall card' },
+  { label: 'family', value: 'behavioral' },
+  { label: 'patterns', value: '10 + Interpreter' },
+]} />
+
+One page to glance at when you can't remember which Behavioral pattern fits. Every row has a **trigger word** (the smell that should make you reach for it) and a **mental anchor** (a real-world image that locks in the idea).
+
+## The ten at a glance
+
+| Pattern | One-liner | Trigger word | Mental anchor |
+| --- | --- | --- | --- |
+| [Strategy](./strategy.mdx) | **Pluggable algorithm** chosen at runtime | "A/B test the algorithm" | Trip from A to B (drive / train / walk) |
+| [Observer](./observer.mdx) | **One-to-many** notification | "publish / subscribe" | Newspaper subscription |
+| [Command](./command.mdx) | **Action as object** | "undo / queue / log" | Restaurant order ticket |
+| [State](./state.mdx) | Behaviour changes when **internal state** changes | "many `if (status == …)`" | Traffic light |
+| [Chain of Responsibility](./chain-of-responsibility.mdx) | Pipeline of handlers, **each may stop** | "middleware order matters" | Helpdesk escalation |
+| [Template Method](./template-method.mdx) | Skeleton + **hooks for variable steps** | "lock step order, vary one step" | Coffee-shop drink recipe |
+| [Iterator](./iterator.mdx) | **Encapsulate traversal** | "custom collection or lazy seq" | Radio scan button |
+| [Mediator](./mediator.mdx) | **Central hub** for N×N talk | "N components reference each other" | Air traffic control |
+| [Memento](./memento.mdx) | **Snapshot + restore** | "undo / save game" | Game save slot |
+| [Visitor](./visitor.mdx) | Add **operations** to a fixed hierarchy | "new operation, frozen classes" | Insurance auditor |
+| Interpreter | Mini-DSL evaluator | "tiny expression language" | Recipe-card grammar |
+
+## Smell → pattern in one line
+
+- "I'm reading a config flag to pick an algorithm" → **Strategy**.
+- "I want N listeners to react when this changes" → **Observer**.
+- "I'd like to undo / queue / log this method call" → **Command**.
+- "Half my class is `if (status == OPEN) … else if (status == CLOSED) …`" → **State**.
+- "Auth → validation → rate-limit → handler, each can short-circuit" → **Chain of Responsibility**.
+- "Five report types share the same 4-step flow, only step 2 differs" → **Template Method**.
+- "Custom container that needs `for (x : container)`" → **Iterator**.
+- "Five components reference each other; the web is unmaintainable" → **Mediator**.
+- "Need to roll back to a prior internal state" → **Memento**.
+- "Twenty AST node types and I keep adding operations on them" → **Visitor**.
+- "I'm parsing a small filter / formula / rule language" → **Interpreter**.
+
+## Three-bucket sort
+
+- **Wrap an action / algorithm** — Strategy (varies algorithm), Command (varies the call), State (varies behaviour per mode), Template Method (varies one step).
+- **Coordinate many objects** — Observer (1 → N), Mediator (N ↔ N), Chain of Responsibility (linear pipeline).
+- **Traverse / inspect a structure** — Iterator (walks), Visitor (operates on each node), Memento (captures), Interpreter (evaluates a grammar).
+
+## The famous twin: Strategy vs. State
+
+Same structural shape (Context delegates to an injected object). The only difference is **intent**:
+
+| | Strategy | State |
+| --- | --- | --- |
+| Who picks? | The **client** | The **state itself** (it transitions) |
+| How often does it change? | Once, then stays | Continuously, as part of operation |
+| Example | Pricing rule per request | Vending machine state machine |
+
+If the object **changes its delegate as part of normal work**, it's State. If the client **picks once and lets it run**, it's Strategy.
+
+## Other easy-to-confuse pairs
+
+| Confused pair | Resolve by |
+| --- | --- |
+| Observer vs Mediator | Observer is 1 → N notification; Mediator is N ↔ N coordination through a hub |
+| Command vs Memento | Command = the *action*; Memento = the *state snapshot* you'd restore on undo |
+| Chain of Responsibility vs Decorator | CoR handlers may **stop**; Decorator layers always **forward** |
+| Visitor vs Iterator | Iterator varies the **traversal**; Visitor varies the **operation** |
+| Template Method vs Strategy | Template Method = inheritance, locks skeleton; Strategy = composition, swaps whole algorithm |
+
+## Common collaborations
+
+| You picked... | …commonly pairs with |
+| --- | --- |
+| Strategy | Factory Method (factory picks the strategy) |
+| Observer | Mediator (Mediator notifies via Observer) |
+| Command | Memento (Command captures state via Memento for undo) |
+| State | Memento (snapshot the (context, state) pair) |
+| Chain of Responsibility | Command (each handler processes a Command payload) |
+| Iterator | Composite (walks the recursive structure) |
+| Visitor | Composite (Visitor + Composite is the canonical AST pair) |
+
+## Decision flowchart
+
+```text
+What does the variation look like?
+│
+├── Pluggable algorithm                       → Strategy
+├── Object's behaviour depends on its state   → State
+├── Skeleton fixed, one step varies           → Template Method
+│
+├── Action that needs undo / queue / log      → Command
+├── N listeners react to one event            → Observer
+├── N components coordinate through a hub     → Mediator
+├── Linear pipeline, each step may stop       → Chain of Responsibility
+│
+├── Need to walk a collection / tree          → Iterator
+├── Need to add operations to fixed classes   → Visitor
+├── Need to snapshot internal state           → Memento
+└── Need to evaluate a tiny grammar           → Interpreter
+```
+
+## Memory hooks
+
+- The 10 GoF behavioural patterns spell ~ **"S O C S C T I M M V"** — group as *Algorithm (4), Comms (3), Traversal+State (3)*.
+- Any time you see *"can I plug this in?"* — think Strategy first, then State, then Template Method.
+- Any time you see *"who tells whom?"* — Observer, Mediator, Chain of Responsibility.
+- Any time you see *"can I redo / undo / time-travel?"* — Command + Memento.

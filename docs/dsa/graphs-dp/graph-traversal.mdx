@@ -1,0 +1,146 @@
+---
+title: Graph Traversal
+sidebar_position: 1
+---
+
+import TreeViz from '@site/src/components/TreeViz';
+import BinarySearchViz from '@site/src/components/BinarySearchViz';
+import DPTableViz from '@site/src/components/DPTableViz';
+import GraphViz from '@site/src/components/GraphViz';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+
+# Graph Traversal
+
+### What is Graph Traversal?
+
+Graphs are vertices and edges. Most "graph" problems in interviews are really about **walking every reachable vertex once** — by breadth (BFS) or by depth (DFS). The hard part is recognizing the disguised graph (grids, courses with prerequisites, words one letter apart).
+
+### Why Does It Work?
+
+Both BFS and DFS visit each vertex at most once and each edge at most twice, so both are `O(V + E)`. Correctness comes from the **visited set**: a marker set when you push, never when you pop.
+
+BFS discovers nodes **in order of edge distance** from the source — that's why BFS solves unweighted shortest path and DFS does not.
+
+### Mental Model
+
+The same loop, two different data structures:
+
+- BFS → queue (FIFO) → frontier bulges outward in layers.
+- DFS → stack / recursion → frontier plunges down one corridor.
+
+<TreeViz />
+
+For weighted graphs, swap the queue for a **min-heap** keyed on distance → Dijkstra.
+
+### When to Use
+
+| Use BFS when... | Use DFS when... |
+| --- | --- |
+| Shortest path on unweighted graph | Topological order / cycle detection |
+| Level-order processing | Tree path / ancestor problems |
+| Multi-source spread (rotting oranges) | Backtracking (permutations, subsets) |
+| Minimum moves | Connected components |
+
+<GraphViz />
+
+<div className="im-core-concept">
+
+### Core Concept
+
+The standard "graph + visited set" template:
+
+```text
+seen = empty set
+frontier = [start]; mark start seen
+while frontier:
+  u = pop          # front (BFS) or top (DFS)
+  process(u)
+  for each neighbour v of u:
+    if v not in seen:
+      mark v seen
+      push v
+```
+
+For weighted graphs:
+
+| Algorithm | Time | Notes |
+| --- | --- | --- |
+| BFS / DFS | `O(V + E)` | Both representations |
+| Topo sort | `O(V + E)` | DAG only |
+| Dijkstra (heap) | `O(E log V)` | Non-negative weights |
+| Bellman-Ford | `O(VE)` | Handles negative edges |
+| Union-find | ~`O(α(N))` per op | Connectivity / merging |
+
+</div>
+### Template Code
+
+<CodeTabs
+  title="BFS"
+  java={`public List<Integer> bfs(List<List<Integer>> g, int start) {
+  List<Integer> order = new ArrayList<>();
+  boolean[] seen = new boolean[g.size()];
+  Deque<Integer> q = new ArrayDeque<>();
+  q.offer(start); seen[start] = true;
+  while (!q.isEmpty()) {
+    int u = q.poll();
+    order.add(u);
+    for (int v : g.get(u)) if (!seen[v]) { seen[v] = true; q.offer(v); }
+  }
+  return order;
+}`}
+  kotlin={`fun bfs(g: List<List<Int>>, start: Int): List<Int> {
+  val order = mutableListOf<Int>()
+  val seen = BooleanArray(g.size); seen[start] = true
+  val q: ArrayDeque<Int> = ArrayDeque(); q.addLast(start)
+  while (q.isNotEmpty()) {
+    val u = q.removeFirst(); order += u
+    for (v in g[u]) if (!seen[v]) { seen[v] = true; q.addLast(v) }
+  }
+  return order
+}`}
+  python={`from collections import deque
+def bfs(g: list[list[int]], s: int) -> list[int]:
+    order, seen = [], [False]*len(g)
+    q = deque([s]); seen[s] = True
+    while q:
+        u = q.popleft(); order.append(u)
+        for v in g[u]:
+            if not seen[v]: seen[v] = True; q.append(v)
+    return order`}
+  go={`func bfs(g [][]int, s int) []int {
+  order := []int{}; seen := make([]bool, len(g)); seen[s] = true
+  q := []int{s}
+  for len(q) > 0 {
+    u := q[0]; q = q[1:]; order = append(order, u)
+    for _, v := range g[u] {
+      if !seen[v] { seen[v] = true; q = append(q, v) }
+    }
+  }
+  return order
+}`}
+/>
+
+### Key Problems to Master
+
+| # | Problem | Difficulty | Pattern | LeetCode |
+| - | --- | --- | --- | --- |
+| 1 | Number of Islands | <Difficulty>Medium</Difficulty> | Grid DFS / BFS | [LC 200](https://leetcode.com/problems/number-of-islands/) |
+| 2 | Clone Graph | <Difficulty>Medium</Difficulty> | DFS + map | [LC 133](https://leetcode.com/problems/clone-graph/) |
+| 3 | Course Schedule (I, II) | <Difficulty>Medium</Difficulty> | Topological sort | [LC 207](https://leetcode.com/problems/course-schedule/) |
+| 4 | Word Ladder | <Difficulty>Hard</Difficulty> | BFS on implicit graph | [LC 127](https://leetcode.com/problems/word-ladder/) |
+| 5 | Network Delay Time | <Difficulty>Medium</Difficulty> | Dijkstra | [LC 743](https://leetcode.com/problems/network-delay-time/) |
+| 6 | Number of Connected Components | <Difficulty>Medium</Difficulty> | Union-find / DFS | [LC 323](https://leetcode.com/problems/number-of-connected-components-in-an-undirected-graph/) |
+| 7 | Cheapest Flights Within K Stops | <Difficulty>Medium</Difficulty> | Bellman-Ford / BFS+levels | [LC 787](https://leetcode.com/problems/cheapest-flights-within-k-stops/) |
+| 8 | Pacific Atlantic Water Flow | <Difficulty>Medium</Difficulty> | Multi-source BFS / DFS | [LC 417](https://leetcode.com/problems/pacific-atlantic-water-flow/) |
+
+### Common Mistakes to Avoid
+
+- Marking visited too late → BFS revisits and shortest-path guarantee breaks.
+- Using DFS for unweighted shortest path → it returns *a* path, not the shortest.
+- Applying Dijkstra to graphs with negative edges (silently wrong).
+- Stack-overflow on deep recursion for very large graphs — switch to iterative.
+
+---

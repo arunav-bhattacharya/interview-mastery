@@ -1,0 +1,252 @@
+---
+title: Behavioral Prep
+description: STAR method, common questions, story bank, interview tips — the deciding factor for senior roles.
+sidebar_position: 1
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import Pillbar from '@site/src/components/Pillbar';
+import { Checklist, ChecklistItem } from '@site/src/components/Checklist';
+
+# Behavioral Interview Preparation
+
+<Pillbar pills={[
+  { label: 'time', value: '3–4 hours' },
+  { label: 'role', value: 'often the deciding round' },
+]} />
+
+Behavioral interviews are often the **deciding factor for senior roles**. Technical skills get you to the interview; behavioral skills get you the job.
+
+<QuickNav items={[
+  { label: 'TOPIC 1: THE STAR METHOD', href: '#topic-1-the-star-method' },
+  { label: 'TOPIC 2: COMMON BEHAVIORAL QUESTIONS', href: '#topic-2-common-behavioral-questions' },
+  { label: 'TOPIC 3: PREPARE YOUR STORIES', href: '#topic-3-prepare-your-stories' },
+  { label: 'TOPIC 4: INTERVIEW TIPS', href: '#topic-4-interview-tips' },
+  { label: 'TOPIC 5: INTERVIEW DAY CHECKLIST', href: '#topic-5-interview-day-checklist' },
+  { label: 'MOCK INTERVIEW PRACTICE', href: '#mock-interview-practice' },
+  { label: 'FINAL READINESS CHECKLIST', href: '#final-readiness-checklist' },
+  { label: 'FINAL WORDS', href: '#final-words' },
+]} />
+
+## Topic 1: The STAR Method
+
+Behavioral interviews are not trick questions. The interviewer is testing whether you can **tell a clean story** and whether the story demonstrates qualities they care about (ownership, conflict resolution, technical judgment).
+
+### The four parts
+
+| Part | Goal | Time |
+| --- | --- | --- |
+| **Situation** | Set the scene in 1–2 sentences. Where, when, who. | 15s |
+| **Task** | Your role and the explicit goal. | 10s |
+| **Action** | What **you** did, specifically. Use "I", not "we". | 45s |
+| **Result** | Outcome (quantified if possible) + what you learned. | 15s |
+
+### A worked example
+
+> **Situation** — Last Black Friday our checkout service started timing out, and the on-call channel was lighting up at 3 a.m. UTC.
+>
+> **Task** — As the on-call engineer that week, I needed to stabilize the service before peak traffic hit Europe a few hours later.
+>
+> **Action** — I correlated the timeouts with a database hot-key — one popular SKU was being read by 30% of cart sessions. I rolled out a read-through Redis cache with a 30-second TTL behind a feature flag, validated on a canary, and ramped to 100% over forty minutes.
+>
+> **Result** — P99 fell from 4.1 seconds to 180 ms. We held through peak with headroom. I wrote up the incident and added a hot-key alert to our dashboards; we've caught two similar issues since.
+
+### Why STAR works
+
+- It forces you to **finish** the story (no orphan setups).
+- It signals **ownership** (focus on Action).
+- It surfaces **quantified impact** (Result).
+
+---
+
+## Topic 2: Common Behavioral Questions
+
+Almost every prompt is a re-skin of one of these five clusters. Pre-map a story from your bank to each.
+
+### Ownership & impact
+
+- Tell me about a project you're most proud of.
+- Describe a time you took on something without being asked.
+- What's the biggest mistake you've made and how did you handle it?
+- Tell me about a time you raised the bar on your team.
+
+### Conflict & collaboration
+
+- Tell me about a disagreement with a peer. How did you resolve it?
+- Describe a time you had to push back on a manager.
+- How do you give feedback to someone resistant to it?
+- A time you worked with someone whose style was different from yours.
+
+### Failure & learning
+
+- Tell me about a time you failed.
+- A project that didn't go to plan — what happened?
+- A decision you'd make differently in hindsight.
+- How do you handle being wrong in a technical discussion?
+
+### Leadership & growth
+
+- A time you led without authority.
+- How do you mentor more junior engineers?
+- Describe a time you influenced a team-level decision.
+- A skill you've developed deliberately in the last year.
+
+### Ambiguity & prioritization
+
+- A time you had to make a decision with incomplete information.
+- How do you decide what to work on when everything seems urgent?
+- A trade-off between speed and quality.
+
+---
+
+## Topic 3: Prepare Your Stories
+
+You only need **8–10 well-prepared stories**. Each story should hit at least one of:
+
+1. A **technical decision** under ambiguity.
+2. A **conflict** with a peer or manager.
+3. A **failure** you owned.
+4. A **leadership moment** without authority.
+5. A **delivery success** against a hard deadline.
+6. A **scope challenge** — saying no, or saying yes carefully.
+7. A **mentoring** moment.
+8. An **incident** you led or recovered from.
+
+### Story template (1-pager per story)
+
+```text
+TITLE: The one-line headline of the story
+WHEN: Quarter / year, team / company
+WHO: Roles involved (you, manager, peer, stakeholder)
+SITUATION: 1–2 sentences setting the scene
+TASK: The explicit goal you owned
+ACTION: 4–6 bullets, "I" verbs, technical specifics
+RESULT: Quantified outcome + one learning
+TAGS: ownership | conflict | failure | leadership | delivery
+```
+
+### Practice this drill
+
+For each prompt in the common-questions list, ask: **which of my stories best fits?** That mapping is faster than improvising.
+
+---
+
+## Topic 4: Interview Tips
+
+### What to do
+
+- **Use "I", not "we".** The interviewer is grading you, not your team.
+- **Pick stories with friction.** Easy stories are boring stories.
+- **Have a number ready** — even soft ("cut review time roughly in half").
+- **End with a learning.** What you'd do differently.
+- **Repeat the question** in your own words. Confirms scope, buys thinking time.
+- **Pause before answering.** A 2-second silence is fine; rambling is not.
+
+### What to avoid
+
+- **Over-setting-the-scene.** One sentence each for S and T.
+- **Vague impact** ("the project went well").
+- **Blaming others** for failures. Senior candidates own outcomes.
+- **Lying or embellishing.** Interviewers ask follow-ups; they will catch holes.
+- **Forgetting to follow up.** "I learned X and applied it on Y next time" is the seal on a story.
+
+### Questions to ask **them**
+
+When the interviewer says *"do you have questions for me?"* — say yes.
+
+- What does a great first 90 days in this role look like?
+- What's the team's biggest blocker right now that I'd help unblock?
+- How does the team make decisions when there isn't consensus?
+- What kind of work does this team find energizing? Draining?
+- How is performance measured for this role specifically?
+
+The point is to test fit, not to flatter.
+
+---
+
+## Topic 5: Interview Day Checklist
+
+### The night before
+
+<Checklist>
+  <ChecklistItem id="behavioral-prep-0-review-your-story-bank-skim-titles-don-t">Review your story bank — skim titles, don't memorize wording.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-0-confirm-the-schedule-video-link-intervie">Confirm the schedule, video link, interviewer names.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-0-charge-your-laptop-headset">Charge your laptop / headset.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-0-test-your-camera-and-mic">Test your camera and mic.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-0-lay-out-water-notebook-pen">Lay out water, notebook, pen.</ChecklistItem>
+</Checklist>
+
+### The morning of
+
+<Checklist>
+  <ChecklistItem id="behavioral-prep-1-light-cardio-walk-to-clear-the-head">Light cardio / walk to clear the head.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-1-light-breakfast-don-t-show-up-hungry-don">Light breakfast — don't show up hungry, don't show up bloated.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-1-re-read-the-company-s-recent-blog-posts">Re-read the company's recent blog posts or product launches.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-1-be-in-your-interview-seat-10-minutes-ear">Be in your interview seat 10 minutes early.</ChecklistItem>
+</Checklist>
+
+### In the interview
+
+<Checklist>
+  <ChecklistItem id="behavioral-prep-2-greet-smile-give-a-30-second-intro">Greet, smile, give a 30-second intro.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-2-repeat-each-behavioral-question-to-confi">Repeat each behavioral question to confirm scope.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-2-stick-to-star-one-story-per-prompt">Stick to STAR; one story per prompt.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-2-time-check-at-5-minutes-left-leave-time">Time-check at 5 minutes left; leave time for **your** questions.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-2-thank-them-by-name-at-the-end">Thank them by name at the end.</ChecklistItem>
+</Checklist>
+
+### After
+
+<Checklist>
+  <ChecklistItem id="behavioral-prep-3-5-minute-brain-dump-which-stories-you-us">5-minute brain dump: which stories you used, what you'd improve.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-3-send-a-thank-you-note-within-24-hours">Send a thank-you note within 24 hours.</ChecklistItem>
+</Checklist>
+
+---
+
+## Mock Interview Practice
+
+You can't get good at behavioral interviews by reading. Practice out loud.
+
+### Solo practice
+
+- Record yourself answering 5 prompts; play it back.
+- Time each answer (target: under 2 minutes).
+- Listen for filler words ("um", "like", "you know").
+
+### Pair practice
+
+- Trade with another candidate or friend.
+- One asks, one answers, then critique.
+- Pramp / Interviewing.io for free or low-cost.
+
+### Mock with a senior
+
+- Find a current senior engineer at a target company.
+- Their feedback on "what landed" is gold.
+
+---
+
+## Final Readiness Checklist
+
+<Checklist>
+  <ChecklistItem id="behavioral-prep-4-10-star-stories-written-and-rehearsed-ou">10 STAR stories written and rehearsed out loud.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-4-each-story-under-2-minutes-when-delivere">Each story under 2 minutes when delivered.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-4-mapped-each-common-question-cluster-to-1">Mapped each common-question cluster to ≥1 story.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-4-did-5-mock-interviews">Did 5+ mock interviews.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-4-drafted-5-questions-to-ask-the-interview">Drafted 5 questions to ask the interviewer.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-4-researched-the-company-s-recent-product">Researched the company's recent product / blog announcements.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-4-tested-your-video-setup-end-to-end">Tested your video setup end-to-end.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-4-updated-resume-with-quantified-achieveme">Updated resume with **quantified** achievements.</ChecklistItem>
+  <ChecklistItem id="behavioral-prep-4-updated-linkedin-title-role-recent-proje">Updated LinkedIn — title, role, recent projects.</ChecklistItem>
+</Checklist>
+
+---
+
+## Final Words
+
+Consistency beats intensity. Two focused hours daily > fourteen hours on a weekend.
+
+The same skill compounds across all rounds: **clear, structured, honest communication**. Practice it in DSA rounds, system design, and behavioral; the interviewer's mental model of "is this person senior?" is built from the same signal every time.
+
+Good luck.

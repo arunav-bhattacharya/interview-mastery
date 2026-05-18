@@ -1,0 +1,80 @@
+---
+title: Transactions
+description: "@Transactional propagation, isolation, and the self-call gotcha."
+sidebar_position: 2
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Transactions
+
+`@Transactional` scopes a unit of work. Rolls back on **unchecked exceptions** by default; configure `rollbackFor` for checked.
+
+```java
+@Transactional
+public void transfer(long fromId, long toId, long amount) {
+  accounts.debit(fromId, amount);
+  accounts.credit(toId, amount);
+  ledger.append(/* ... */);
+}
+```
+
+### Propagation — all seven levels
+
+| Propagation | Behaviour | When |
+| --- | --- | --- |
+| `REQUIRED` (default) | Join existing or start new | 99% of cases |
+| `REQUIRES_NEW` | Suspend existing, always start new | Audit log that must commit even if outer rolls back |
+| `MANDATORY` | Must already be in a transaction; throws if not | Helper methods that should never be called standalone |
+| `SUPPORTS` | Join existing; otherwise run non-transactionally | Read-only helpers |
+| `NOT_SUPPORTED` | Suspend existing; run non-transactionally | Long-running ops you don't want in the tx |
+| `NEVER` | Must not be in a transaction; throws if it is | Methods that explicitly forbid tx context |
+| `NESTED` | Nested savepoint (DB-dependent) | Partial rollback within an outer transaction |
+
+### Isolation levels
+
+| Level | Dirty reads | Non-repeatable reads | Phantoms |
+| --- | :-: | :-: | :-: |
+| `READ_UNCOMMITTED` | ✅ allowed | ✅ | ✅ |
+| `READ_COMMITTED` (Postgres default) | ❌ | ✅ | ✅ |
+| `REPEATABLE_READ` (MySQL InnoDB default) | ❌ | ❌ | ✅ (PG: ❌ via snapshot) |
+| `SERIALIZABLE` | ❌ | ❌ | ❌ |
+
+- **Dirty read** — read uncommitted data from another transaction.
+- **Non-repeatable read** — same row, two reads, different values.
+- **Phantom** — same range query, two reads, different row counts.
+
+Higher isolation = more locks = less concurrency. Stay at `READ_COMMITTED` unless the use case demands otherwise.
+
+### Rollback rules
+
+By default `@Transactional` rolls back on **unchecked exceptions** (`RuntimeException` and `Error`) and **commits** on checked exceptions. To roll back on a checked exception:
+
+```java
+@Transactional(rollbackFor = IOException.class)
+void uploadAndCommit(File f) throws IOException { ... }
+
+@Transactional(noRollbackFor = NotFoundException.class)
+void searchAndLog(Query q) { ... }
+```
+
+In practice: throw unchecked from the service layer; checked from boundaries that need typed errors (file I/O, parsing).
+
+### Common pitfalls
+
+| Pitfall | What goes wrong | Fix |
+| --- | --- | --- |
+| **Self-invocation** | One `@Transactional` method calls another in the same bean — proxy bypassed | Extract inner method to a separate bean |
+| **Rollback on checked** | Throwing a checked exception **commits** the transaction silently | `rollbackFor = MyChecked.class` |
+| **Catching and swallowing** | `try { ... } catch (Exception e) { log... }` inside `@Transactional` → tx commits | Re-throw or use `TransactionAspectSupport.currentTransactionStatus().setRollbackOnly()` |
+| **`@Transactional` on private** | Spring AOP only advises public methods (CGLIB proxies) | Make it public, or move to another bean |
+| **Long transactions** | Hold DB locks for the duration of any external HTTP call inside the method | Move the external call outside, or use `REQUIRES_NEW` for the local update |
+| **`readOnly = true` ignored** | Some drivers / dialects ignore the hint | Don't rely on it for correctness; use it as a perf hint only |
+
+### Self-invocation gotcha (recap)
+
+`@Transactional` works via **proxies**. A self-call (one `@Service` method calling another in the same class) bypasses the proxy → the transaction is **not** applied. Refactor to two beans, or inject `self`.
+
+---

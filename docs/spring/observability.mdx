@@ -1,0 +1,87 @@
+---
+title: Observability
+description: "Actuator, Micrometer, Prometheus, OpenTelemetry distributed tracing."
+sidebar_position: 6
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Observability
+
+### Spring Boot Actuator
+
+- `/actuator/health` — liveness / readiness probes.
+- `/actuator/metrics` — JVM, HTTP, DB metrics.
+- `/actuator/loggers` — change log levels at runtime.
+- `/actuator/info` — build info, git commit.
+
+**Gate Actuator behind auth in production.** It leaks everything from memory pools to environment variables.
+
+### Micrometer + Prometheus
+
+`MeterRegistry` is Spring's metric facade. Export to Prometheus, Datadog, etc.
+
+```java
+@Service
+class CheckoutService {
+  private final Counter checkouts;
+  CheckoutService(MeterRegistry reg) {
+    checkouts = reg.counter("checkouts.completed");
+  }
+  void completeCheckout() { /* ... */ checkouts.increment(); }
+}
+```
+
+### Distributed tracing
+
+OpenTelemetry agent + Spring Boot autoconfig → spans for every HTTP request, JPA query, and Kafka message.
+
+### MDC correlation-ID filter
+
+Stitch every log line for a given request together by stuffing a unique ID into the SLF4J **MDC** (Mapped Diagnostic Context) at request entry, then drop it at exit:
+
+```java
+@Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
+public class CorrelationIdFilter extends OncePerRequestFilter {
+
+    private static final String HEADER = "X-Request-Id";
+    private static final String MDC_KEY = "requestId";
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest req,
+                                    HttpServletResponse res,
+                                    FilterChain chain) throws ServletException, IOException {
+        String id = Optional.ofNullable(req.getHeader(HEADER))
+                            .filter(s -> !s.isBlank())
+                            .orElse(UUID.randomUUID().toString());
+        MDC.put(MDC_KEY, id);
+        res.setHeader(HEADER, id);
+        try {
+            chain.doFilter(req, res);
+        } finally {
+            MDC.remove(MDC_KEY);
+        }
+    }
+}
+```
+
+Reference the key in the Logback pattern so it appears on every line:
+
+```xml
+<pattern>%d{ISO8601} %-5level [%X{requestId}] %logger - %msg%n</pattern>
+```
+
+Now `grep "requestId=7c2a-..."` over your logs returns the whole request lifecycle, even across threads if you propagate the MDC into the executor.
+
+### Three pillars at a glance
+
+| Pillar | Question it answers | Cardinality | Tool |
+| --- | --- | --- | --- |
+| **Metrics** | "How are things going?" | Bounded (low) — labels per dimension | Prometheus, Datadog |
+| **Logs** | "What just happened?" | Unbounded — every event a row | Loki, Elasticsearch, CloudWatch |
+| **Traces** | "Where did this single request spend its time?" | Unbounded; sample aggressively | Jaeger, Tempo, Honeycomb |
+
+---

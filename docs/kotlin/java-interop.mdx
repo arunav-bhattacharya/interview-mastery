@@ -1,0 +1,150 @@
+---
+title: Java Interop & Idioms
+description: "Calling Kotlin from Java and vice versa — @JvmStatic, platform types, idiomatic conversions."
+sidebar_position: 5
+---
+
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Java Interop & Idioms
+
+<Pillbar pills={[
+  { label: 'topic', value: 'jvm interop' },
+  { label: 'reach for', value: 'mixed codebases' },
+]} />
+
+Kotlin compiles to standard JVM bytecode, so any Java code can call into it and vice versa. The trick is knowing the **handful of annotations** that smooth out the rough edges.
+
+## Calling Java from Kotlin
+
+Mostly transparent. The two things that trip people up:
+
+### Platform types
+
+A Java method like `public String getName()` returns `String!` from Kotlin's view — the `!` means "could be null or non-null; Kotlin doesn't know". The compiler **won't enforce null safety**, but a `NullPointerException` will fire if it actually is null.
+
+Defensive practice: annotate the boundary or assign with an explicit type:
+
+```kotlin
+val name: String  = legacyService.getName()  // crashes loudly if null at this point
+val name: String? = legacyService.getName()  // treat as nullable, handle null
+```
+
+For Java APIs you control, add `@Nullable` / `@NotNull` (JSR-305 or Jetbrains annotations) and Kotlin will see them.
+
+### Checked exceptions
+
+Kotlin has no checked exceptions. From Kotlin, a Java method that `throws IOException` is callable without `try/catch`. The exception still flies at runtime — Kotlin simply doesn't make it your problem at compile time.
+
+If a Kotlin function will be **called from Java** and you want Java callers to see the `throws`:
+
+```kotlin
+@Throws(IOException::class)
+fun loadFile(path: Path): ByteArray = Files.readAllBytes(path)
+```
+
+## Calling Kotlin from Java
+
+This is where the annotations matter — Kotlin features that don't exist in Java need bridges.
+
+### `@JvmStatic` — static methods
+
+A Kotlin `companion object` member is, from Java's view, accessed as `MyClass.Companion.foo()`. Add `@JvmStatic` to expose it as a plain static:
+
+```kotlin
+class HttpClient {
+  companion object {
+    @JvmStatic
+    fun default(): HttpClient = HttpClient()
+  }
+}
+```
+
+```java
+HttpClient c = HttpClient.default();   // not HttpClient.Companion.default()
+```
+
+### `@JvmField` — public fields
+
+```kotlin
+class Config {
+  @JvmField
+  val timeout = Duration.ofSeconds(30)
+}
+```
+
+```java
+Duration t = config.timeout;   // direct field, not config.getTimeout()
+```
+
+Use sparingly — losing the getter loses your ability to add validation later.
+
+### `@JvmOverloads` — default arguments
+
+Kotlin supports default arguments; Java doesn't. `@JvmOverloads` generates an overload per default-able parameter.
+
+```kotlin
+@JvmOverloads
+fun greet(name: String, greeting: String = "Hello", punct: String = "!") =
+  "$greeting, $name$punct"
+```
+
+```java
+greet("Ada");                    // uses both defaults
+greet("Ada", "Hi");              // uses one default
+greet("Ada", "Hi", ".");         // explicit
+```
+
+### `@JvmName` — rename for Java
+
+Useful when a Kotlin name conflicts with a Java keyword or you want a different name when seen from Java:
+
+```kotlin
+@JvmName("loadConfig")
+fun load(): Config = …
+```
+
+## Properties
+
+A Kotlin `val name: String` exposes a Java getter `getName()`. `var` exposes both `getName()` and `setName(...)`. Boolean `val isActive` exposes `isActive()` (per JavaBeans convention).
+
+```kotlin
+class User(val id: Long, val name: String, var email: String)
+```
+
+From Java:
+
+```java
+long id   = user.getId();
+String n  = user.getName();
+user.setEmail("new@example.com");
+```
+
+## Collections
+
+Kotlin's `List<T>` is **read-only at the type level**, backed by `java.util.List` at runtime. `MutableList<T>` is also `java.util.List` underneath. From Java's perspective there's no distinction — Java code can still mutate a Kotlin `List` it receives. Treat the boundary defensively.
+
+```kotlin
+fun snapshot(): List<User> = users.toList()   // defensive copy
+```
+
+## Common idiomatic conversions
+
+| Java pattern | Kotlin idiom |
+| --- | --- |
+| `Optional<T>` | `T?` |
+| `Stream<T>` | `Sequence<T>` (lazy) or `List<T>` (eager) |
+| `CompletableFuture<T>` | `suspend fun ... : T` (via `kotlinx-coroutines-jdk8`) |
+| `Builder().withX().withY().build()` | `data class` + `.copy(x = …, y = …)` |
+| `Objects.equals(a, b)` | `a == b` |
+| `Objects.requireNonNull(x, "msg")` | `requireNotNull(x) { "msg" }` |
+| `if (x == null) throw …` | `x ?: error("msg")` |
+| `(s == null \|\| s.isEmpty())` | `s.isNullOrEmpty()` |
+
+## Gradual adoption strategy
+
+1. **New code in Kotlin** — start with leaf modules (one class per file, no inheritance hierarchy spanning languages).
+2. **Annotate boundaries** — `@JvmStatic`, `@JvmOverloads`, `@Nullable`/`@NotNull` on public-from-Java surfaces.
+3. **Convert hot paths last** — let interfaces stay Java until you're sure the Kotlin replacement compiles cleanly.
+4. **Build pipeline**: JVM bytecode is identical; one Gradle/Maven plugin (`kotlin("jvm")`) adds Kotlin compilation. CI doesn't change.

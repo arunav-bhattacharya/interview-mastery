@@ -1,0 +1,120 @@
+---
+title: Data, Sealed & Enum Classes
+description: "DTOs with data classes; algebraic data types and exhaustive when via sealed interfaces."
+sidebar_position: 2
+---
+
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Data, Sealed & Enum Classes
+
+<Pillbar pills={[
+  { label: 'topic', value: 'modelling' },
+  { label: 'reach for', value: 'DTOs, results, state' },
+]} />
+
+## Data classes
+
+The Kotlin equivalent of Java records — but with one important superpower: **`.copy()`**.
+
+```kotlin
+data class User(val id: Long, val name: String, val email: String)
+
+val a = User(1, "Ada", "ada@example.com")
+val b = a.copy(email = "ada@new.example.com")   // only email differs
+```
+
+For every property listed in the primary constructor, the compiler generates:
+
+- `equals` / `hashCode` (value-based)
+- `toString` (`User(id=1, name=Ada, …)`)
+- `componentN()` (for destructuring)
+- `copy()`
+
+```kotlin
+val (id, name) = user     // destructuring via componentN()
+```
+
+### When NOT to use a data class
+
+- The class has identity, not value semantics (e.g. an entity backed by a DB row — equality should be by id, not all fields).
+- You need inheritance — data classes can implement interfaces but not extend open classes meaningfully.
+
+## Sealed interfaces / classes
+
+Algebraic data types. A sealed type knows **all** its subclasses, so `when` can be exhaustive without an `else`.
+
+```kotlin
+sealed interface Shape
+data class Circle(val r: Double) : Shape
+data class Square(val side: Double) : Shape
+data class Triangle(val base: Double, val height: Double) : Shape
+
+fun area(s: Shape): Double = when (s) {
+  is Circle   -> Math.PI * s.r * s.r
+  is Square   -> s.side * s.side
+  is Triangle -> 0.5 * s.base * s.height
+  // No else — compiler verifies coverage
+}
+```
+
+If a new subtype is added later, every `when` over `Shape` becomes a **compile error** until you handle it. That's the win.
+
+### Result type (idiomatic)
+
+A `Result<T, E>`-style sum type for business outcomes:
+
+```kotlin
+sealed interface CheckoutResult {
+  data class Ok(val orderId: Long) : CheckoutResult
+  data object EmptyCart           : CheckoutResult       // `data object` since Kotlin 1.9
+  data class InsufficientFunds(val needed: Long) : CheckoutResult
+  data class OutOfStock(val sku: String)         : CheckoutResult
+}
+
+fun checkout(cart: Cart): CheckoutResult = when {
+  cart.isEmpty()           -> CheckoutResult.EmptyCart
+  cart.total > user.wallet -> CheckoutResult.InsufficientFunds(cart.total - user.wallet)
+  /* ... */                -> CheckoutResult.Ok(orderId = 42)
+}
+```
+
+Callers `when` over the result and the compiler enforces handling.
+
+## `data object` (Kotlin 1.9+)
+
+A singleton with a useful `toString` and value equality. Use it for **stateless** sealed-type cases:
+
+```kotlin
+sealed interface AuthState
+data object LoggedOut : AuthState
+data class LoggedIn(val user: User) : AuthState
+```
+
+## Enum classes
+
+Java-style enums, with the same restrictions you'd expect. Use when the case set is **fixed and primitive-like**.
+
+```kotlin
+enum class Currency(val symbol: String) {
+  USD("$"), EUR("€"), JPY("¥");
+
+  fun format(amount: Long) = "$symbol${amount / 100}.${amount % 100}"
+}
+```
+
+Reach for `sealed interface` instead when:
+
+- Cases carry **different shapes of data** (`Ok(orderId)` vs `OutOfStock(sku)`).
+- You want exhaustive `when` with the compiler's help.
+
+## Decision matrix
+
+| Need | Reach for |
+| --- | --- |
+| DTO with value equality | `data class` |
+| Domain entity (identity = id) | regular `class` (override `equals` on id) |
+| Fixed primitive-like set | `enum class` |
+| Fixed set with varying payloads | `sealed interface` (+ `data class` / `data object` cases) |
+| One stateless singleton | `object` (`data object` for nicer `toString`) |

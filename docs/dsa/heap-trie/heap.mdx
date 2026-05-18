@@ -1,0 +1,145 @@
+---
+title: Heap / Priority Queue
+sidebar_position: 1
+---
+
+import HeapViz from '@site/src/components/HeapViz';
+import TrieViz from '@site/src/components/TrieViz';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+
+# Heap / Priority Queue
+
+### What is a Heap?
+
+A heap is a **complete binary tree** with the property that every parent is ≤ (min-heap) or ≥ (max-heap) its children. The root is therefore the global minimum or maximum.
+
+Because the tree is always complete, it's stored compactly in an array: `parent(i) = (i − 1) / 2`, `children(i) = 2i + 1, 2i + 2`.
+
+### Why Does It Work?
+
+The heap invariant is local — it only mentions parents and children — yet it guarantees a global property: the root is the extreme element. That gives a priority queue with very cheap operations:
+
+| Operation | Time |
+| --- | --- |
+| Peek root | `O(1)` |
+| Push | `O(log n)` |
+| Pop root | `O(log n)` |
+| Build from array | `O(n)` |
+
+### Mental Model
+
+A pyramid where the smallest (or largest) value is always on top, stored as a flat array.
+
+<HeapViz />
+
+### When to Use
+
+- **Top-K** anything: K largest / smallest / closest / most-frequent.
+- **Streaming median** — two heaps in balance.
+- **Merging K sorted streams** — one heap entry per stream.
+- **Greedy scheduling** — earliest deadline, cheapest cost, shortest job first.
+- **Dijkstra's shortest path**.
+
+<div className="im-core-concept">
+
+### Core Concept
+
+**Bounded heap trick for top-K**:
+
+- For the **K largest**, keep a **min-heap of size K**. On every insert past K, pop the root. The root is always the K-th largest seen so far.
+- For the **K smallest**, symmetric — a max-heap of size K.
+
+This keeps memory to `O(K)` and time to `O(n log K)` for huge streams.
+
+</div>
+### Template Code
+
+<CodeTabs
+  title="KthLargestInStream"
+  java={`class KthLargest {
+  private final int k;
+  private final PriorityQueue<Integer> min = new PriorityQueue<>();
+
+  public KthLargest(int k, int[] nums) {
+    this.k = k;
+    for (int v : nums) add(v);
+  }
+
+  public int add(int v) {
+    min.offer(v);
+    if (min.size() > k) min.poll();
+    return min.peek();
+  }
+}`}
+  kotlin={`import java.util.PriorityQueue
+
+class KthLargest(private val k: Int, nums: IntArray) {
+  private val min = PriorityQueue<Int>()
+  init { nums.forEach { add(it) } }
+  fun add(v: Int): Int {
+    min.offer(v)
+    if (min.size > k) min.poll()
+    return min.peek()
+  }
+}`}
+  python={`import heapq
+
+class KthLargest:
+    def __init__(self, k: int, nums: list[int]):
+        self.k = k
+        self.heap: list[int] = []
+        for v in nums: self.add(v)
+    def add(self, v: int) -> int:
+        heapq.heappush(self.heap, v)
+        if len(self.heap) > self.k: heapq.heappop(self.heap)
+        return self.heap[0]`}
+  go={`import "container/heap"
+
+type IntMinHeap []int
+func (h IntMinHeap) Len() int           { return len(h) }
+func (h IntMinHeap) Less(i, j int) bool { return h[i] < h[j] }
+func (h IntMinHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h *IntMinHeap) Push(x any)        { *h = append(*h, x.(int)) }
+func (h *IntMinHeap) Pop() any          { o := *h; v := o[len(o)-1]; *h = o[:len(o)-1]; return v }
+
+type KthLargest struct {
+  k int
+  h *IntMinHeap
+}
+
+func New(k int, nums []int) *KthLargest {
+  kl := &KthLargest{k: k, h: &IntMinHeap{}}
+  for _, v := range nums { kl.Add(v) }
+  return kl
+}
+
+func (kl *KthLargest) Add(v int) int {
+  heap.Push(kl.h, v)
+  if kl.h.Len() > kl.k { heap.Pop(kl.h) }
+  return (*kl.h)[0]
+}`}
+/>
+
+### Key Problems to Master
+
+| # | Problem | Difficulty | Pattern | LeetCode |
+| - | --- | --- | --- | --- |
+| 1 | Kth Largest Element in Stream | <Difficulty>Easy</Difficulty> | Bounded min-heap | [LC 703](https://leetcode.com/problems/kth-largest-element-in-a-stream/) |
+| 2 | Top K Frequent Elements | <Difficulty>Medium</Difficulty> | Counts + heap / bucket | [LC 347](https://leetcode.com/problems/top-k-frequent-elements/) |
+| 3 | Merge K Sorted Lists | <Difficulty>Hard</Difficulty> | Heap of list heads | [LC 23](https://leetcode.com/problems/merge-k-sorted-lists/) |
+| 4 | Find Median From Data Stream | <Difficulty>Hard</Difficulty> | Two heaps in balance | [LC 295](https://leetcode.com/problems/find-median-from-data-stream/) |
+| 5 | Reorganize String | <Difficulty>Medium</Difficulty> | Max-heap of counts | [LC 767](https://leetcode.com/problems/reorganize-string/) |
+| 6 | Last Stone Weight | <Difficulty>Easy</Difficulty> | Repeated max-extract | [LC 1046](https://leetcode.com/problems/last-stone-weight/) |
+| 7 | Task Scheduler | <Difficulty>Medium</Difficulty> | Heap + cooling queue | [LC 621](https://leetcode.com/problems/task-scheduler/) |
+
+### Common Mistakes to Avoid
+
+- Building a heap of all `n` when you only need top-K. Use a bounded heap; `O(n log K)` beats `O(n log n)`.
+- Reaching for a max-heap when the language only ships a min-heap → invert ordering (Java `Comparator.reverseOrder()`, Python push negated values).
+- Forgetting that `peek` doesn't pop — call it, then decide whether to `poll`.
+- Tuple comparison gotchas — wrap with an explicit comparator when ties matter.
+
+---

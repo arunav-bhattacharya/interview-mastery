@@ -1,0 +1,32 @@
+.block {
+  border-radius: 12px !important;
+  border: 1px solid var(--im-border);
+  margin: 1rem 0;
+  overflow: hidden;
+}
+
+.title {
+  padding: 8px 14px;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--im-fg-2);
+  background: var(--im-surface-2);
+  border-bottom: 1px solid var(--im-border);
+}
+
+.pre {
+  margin: 0;
+  padding: 14px 16px;
+  overflow-x: auto;
+  background: inherit;
+  font-family: var(--ifm-font-family-monospace) !important;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  tab-size: 2;
+}
+
+.line {
+  display: block;
+  white-space: pre;
+}

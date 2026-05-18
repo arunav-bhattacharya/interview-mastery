@@ -1,0 +1,97 @@
+---
+title: Mental Model
+description: "One-glance recall card for all seven Structural patterns — trigger words, mnemonics, and when to reach for each."
+sidebar_position: 0
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+
+# Structural — Mental Model
+
+<Pillbar pills={[
+  { label: 'role', value: 'recall card' },
+  { label: 'family', value: 'structural' },
+  { label: 'patterns', value: 7 },
+]} />
+
+One page to glance at when you can't remember which Structural pattern fits. Every row has a **trigger word** (the smell that should make you reach for it) and a **mental anchor** (a real-world image that locks in the idea).
+
+## The seven at a glance
+
+| Pattern | One-liner | Trigger word | Mental anchor |
+| --- | --- | --- | --- |
+| [Adapter](./adapter.mdx) | Translate **one interface** into another | "third-party API mismatches" | Travel power plug |
+| [Bridge](./bridge.mdx) | Split **abstraction × implementation** into two hierarchies | "M × N class explosion" | TV remote × TV brand |
+| [Composite](./composite.mdx) | Treat **leaves and trees** the same | "recursive tree (files, UI, AST)" | Boxes inside boxes |
+| [Decorator](./decorator.mdx) | **Wrap** an object to add behaviour | "stack cross-cutting concerns" | Gift → tissue → box → paper |
+| [Facade](./facade.mdx) | One **simple front** to a complex subsystem | "5-step orchestration repeated" | Hotel concierge |
+| [Flyweight](./flyweight.mdx) | **Share** fine-grained instances | "millions of similar tiny objects" | Type-block in a printing press |
+| [Proxy](./proxy.mdx) | **Stand-in** for the real object | "lazy / auth / RPC" | Bank cheque for cash |
+
+## Smell → pattern in one line
+
+- "Two libraries that should talk, but their interfaces don't match" → **Adapter**.
+- "Theme × widget = 30 classes" → **Bridge**.
+- "I keep writing `if (item is Directory) … else …`" → **Composite**.
+- "I want logging + retry + caching around the same call" → **Decorator** stack.
+- "The caller has to invoke 5 subsystems in the right order" → **Facade**.
+- "Allocating millions of nearly-identical `Glyph`s blows up memory" → **Flyweight**.
+- "Object should construct on first use, not at startup" → **Proxy** (virtual / lazy).
+
+## Three-bucket sort
+
+Structural patterns are all about **how objects compose**. The trick is *what kind of composition*:
+
+- **Wrappers** — same interface, different behaviour: **Decorator** (adds), **Proxy** (controls).
+- **Translators / aggregators** — different interface or hidden complexity: **Adapter** (translates), **Facade** (simplifies subsystem).
+- **Structural shapes** — composition is the point: **Composite** (tree), **Bridge** (two-axis split), **Flyweight** (shared instances).
+
+## Adapter vs. Decorator vs. Proxy vs. Facade
+
+These four are the easiest to confuse — all involve wrapping. The distinction:
+
+| | Same interface? | Adds behaviour? | Controls access? | Hides multi-class subsystem? |
+| --- | --- | --- | --- | --- |
+| **Adapter**  | ❌ changes it | — | — | ❌ |
+| **Decorator**| ✅ | ✅ | — | ❌ |
+| **Proxy**    | ✅ | — | ✅ | ❌ |
+| **Facade**   | ✅ (new) | — | — | ✅ |
+
+## Common collaborations
+
+| You picked... | …commonly pairs with |
+| --- | --- |
+| Adapter | Facade (Facade often adapts internally) |
+| Bridge | Abstract Factory (factory picks the implementation) |
+| Composite | Iterator (walks the tree), Visitor (operations on it) |
+| Decorator | Strategy (each layer is a strategy choice) |
+| Facade | Singleton (one orchestrator per process) |
+| Flyweight | Factory Method (gates the shared cache) |
+| Proxy | Decorator (similar shape; intent differs) |
+
+## Decision flowchart
+
+```text
+Need to bolt classes together?
+│
+├── Interfaces don't match                          → Adapter
+│
+├── Two independent dimensions vary together
+│   (shape × renderer, theme × widget)              → Bridge
+│
+├── Recursive tree (leaves + branches)              → Composite
+│
+├── Add behaviour without subclassing               → Decorator
+│
+├── Simplify a multi-step subsystem behind one call → Facade
+│
+├── Tons of nearly-identical small objects          → Flyweight
+│
+└── Need lazy load, auth, RPC, or caching          → Proxy
+```
+
+## Memory hooks
+
+- **A B C D F F P** = *Adapter, Bridge, Composite, Decorator, Facade, Flyweight, Proxy*.
+- All seven prefer **composition over inheritance**. If your fix is "add another subclass", reach for one of these instead.
+- The **wrapper trio** (Adapter / Decorator / Proxy) all hold a reference to the wrapped object. The difference is *why*.

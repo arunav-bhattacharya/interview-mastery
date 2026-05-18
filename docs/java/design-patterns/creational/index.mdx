@@ -1,0 +1,106 @@
+---
+title: Creational Patterns
+description: Patterns that hide how objects come into being — Singleton, Factory Method, Abstract Factory, Builder, Prototype.
+sidebar_position: 1
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Creational Patterns
+
+<Pillbar pills={[
+  { label: 'family', value: 'creational' },
+  { label: 'patterns', value: 5 },
+  { label: 'theme', value: 'hide construction' },
+]} />
+
+Creational patterns hide **how objects come into being** from the code that uses them. The caller asks for a `Document`, not for a particular `PdfDocument` constructor. The shared shape: introduce an indirection — a factory, a builder, a prototype — between *needing* an object and *picking which concrete class to instantiate*.
+
+Reach for one when construction is non-trivial: many optional arguments, a family of related classes, an expensive object you'd rather clone than rebuild, or a service the whole system shares.
+
+<QuickNav items={[
+  { label: 'SINGLETON',        href: '/learn/java/design-patterns/creational/singleton' },
+  { label: 'FACTORY METHOD',   href: '/learn/java/design-patterns/creational/factory-method' },
+  { label: 'ABSTRACT FACTORY', href: '/learn/java/design-patterns/creational/abstract-factory' },
+  { label: 'BUILDER',          href: '/learn/java/design-patterns/creational/builder' },
+  { label: 'PROTOTYPE',        href: '/learn/java/design-patterns/creational/prototype' },
+]} />
+
+## At a glance
+
+| Pattern | Intent | Reach for it when | Key collaborator |
+| --- | --- | --- | --- |
+| [Singleton](./singleton.mdx) | Exactly one instance, globally accessible | Truly shared resource (pool, registry, logger) | itself |
+| [Factory Method](./factory-method.mdx) | Subclasses decide which class to instantiate | Construction depends on input or context | a `Product` interface |
+| [Abstract Factory](./abstract-factory.mdx) | Family of related products that vary together | Cross-product variants must stay consistent | a `Factory` interface |
+| [Builder](./builder.mdx) | Step-by-step construction of a complex object | Many optional fields, immutable target | optional `Director` |
+| [Prototype](./prototype.mdx) | Clone an existing instance instead of `new` | `new` is expensive or type is chosen at runtime | `Cloneable` / `copy()` |
+
+## Smell → pattern lookup
+
+| Symptom in code | Pattern to consider |
+| --- | --- |
+| `new Foo()` repeated; you wanted one shared instance | **Singleton** (often replaced by a DI-managed bean) |
+| Big `switch` on a type discriminator picking a class | **Factory Method** or registry-based factory |
+| Need to swap an entire **family** of components together | **Abstract Factory** |
+| Constructor has 6+ parameters, half nullable | **Builder** |
+| Bootstrapping the object is slow; you need many copies | **Prototype** |
+
+## Practice Problems
+
+Interview-style problems that exercise creational patterns. Time yourself; sketch a class diagram first, then code.
+
+### 1. Thread-safe configuration loader
+
+Design a `Configuration` class that reads `application.yml` once at startup and exposes typed getters (`getString`, `getInt`, `getDuration`). Multiple threads call `Configuration.get()` from anywhere in the codebase.
+
+- **Pattern**: Singleton.
+- **What to ask the interviewer**: Is the config immutable after load? Do we need hot-reload? If hot-reload is in scope, the singleton must hold a `volatile` snapshot reference and swap atomically.
+
+### 2. Generic notification factory
+
+Implement a notification system that dispatches messages over **email**, **SMS**, **push**, or **Slack** based on the user's preference. Adding a new channel must not require editing existing code.
+
+- **Pattern**: Factory Method (or Abstract Factory if entire families vary — e.g., transactional vs. marketing pipelines).
+- **Stretch**: Return a `List<Notifier>` so a user can opt into multiple channels for one event.
+
+### 3. Cross-platform UI toolkit
+
+You're building a desktop app that runs on macOS, Windows, and Linux. Buttons, dialogs, and menus should look native on each. The application code must not contain `if (os == ...)` branches.
+
+- **Pattern**: Abstract Factory (`GuiFactory` with platform variants).
+- **Trap**: Adding a new widget type (say, a tooltip) forces a change in every concrete factory.
+
+### 4. Fluent HTTP request builder
+
+Build an immutable `HttpRequest` with required fields (`method`, `url`) and many optional ones (headers, query params, timeout, retry policy, body). The API should chain calls and fail-fast if a required field is missing at `build()` time.
+
+- **Pattern**: Builder.
+- **Variants worth discussing**: Java records vs. hand-rolled builder; Kotlin named arguments; the Lombok `@Builder` annotation.
+
+### 5. Document template engine
+
+Given an expensive-to-construct `LegalDocumentTemplate` (parses 50 KB of XSLT, resolves brand assets, validates schemas), produce N personalized documents per second by cloning the template and filling in customer-specific fields.
+
+- **Pattern**: Prototype.
+- **Trap**: Deep-copy vs. shallow-copy on nested mutable state.
+
+### 6. Database connection pool
+
+Implement a connection pool that hands out `Connection` objects, blocks when exhausted, and recycles closed connections. The pool itself should be a single instance per application.
+
+- **Patterns**: Singleton (the pool) + Prototype-ish behaviour (pre-built connection templates) + Factory Method (creating new connections on demand).
+
+### 7. Plugin loader
+
+A game engine loads plugins from a directory at startup. Each plugin advertises a `kind` (renderer, audio, physics), and the engine builds the appropriate concrete plugin instance based on metadata in the plugin's manifest.
+
+- **Pattern**: Factory Method with a registry. The registry maps `kind` → constructor.
+
+### 8. SQL query DSL
+
+Design a fluent API to build SQL queries: `Query.select("id", "name").from("users").where("active = true").orderBy("created_at desc").limit(10)`. The final `build()` returns a parameterized SQL string and a list of values.
+
+- **Pattern**: Builder.
+- **Stretch**: Implement subqueries — does your API compose recursively?

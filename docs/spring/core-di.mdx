@@ -1,0 +1,151 @@
+---
+title: Spring Core & DI
+description: "Spring's IoC container, bean lifecycle, and constructor injection."
+sidebar_position: 1
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Spring Core & DI
+
+### IoC & DI
+
+Spring's container instantiates beans, wires their dependencies, and manages their lifecycle. **You don't `new` your dependencies; the framework hands them to you.**
+
+- **`@Component`** (and stereotypes `@Service`, `@Repository`, `@Controller`) registers a class as a bean.
+- **`@Configuration`** + **`@Bean`** for manual bean creation when a class isn't yours.
+- **Constructor injection** is the recommended style — explicit, testable, immutable.
+
+<CodeTabs
+  title="ConstructorInjection"
+  java={`@Service
+public class OrderService {
+  private final UserService users;
+  private final InventoryClient inventory;
+
+  public OrderService(UserService users, InventoryClient inventory) {
+    this.users = users;
+    this.inventory = inventory;
+  }
+}`}
+  kotlin={`@Service
+class OrderService(
+  private val users: UserService,
+  private val inventory: InventoryClient,
+)`}
+/>
+
+### Bean scopes
+
+| Scope | Lifecycle |
+| --- | --- |
+| `singleton` (default) | One per container, shared across threads |
+| `prototype` | New instance every injection |
+| `request` / `session` | One per HTTP request / session |
+| `application` | One per `ServletContext` |
+| `websocket` | One per WebSocket session |
+
+Singletons must be **stateless** — request-scoped mutable state in a singleton is a race condition.
+
+### Injection types — compared
+
+| Style | Looks like | Verdict |
+| --- | --- | --- |
+| **Constructor** | `final` fields set in the constructor (recommended) | ✅ Immutable, explicit, easy to unit-test without Spring, prevents circular deps at startup |
+| **Setter** | `@Autowired` on a setter | Useful for **optional** deps; otherwise avoid |
+| **Field** | `@Autowired` on a private field | ❌ Reflection-only — can't construct in tests without Spring; hides dependencies; allows circular deps to silently exist |
+
+Modern Spring Boot starters all use constructor injection (Lombok's `@RequiredArgsConstructor` or Kotlin's primary constructor make it ergonomic).
+
+### Bean lifecycle
+
+The full sequence for a singleton bean:
+
+1. **Instantiation** — constructor runs.
+2. **Property population** — `@Autowired` / setter injection completes.
+3. **`BeanNameAware.setBeanName`** / `BeanFactoryAware` / `ApplicationContextAware` if implemented.
+4. **`@PostConstruct`** method runs (or `InitializingBean.afterPropertiesSet`, or `init-method`).
+5. **`BeanPostProcessor.postProcessBeforeInitialization`** — this is where proxies are created (AOP, `@Transactional`).
+6. **Bean is in use.**
+7. On shutdown: **`@PreDestroy`** (or `DisposableBean.destroy`, or `destroy-method`).
+
+```java
+@Component
+public class CachePrimer {
+    @PostConstruct
+    void warmUp() { /* runs once after wiring */ }
+
+    @PreDestroy
+    void flush()  { /* runs on graceful shutdown */ }
+}
+```
+
+### Circular dependencies
+
+```text
+A → depends on → B
+B → depends on → A
+```
+
+With constructor injection Spring **fails fast** at startup with `BeanCurrentlyInCreationException` — which is what you want. With field/setter injection it silently uses proxies and you discover the bug at first request.
+
+**Right fixes:**
+
+1. Pull the shared logic into a third bean `C` that both `A` and `B` depend on.
+2. Make one side **lazy** (`@Lazy` on the parameter) — last-resort only.
+3. Switch to event-driven (`ApplicationEventPublisher`) for fire-and-forget cycles.
+
+### `@Component` vs. `@Bean`
+
+| | `@Component` | `@Bean` |
+| --- | --- | --- |
+| Where it goes | On a class you own | On a method inside `@Configuration` |
+| Use for | Your own services | Third-party classes you can't annotate (drivers, clients) |
+| How Spring sees it | Component-scanned | Explicitly invoked at startup |
+
+### Proxy mechanism — JDK Dynamic Proxy vs. CGLIB
+
+Spring wraps your bean in a proxy to apply cross-cutting concerns (`@Transactional`, `@Async`, `@Cacheable`).
+
+| Proxy type | When Spring picks it | Limitation |
+| --- | --- | --- |
+| **JDK dynamic proxy** | Bean implements an interface | Only methods on the interface are advised |
+| **CGLIB** | Bean has no interface, or `proxyTargetClass = true` | Subclasses the bean class — final classes / methods can't be proxied |
+
+Spring Boot defaults to **CGLIB** since 2.x for most cases. Be aware:
+
+- `final` methods are **not** advised by CGLIB.
+- `private` methods are **never** advised (neither proxy can intercept them).
+- Static methods are never advised.
+
+### The self-invocation problem
+
+A proxy can only intercept calls that go **through the proxy**. Calls from one method on the bean to another method on the **same** bean go directly through `this`, bypassing the proxy.
+
+```java
+@Service
+public class OrderService {
+    @Transactional
+    public void createOrder(Order o) {
+        save(o);
+        notifyCustomer(o);   // ← still inside the same transaction (OK)
+    }
+
+    @Transactional(propagation = REQUIRES_NEW)
+    public void notifyCustomer(Order o) {   // ❌ self-call bypasses proxy
+        ...
+    }
+}
+```
+
+The `REQUIRES_NEW` is silently ignored because `this.notifyCustomer(o)` skips the proxy. **Fixes:**
+
+1. Inject `OrderService` into itself (`@Autowired` a self-reference) and call through it. Ugly but works.
+2. Split the inner method into a separate bean.
+3. Use `AopContext.currentProxy()` (requires `exposeProxy = true`). Ugly.
+
+The right fix is almost always (2) — extract the inner method into its own bean.
+
+---

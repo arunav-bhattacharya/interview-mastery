@@ -1,0 +1,98 @@
+---
+title: Bit Manipulation
+sidebar_position: 3
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+
+# Bit Manipulation
+
+### What is Bit Manipulation?
+
+Operating on integers at the **bit level** — AND, OR, XOR, shifts, masks. Often used to compact state, count parity, or solve problems where one element appears once and others twice.
+
+### Why Does It Work?
+
+XOR has two magic properties: `a ^ a = 0` and `a ^ 0 = a`. So XOR-ing every element in a list where every value appears twice (except one) gives you that lonely value — in `O(n)` time and `O(1)` space.
+
+Bitmasks let you represent subsets as integers: a 32-bit int can be a set of up to 32 elements, with intersection / union / membership all running in `O(1)`.
+
+### Mental Model
+
+A bitmask is a tiny set. AND is intersection, OR is union, XOR is symmetric difference, NOT is complement.
+
+```text
+n & (n - 1)  →  clears the lowest set bit
+n & -n       →  isolates the lowest set bit
+__builtin_popcount(n) / Integer.bitCount(n) → number of 1-bits
+```
+
+### When to Use
+
+- "One element appears once, others twice/three times" → XOR.
+- Counting / iterating subsets — bitmask DP.
+- Power-of-two checks: `n > 0 && (n & (n − 1)) == 0`.
+- Compact state for small `n` (≤ ~20 elements).
+
+<div className="im-core-concept">
+
+### Core Concept
+
+The handful of operations you'll use most:
+
+| Operation | Bits |
+| --- | --- |
+| Test bit `k` | `(n >> k) & 1` |
+| Set bit `k` | `n \| (1 << k)` |
+| Clear bit `k` | `n & ~(1 << k)` |
+| Toggle bit `k` | `n ^ (1 << k)` |
+| Iterate over subsets of mask `m` | `s = m; while (s > 0) { ...; s = (s − 1) & m; }` |
+
+</div>
+### Template Code
+
+<CodeTabs
+  title="SingleNumber"
+  java={`public int singleNumber(int[] nums) {
+  int x = 0;
+  for (int v : nums) x ^= v;
+  return x;
+}`}
+  kotlin={`fun singleNumber(nums: IntArray): Int {
+  var x = 0
+  for (v in nums) x = x xor v
+  return x
+}`}
+  python={`def single_number(nums: list[int]) -> int:
+    x = 0
+    for v in nums: x ^= v
+    return x`}
+  go={`func singleNumber(nums []int) int {
+  x := 0
+  for _, v := range nums { x ^= v }
+  return x
+}`}
+/>
+
+### Key Problems to Master
+
+| # | Problem | Difficulty | Trick | LeetCode |
+| - | --- | --- | --- | --- |
+| 1 | Single Number | <Difficulty>Easy</Difficulty> | XOR | [LC 136](https://leetcode.com/problems/single-number/) |
+| 2 | Number of 1 Bits | <Difficulty>Easy</Difficulty> | `n & (n - 1)` | [LC 191](https://leetcode.com/problems/number-of-1-bits/) |
+| 3 | Counting Bits | <Difficulty>Easy</Difficulty> | DP on bits | [LC 338](https://leetcode.com/problems/counting-bits/) |
+| 4 | Reverse Bits | <Difficulty>Easy</Difficulty> | Shift & OR | [LC 190](https://leetcode.com/problems/reverse-bits/) |
+| 5 | Sum of Two Integers | <Difficulty>Medium</Difficulty> | Adder via XOR + AND | [LC 371](https://leetcode.com/problems/sum-of-two-integers/) |
+| 6 | Power of Two | <Difficulty>Easy</Difficulty> | `n & (n - 1) == 0` | [LC 231](https://leetcode.com/problems/power-of-two/) |
+
+### Common Mistakes to Avoid
+
+- Confusing arithmetic and logical right-shift in signed integers (Java's `>>` vs. `>>>`).
+- Off-by-one on bit index — bit `0` is the least significant.
+- Overflow in shifts — `1 << 32` is undefined in many languages.
+- Reaching for bit tricks when a hash map is faster to write and just as fast to run.
+
+---

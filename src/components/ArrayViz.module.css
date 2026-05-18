@@ -71,11 +71,21 @@
 
 .cell.window {
   border-color: var(--im-accent);
-  background: rgba(217, 119, 6, 0.14);
+  background: rgba(79, 70, 229, 0.14);
 }
 .cell.windowEdge {
   outline: 2px solid var(--im-accent);
   outline-offset: -2px;
+}
+.cell.entered {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: #10b981;
+  transform: translateY(-3px);
+}
+.cell.leftDrop {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.5);
+  opacity: 0.55;
 }
 .cell.found {
   background: rgba(16, 185, 129, 0.22);

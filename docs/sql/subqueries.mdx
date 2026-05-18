@@ -1,0 +1,82 @@
+---
+title: Subqueries
+description: Scalar, IN, EXISTS, correlated — pick the right shape for the question.
+sidebar_position: 5
+---
+
+# Subqueries
+
+## Three shapes
+
+| Shape | Example |
+| --- | --- |
+| **Scalar** | `SELECT name, (SELECT COUNT(*) FROM orders WHERE customer_id = c.id) FROM customers c` |
+| **`IN` / `NOT IN`** | `WHERE id IN (SELECT customer_id FROM orders WHERE total > 100)` |
+| **Correlated `EXISTS` / `NOT EXISTS`** | `WHERE EXISTS (SELECT 1 FROM orders WHERE customer_id = c.id)` |
+
+A **correlated** subquery references the outer query's columns; an **uncorrelated** one stands alone. Correlated subqueries run conceptually once per outer row, though modern planners often rewrite them.
+
+## `EXISTS` vs. `IN`
+
+`EXISTS` short-circuits — once any matching row is found, the engine stops. `IN` may build the full sub-result.
+
+```sql
+-- EXISTS — best when the subquery could be huge but a match is likely
+SELECT c.id
+FROM customers c
+WHERE EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id);
+
+-- IN — best when the subquery is small and produces a deduplicated set
+SELECT c.id
+FROM customers c
+WHERE c.id IN (SELECT customer_id FROM vip_list);
+```
+
+## `NOT IN` and NULL — the silent killer
+
+```sql
+-- BROKEN if any subquery row is NULL
+SELECT id FROM customers WHERE id NOT IN (SELECT customer_id FROM orders);
+```
+
+If `orders.customer_id` contains even one NULL, **every** outer row is eliminated because `id NOT IN (..., NULL, ...)` evaluates to `NULL` (not `TRUE`). Prefer `NOT EXISTS`:
+
+```sql
+SELECT c.id
+FROM customers c
+WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id);
+```
+
+## Scalar subquery in `SELECT`
+
+Lean on this for "decorating" rows:
+
+```sql
+SELECT
+  c.id,
+  c.name,
+  (SELECT COUNT(*)     FROM orders o WHERE o.customer_id = c.id) AS order_count,
+  (SELECT MAX(amount)  FROM orders o WHERE o.customer_id = c.id) AS biggest_order
+FROM customers c;
+```
+
+Often clearer than a `LEFT JOIN + GROUP BY`. For >2 metrics, a `LEFT JOIN ... GROUP BY` is usually faster.
+
+## Subquery vs. JOIN — when each wins
+
+| Want | Reach for |
+| --- | --- |
+| Filter outer rows by existence | `EXISTS` |
+| Filter outer rows by absence | `NOT EXISTS` |
+| Pull columns from a 1:1 relation | `JOIN` |
+| Pull aggregates per group | `JOIN + GROUP BY` (or window function) |
+| One-shot value to compare against | Scalar subquery |
+| Top-N per group | Window function (see [next spoke](./window-functions.mdx)) |
+
+## Gotchas
+
+- A **scalar subquery returning >1 row** errors at runtime.
+- **Correlated subqueries inside `SELECT`** can quietly become O(N²) on large tables. Check `EXPLAIN ANALYZE`.
+- **`IN (...)` with thousands of values** can blow up the parser/plan time. Use a temp table or `VALUES`-list join.
+
+Next: [CTEs](./ctes.mdx).

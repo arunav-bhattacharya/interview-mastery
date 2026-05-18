@@ -1,0 +1,46 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 1.4rem 0 2rem;
+}
+
+.card {
+  padding: 14px 16px;
+  background: var(--im-surface);
+  border: 1px solid var(--im-border);
+  border-radius: 12px;
+  border-top: 3px solid var(--im-accent);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.amber { border-top-color: #f59e0b; }
+.iris  { border-top-color: #6366f1; }
+.mint  { border-top-color: #10b981; }
+.rose  { border-top-color: #e11d48; }
+.cyan  { border-top-color: #0891b2; }
+
+.area {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--im-muted);
+}
+
+.goal {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  line-height: 1.4;
+}
+
+.verify {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--im-fg-2);
+  line-height: 1.5;
+}

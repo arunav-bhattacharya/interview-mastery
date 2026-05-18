@@ -1,0 +1,169 @@
+---
+title: "SD Cases: Search & Payments"
+description: Designing typeahead / autocomplete, a notification system, and a payment system.
+sidebar_position: 6
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import Pillbar from '@site/src/components/Pillbar';
+import { Checklist, ChecklistItem } from '@site/src/components/Checklist';
+
+# System Design Case Studies — Part 3
+
+<Pillbar pills={[
+  { label: 'time', value: '3–4 hours' },
+  { label: 'designs', value: 3 },
+]} />
+
+**Search, Notifications & Payments** — Typeahead, Notification System, Payment System.
+
+<QuickNav items={[
+  { label: 'DESIGN 8: SEARCH AUTOCOMPLETE / TYPEAHEAD', href: '#design-8-search-autocomplete--typeahead' },
+  { label: 'DESIGN 9: NOTIFICATION SYSTEM', href: '#design-9-notification-system' },
+  { label: 'DESIGN 10: PAYMENT SYSTEM', href: '#design-10-payment-system' },
+  { label: 'CHECKLIST', href: '#checklist' },
+]} />
+
+## Design 8: Search Autocomplete / Typeahead
+
+### Functional
+
+- As the user types, show top-K suggestions matching the prefix.
+- Suggestions are personalized and ranked.
+- Response time < 100 ms.
+
+### Numbers
+
+- 10M DAU, ~10 queries/user/day → 100M queries/day.
+- Each keystroke fires a query → 10× more requests → 1B/day.
+
+### Architecture
+
+```text
+[ Client ] → [ Edge / CDN ] → [ Suggest API ]
+                                      │
+                                      ▼
+                          [ In-memory trie / FST ]
+                                      │
+                                      ▼
+                          [ Personalization layer ]
+```
+
+### Key design points
+
+- **Index structure**: trie of prefixes → top-K completions per node. Or a finite-state transducer (FST) for compactness.
+- **Top-K precomputed**: don't compute at query time; bake into trie nodes.
+- **Refresh cadence**: rebuild offline daily (Spark / batch job) + live patching for trending queries.
+- **Personalization**: blend global popularity with user history; cap latency budget.
+- **Caching**: edge cache for popular prefixes — most keystrokes are repeated.
+
+### Bottlenecks
+
+- Long-tail prefixes never hit cache.
+- Trie size — 100M unique queries → multi-GB tries; shard by prefix.
+
+---
+
+## Design 9: Notification System
+
+### Functional
+
+- Send notifications across **email, push (APNs / FCM), SMS, in-app** channels.
+- User preferences per channel and per category.
+- Templated, localized.
+- Reliable delivery + idempotent retries.
+
+### Architecture
+
+```text
+[ Producer service ] → [ Notification API ] → [ Queue ]
+                                                  ↓
+                            ┌─────────────────────┼─────────────────────┐
+                            ▼                     ▼                     ▼
+                    [ Email worker ]       [ Push worker ]       [ SMS worker ]
+                            ↓                     ↓                     ↓
+                       [ SendGrid ]          [ APNs / FCM ]         [ Twilio ]
+```
+
+### Key design points
+
+- **Decouple via queue** — producer never blocks on delivery.
+- **Worker per channel** — each handles retries, dead-letter, vendor-specific quirks.
+- **User preference DB** — joined into the dispatch logic; cache aggressively (preferences change rarely).
+- **Templates** — versioned in a template store; render at dispatch time with locale-aware copy.
+- **Idempotency** — every notification has a unique `event_id`; workers de-dupe by it.
+
+### Tradeoffs
+
+- Per-channel fan-out duplicates work but isolates failures.
+- Vendor SLAs matter — circuit-break around them.
+
+---
+
+## Design 10: Payment System
+
+### Functional
+
+- Accept payments from cards / wallets / bank transfers.
+- Charge, refund, capture-later, partial capture.
+- Reconcile with payment networks at end of day.
+- Audit log every action.
+
+### Numbers
+
+- 100M transactions/day, ~$10B/day in volume.
+- ~1.2k TPS average, 5k TPS peak.
+- Compliance: PCI DSS, SOX.
+
+### Architecture
+
+```text
+[ Client ] → [ Payment API ] → [ Idempotency layer ]
+                                       │
+                  ┌────────────────────┼────────────────────┐
+                  ▼                    ▼                    ▼
+          [ Authorization ]    [ Fraud / Risk ]    [ Compliance ]
+                  │                    │                    │
+                  └────────────────────┼────────────────────┘
+                                       ▼
+                         [ Card Networks / Acquirer ]
+                                       │
+                                       ▼
+                         [ Ledger DB (double-entry) ]
+```
+
+### Key design points
+
+- **Idempotency keys** are non-negotiable. Every charge request carries one; the server stores `(idempotency_key, response)`; replays return the cached response.
+- **Double-entry ledger**: every transaction is two records (debit + credit). The ledger must always balance. Reconciliation jobs verify this nightly.
+- **Async settlement**: card networks settle in batches. The ledger records both authorized and captured states.
+- **Refund** is a new transaction, not a delete. Cancellation is a forward action.
+- **Fraud / risk**: synchronous score + async deeper analysis with retroactive reversal.
+
+### Compliance
+
+- **PCI DSS**: never store the raw PAN (primary account number); use a tokenization vault.
+- **Audit log** every state change; append-only, signed.
+- **Encryption**: at rest and in transit, with HSM-backed keys.
+
+### Tradeoffs
+
+- Strong consistency for the ledger; eventual consistency tolerated for analytics.
+- Synchronous fraud check → latency cost. Skip for trusted accounts.
+
+---
+
+## Checklist
+
+Across all 10 case studies, make sure you can articulate:
+
+<Checklist>
+  <ChecklistItem id="system-design-cases-search-payments-0-functional-vs-non-functional-requirement">**Functional vs. non-functional requirements** in the first 5 minutes.</ChecklistItem>
+  <ChecklistItem id="system-design-cases-search-payments-0-scale-numbers-rps-storage-payload-size">**Scale numbers** — RPS, storage, payload size.</ChecklistItem>
+  <ChecklistItem id="system-design-cases-search-payments-0-three-api-endpoints-with-request-respons">**Three API endpoints** with request / response shapes.</ChecklistItem>
+  <ChecklistItem id="system-design-cases-search-payments-0-read-vs-write-ratio-and-which-side-domin">**Read vs. write ratio** and which side dominates the design.</ChecklistItem>
+  <ChecklistItem id="system-design-cases-search-payments-0-where-the-cache-lives-and-what-its-hit-r">**Where the cache lives** and what its hit ratio is.</ChecklistItem>
+  <ChecklistItem id="system-design-cases-search-payments-0-how-writes-are-partitioned">**How writes are partitioned**.</ChecklistItem>
+  <ChecklistItem id="system-design-cases-search-payments-0-what-fails-first-under-load-and-how-the">**What fails first under load** and how the system degrades.</ChecklistItem>
+  <ChecklistItem id="system-design-cases-search-payments-0-trade-offs-you-knowingly-made-the-wrap-u">**Trade-offs you knowingly made** (the wrap-up step).</ChecklistItem>
+</Checklist>

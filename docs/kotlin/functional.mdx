@@ -1,0 +1,185 @@
+---
+title: Functional Features
+description: "Lambdas, higher-order functions, scope functions, sequences, extension functions."
+sidebar_position: 4
+---
+
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Functional Features
+
+<Pillbar pills={[
+  { label: 'topic', value: 'functional kotlin' },
+  { label: 'reach for', value: 'everywhere' },
+]} />
+
+## Lambdas & function types
+
+A function type is `(Input) -> Output`. Lambdas are expressions of that type.
+
+```kotlin
+val square: (Int) -> Int = { it * it }
+val add: (Int, Int) -> Int = { a, b -> a + b }
+
+square(5)         // 25
+add(2, 3)         // 5
+```
+
+When a lambda has **one** parameter you can refer to it as `it`. With multiple parameters, name them explicitly: `{ a, b -> ... }`.
+
+## Higher-order functions
+
+Functions that take or return other functions. The collection API is full of these.
+
+```kotlin
+val users = repo.findAll()
+
+// Idiomatic chain:
+val active = users
+  .filter { it.active }
+  .map    { it.name }
+  .sorted()
+```
+
+Writing your own:
+
+```kotlin
+inline fun <T> retry(times: Int, block: () -> T): T {
+  var last: Exception? = null
+  repeat(times) {
+    try { return block() }
+    catch (e: Exception) { last = e }
+  }
+  throw last!!
+}
+
+val data = retry(3) { httpClient.get(url) }
+```
+
+`inline` tells the compiler to copy the lambda body into the call site, avoiding the cost of allocating a `Function` object — important for hot paths.
+
+## Trailing lambda + parens-free call
+
+If a function's **last** parameter is a lambda, you can pass it outside the parens. If it's the **only** parameter, drop the parens:
+
+```kotlin
+users.filter { it.active }            // trailing lambda
+users.fold(0) { acc, u -> acc + u.age } // last-arg lambda
+
+synchronized(lock) {                  // last-arg-only lambda
+  /* critical section */
+}
+```
+
+This is what gives Kotlin DSLs their fluent feel (Gradle Kotlin DSL, kotlinx.html, etc.).
+
+## Scope functions
+
+Five built-ins that run a block in a context. Subtly different — pick by what you want as the **context object** and the **return value**.
+
+| Function | Context (`this` / `it`) | Returns |
+| --- | --- | --- |
+| `let`    | `it`   | Lambda result |
+| `also`   | `it`   | Receiver |
+| `run`    | `this` | Lambda result |
+| `apply`  | `this` | Receiver |
+| `with`   | `this` | Lambda result |
+
+```kotlin
+// let — transform / null-safe call
+val len = name?.let { it.trim().length }
+
+// apply — configure & return
+val user = User().apply {
+  name = "Ada"
+  email = "ada@example.com"
+}
+
+// also — side effect & return
+val saved = userRepo.save(user).also {
+  metrics.counter("user.saved").increment()
+}
+
+// run — block expression with `this`
+val area = rect.run { width * height }
+
+// with — like run but with explicit receiver
+val msg = with(StringBuilder()) {
+  append("hello, ")
+  append(name)
+  toString()
+}
+```
+
+**Rule of thumb**: `apply` for builders, `also` for side effects, `let` for null-safe chains. `run` / `with` are interchangeable; pick by style.
+
+## Extension functions
+
+Add a method to a class you don't own.
+
+```kotlin
+fun String.toSlug(): String =
+  trim().lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')
+
+"Hello, World!".toSlug()    // "hello-world"
+```
+
+Compiles to a static helper — there's no actual modification of `String`. Useful for centralising helpers without utility classes.
+
+## Sequences — lazy chains
+
+Collection operations are **eager** by default — each `map`/`filter` materialises an intermediate list. For long chains over large data, switch to `asSequence()`:
+
+```kotlin
+val firstActiveMatch = users
+  .asSequence()
+  .filter { it.active }                // lazy
+  .map    { it.toDto() }               // lazy
+  .firstOrNull { it.role == "admin" }  // terminal — short-circuits
+```
+
+Sequences are Kotlin's analogue of Java's `Stream`: lazy, single-pass, short-circuit-friendly.
+
+## Operator overloading
+
+Operators map to function names you can implement:
+
+```kotlin
+data class Vec(val x: Int, val y: Int) {
+  operator fun plus(o: Vec) = Vec(x + o.x, y + o.y)
+  operator fun times(k: Int) = Vec(x * k, y * k)
+}
+
+Vec(1, 2) + Vec(3, 4)    // Vec(4, 6)
+Vec(1, 2) * 3            // Vec(3, 6)
+```
+
+Useful in DSLs and value types. Don't overload for clever effects in business code.
+
+## Common patterns
+
+### Builder via `apply`
+
+```kotlin
+fun newUser(block: User.() -> Unit) = User().apply(block)
+
+val u = newUser {
+  name = "Ada"
+  email = "ada@example.com"
+}
+```
+
+`block: User.() -> Unit` is an **extension lambda** — inside it, `this` is the `User`. That's why setters like `name = ...` work without `it.`.
+
+### Null-safe chain
+
+```kotlin
+val displayName = user
+  ?.profile
+  ?.displayName
+  ?.takeIf { it.isNotBlank() }
+  ?: "Guest"
+```
+
+`takeIf` returns the receiver if the predicate holds, otherwise `null` — composes well with `?:`.

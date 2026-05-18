@@ -1,0 +1,160 @@
+---
+title: Trie (Prefix Tree)
+sidebar_position: 2
+---
+
+import HeapViz from '@site/src/components/HeapViz';
+import TrieViz from '@site/src/components/TrieViz';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+
+# Trie (Prefix Tree)
+
+### What is a Trie?
+
+A trie is a **tree of characters**. Each node corresponds to a character; each root-to-node path corresponds to a string. Strings that share a prefix share the same path until they diverge.
+
+Lookup / insert / "starts-with" run in `O(L)` where `L` is the string length — independent of how many strings are stored.
+
+### Why Does It Work?
+
+A trie exploits the fact that **prefixes overlap**. Storing 1,000 words that all share the first three letters costs roughly the same as storing the 997 distinct suffixes plus three shared nodes.
+
+Prefix queries cost the same as exact lookup, because the answer is determined by whether the traversal reaches a node at all — a property hash maps and balanced trees cannot match.
+
+### Mental Model
+
+A character tree growing downward. Every stored prefix corresponds to a real path; type a prefix, walk down, see if the path exists.
+
+<TrieViz />
+
+### When to Use
+
+- Autocomplete / search-as-you-type.
+- Word-search boards — DFS the grid while staying on a trie node.
+- Longest prefix match — IP routing, URL routing.
+- When a `HashMap<String, V>` would do but you also need prefix queries.
+
+<div className="im-core-concept">
+
+### Core Concept
+
+Two implementation choices for the children:
+
+- **Fixed array** (e.g. `Node[26]` for lowercase Latin) — fast, more memory.
+- **Hash map** (`Map<Character, Node>`) — efficient for large or sparse alphabets.
+
+</div>
+### Template Code
+
+<CodeTabs
+  title="Trie"
+  java={`class Trie {
+  static class Node {
+    Node[] kids = new Node[26];
+    boolean end;
+  }
+  private final Node root = new Node();
+
+  public void insert(String w) {
+    Node n = root;
+    for (char c : w.toCharArray()) {
+      int i = c - 'a';
+      if (n.kids[i] == null) n.kids[i] = new Node();
+      n = n.kids[i];
+    }
+    n.end = true;
+  }
+
+  public boolean search(String w)     { return find(w, true);  }
+  public boolean startsWith(String p) { return find(p, false); }
+
+  private boolean find(String s, boolean whole) {
+    Node n = root;
+    for (char c : s.toCharArray()) {
+      int i = c - 'a';
+      if (n.kids[i] == null) return false;
+      n = n.kids[i];
+    }
+    return !whole || n.end;
+  }
+}`}
+  kotlin={`class Trie {
+  private class Node { val kids = arrayOfNulls<Node>(26); var end = false }
+  private val root = Node()
+  fun insert(w: String) {
+    var n = root
+    for (c in w) { val i = c - 'a'; if (n.kids[i] == null) n.kids[i] = Node(); n = n.kids[i]!! }
+    n.end = true
+  }
+  fun search(w: String) = find(w, true)
+  fun startsWith(p: String) = find(p, false)
+  private fun find(s: String, whole: Boolean): Boolean {
+    var n = root
+    for (c in s) { n = n.kids[c - 'a'] ?: return false }
+    return !whole || n.end
+  }
+}`}
+  python={`class Trie:
+    class _N:
+        __slots__ = ('kids', 'end')
+        def __init__(self):
+            self.kids: dict[str, 'Trie._N'] = {}
+            self.end = False
+    def __init__(self): self.root = Trie._N()
+    def insert(self, w: str) -> None:
+        n = self.root
+        for c in w: n = n.kids.setdefault(c, Trie._N())
+        n.end = True
+    def search(self, w: str) -> bool: return self._find(w, True)
+    def starts_with(self, p: str) -> bool: return self._find(p, False)
+    def _find(self, s: str, whole: bool) -> bool:
+        n = self.root
+        for c in s:
+            if c not in n.kids: return False
+            n = n.kids[c]
+        return (not whole) or n.end`}
+  go={`type trieNode struct { kids [26]*trieNode; end bool }
+type Trie struct{ root trieNode }
+func (t *Trie) Insert(w string) {
+  n := &t.root
+  for _, c := range w {
+    i := int(c - 'a')
+    if n.kids[i] == nil { n.kids[i] = &trieNode{} }
+    n = n.kids[i]
+  }
+  n.end = true
+}
+func (t *Trie) Search(w string) bool     { return t.find(w, true)  }
+func (t *Trie) StartsWith(p string) bool { return t.find(p, false) }
+func (t *Trie) find(s string, whole bool) bool {
+  n := &t.root
+  for _, c := range s {
+    i := int(c - 'a')
+    if n.kids[i] == nil { return false }
+    n = n.kids[i]
+  }
+  return !whole || n.end
+}`}
+/>
+
+### Key Problems to Master
+
+| # | Problem | Difficulty | Pattern | LeetCode |
+| - | --- | --- | --- | --- |
+| 1 | Implement Trie (Prefix Tree) | <Difficulty>Medium</Difficulty> | Base | [LC 208](https://leetcode.com/problems/implement-trie-prefix-tree/) |
+| 2 | Design Add and Search Words | <Difficulty>Medium</Difficulty> | Wildcard `.` → DFS | [LC 211](https://leetcode.com/problems/design-add-and-search-words-data-structure/) |
+| 3 | Word Search II | <Difficulty>Hard</Difficulty> | Trie + grid DFS | [LC 212](https://leetcode.com/problems/word-search-ii/) |
+| 4 | Replace Words | <Difficulty>Medium</Difficulty> | Shortest stored root | [LC 648](https://leetcode.com/problems/replace-words/) |
+| 5 | Maximum XOR of Two Numbers | <Difficulty>Medium</Difficulty> | Binary trie | [LC 421](https://leetcode.com/problems/maximum-xor-of-two-numbers-in-an-array/) |
+
+### Common Mistakes to Avoid
+
+- Using a trie when a hash map would do — adds memory and complexity for nothing.
+- Confusing "prefix exists" with "word exists" — always check the end-of-word flag in `search`.
+- Memory bloat from fixed arrays with a large or sparse alphabet — switch to a map.
+- Returning `true` from `search` for a partial path — that's `startsWith`, not `search`.
+
+---

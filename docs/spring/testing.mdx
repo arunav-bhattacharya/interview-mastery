@@ -1,0 +1,112 @@
+---
+title: Testing
+description: "Unit, slice (@WebMvcTest / @DataJpaTest), integration with Testcontainers."
+sidebar_position: 7
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Testing
+
+### Test pyramid
+
+| Layer | Speed | Coverage |
+| --- | --- | --- |
+| **Unit** | ms | Single class, mocks |
+| **Slice** (`@WebMvcTest`, `@DataJpaTest`) | seconds | One layer, embedded deps |
+| **Integration** (`@SpringBootTest`) | tens of seconds | Real context, Testcontainers DB |
+| **Contract** (Pact, Spring Cloud Contract) | seconds | Provider / consumer alignment |
+| **E2E** | minutes | Real services, real traffic |
+
+### Testcontainers
+
+```java
+@SpringBootTest
+@Testcontainers
+class OrderServiceIT {
+  @Container static PostgreSQLContainer<?> pg = new PostgreSQLContainer<>("postgres:16");
+
+  @DynamicPropertySource
+  static void props(DynamicPropertyRegistry r) {
+    r.add("spring.datasource.url", pg::getJdbcUrl);
+    r.add("spring.datasource.username", pg::getUsername);
+    r.add("spring.datasource.password", pg::getPassword);
+  }
+
+  @Test
+  void roundTrip() { /* test against real Postgres */ }
+}
+```
+
+### Slice tests
+
+- `@WebMvcTest` — controller layer, mocked services.
+- `@DataJpaTest` — repository layer, embedded H2 (or Testcontainers).
+- `@JsonTest` — serialization only.
+
+### Test annotations — compared
+
+| Annotation | Loads | Use for |
+| --- | --- | --- |
+| `@SpringBootTest` | Full ApplicationContext | Integration tests, end-to-end through controllers |
+| `@WebMvcTest(MyController.class)` | Just the MVC layer (controller + filters + advice) | Unit-test a controller against a mocked service |
+| `@DataJpaTest` | JPA, repos, transaction manager; rolls back each test | Repository queries |
+| `@JsonTest` | Just `Jackson` / `Gson` | Serialization / deserialization |
+| `@WebFluxTest` | The WebFlux layer | Reactive controller tests |
+| `@RestClientTest` | Just `RestTemplate` / `WebClient` | Test outbound HTTP clients |
+
+The slice annotations are **much faster** than `@SpringBootTest` because they wire only what they need. Use them by default; fall back to `@SpringBootTest` only when the test crosses layers.
+
+### MockMvc — a complete controller test
+
+```java
+@WebMvcTest(OrderController.class)
+class OrderControllerTest {
+
+    @Autowired MockMvc mvc;
+    @MockBean OrderService orderService;
+
+    @Test
+    void getOrder_returnsOk() throws Exception {
+        Mockito.when(orderService.findById(42L))
+               .thenReturn(Optional.of(new OrderDto(42L, "FULFILLED")));
+
+        mvc.perform(get("/api/orders/42"))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.id").value(42))
+           .andExpect(jsonPath("$.status").value("FULFILLED"));
+    }
+
+    @Test
+    void getOrder_returns404_whenMissing() throws Exception {
+        Mockito.when(orderService.findById(anyLong())).thenReturn(Optional.empty());
+        mvc.perform(get("/api/orders/99")).andExpect(status().isNotFound());
+    }
+}
+```
+
+`@MockBean` replaces the real service in the context with a Mockito mock. `MockMvc` runs the controller through the full filter chain *without* a network call.
+
+### Test pyramid — what it tells you
+
+```text
+       /\
+      /E2\          ← few; brittle; slow; only for "the system works"
+     /----\
+    / IT   \        ← some; per-feature happy + 1-2 sad paths
+   /--------\
+  / SLICE    \      ← many; per-controller / per-repo
+ /------------\
+/ UNIT         \    ← lots; fast; per-class
+----------------
+```
+
+A senior tester:
+- Has more **unit** tests than anything else.
+- Uses **Testcontainers** instead of H2 — embedded DBs hide bugs.
+- Writes **contract tests** for service boundaries (Spring Cloud Contract, Pact) before adding more integration tests.
+- Keeps **E2E** to a smoke-suite — most things should fail earlier.
+
+---

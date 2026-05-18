@@ -11,32 +11,33 @@
 
 /* === Light palette ==================================================== */
 :root {
-  --im-bg: #fafaf7;
+  --im-bg: #fafafa;
   --im-surface: #ffffff;
-  --im-surface-2: #f1f1ec;
-  --im-border: #e5e3da;
-  --im-fg: #15161a;
-  --im-fg-2: #4b4d57;
-  --im-muted: #80828c;
+  --im-surface-2: #f3f4f8;
+  --im-border: #e3e5ee;
+  --im-fg: #14151b;
+  --im-fg-2: #444657;
+  --im-muted: #7a7d8c;
 
-  --im-accent: #d97706;          /* amber */
-  --im-accent-soft: #fde68a;
-  --im-accent-fg: #7c2d12;
+  --im-accent: #3346b3;          /* navy-blue with a purple touch (was indigo-600 #4f46e5) */
+  --im-accent-soft: #d8def0;     /* slightly cooler / more saturated than #e0e7ff */
+  --im-accent-fg: #1c2566;       /* deeper for strong contrast on --im-accent-soft */
+  --im-accent-2: #0891b2;        /* teal accent for gradients */
 
-  --im-iris: #6366f1;            /* indigo for secondary highlights */
-  --im-iris-soft: #e0e7ff;
+  --im-iris: #4c5dc6;
+  --im-iris-soft: #dde2f3;
 
   --im-success: #10b981;
   --im-warn: #f59e0b;
   --im-danger: #ef4444;
 
-  --ifm-color-primary: #d97706;
-  --ifm-color-primary-dark: #c2680b;
-  --ifm-color-primary-darker: #b76210;
-  --ifm-color-primary-darkest: #a05111;
-  --ifm-color-primary-light: #e08727;
-  --ifm-color-primary-lighter: #e58e36;
-  --ifm-color-primary-lightest: #f1a553;
+  --ifm-color-primary: #3346b3;
+  --ifm-color-primary-dark: #2c3d9f;
+  --ifm-color-primary-darker: #283788;
+  --ifm-color-primary-darkest: #1c2566;
+  --ifm-color-primary-light: #4456c2;
+  --ifm-color-primary-lighter: #5263cb;
+  --ifm-color-primary-lightest: #6f7dd5;
 
   --ifm-background-color: var(--im-bg);
   --ifm-background-surface-color: var(--im-surface);
@@ -55,51 +56,52 @@
   --ifm-code-padding-horizontal: 0.4em;
   --ifm-code-padding-vertical: 0.18em;
   --ifm-code-border-radius: 4px;
-  --ifm-code-background: rgba(217, 119, 6, 0.10);
+  --ifm-code-background: rgba(51, 70, 179, 0.12);
 
-  --ifm-navbar-background-color: rgba(250, 250, 247, 0.85);
+  --ifm-navbar-background-color: rgba(250, 250, 250, 0.85);
   --ifm-navbar-shadow: 0 1px 0 var(--im-border);
-  --ifm-footer-background-color: #15161a;
-  --ifm-footer-color: #c7c8cf;
-  --ifm-footer-link-color: #e5e7eb;
+  --ifm-footer-background-color: #0b0c10;
+  --ifm-footer-color: #d6d8e3;
+  --ifm-footer-link-color: #c1ccfd;
   --ifm-footer-title-color: #ffffff;
 
-  --docusaurus-highlighted-code-line-bg: rgba(217, 119, 6, 0.14);
+  --docusaurus-highlighted-code-line-bg: rgba(51, 70, 179, 0.16);
 }
 
 /* === Dark palette ===================================================== */
 [data-theme='dark'] {
   --im-bg: #0b0c10;
-  --im-surface: #14161c;
-  --im-surface-2: #1c1f27;
-  --im-border: #262a33;
+  --im-surface: #1a1d24;          /* lifted from #14161c — gives cards / Mermaid boxes visible separation from page bg */
+  --im-surface-2: #232733;        /* lifted from #1c1f27 */
+  --im-border: #3a3f4d;           /* lifted from #262a33 — borders pop against dark bg */
   --im-fg: #f5f5f0;
   --im-fg-2: #c6c8d1;
   --im-muted: #8d909c;
 
-  --im-accent: #fbbf24;
-  --im-accent-soft: rgba(251, 191, 36, 0.16);
-  --im-accent-fg: #fde68a;
+  --im-accent: #a5b4fc;
+  --im-accent-soft: rgba(165, 180, 252, 0.16);
+  --im-accent-fg: #c7d2fe;
+  --im-accent-2: #67e8f9;
 
   --im-iris: #a5b4fc;
   --im-iris-soft: rgba(165, 180, 252, 0.14);
 
-  --ifm-color-primary: #fbbf24;
-  --ifm-color-primary-dark: #e0a720;
-  --ifm-color-primary-darker: #cf991e;
-  --ifm-color-primary-darkest: #a87d18;
-  --ifm-color-primary-light: #fcc946;
-  --ifm-color-primary-lighter: #fccf57;
-  --ifm-color-primary-lightest: #fddc7c;
+  --ifm-color-primary: #a5b4fc;
+  --ifm-color-primary-dark: #8b9cf9;
+  --ifm-color-primary-darker: #7b8df8;
+  --ifm-color-primary-darkest: #4f6cef;
+  --ifm-color-primary-light: #b8c4fd;
+  --ifm-color-primary-lighter: #c1ccfd;
+  --ifm-color-primary-lightest: #d6dffe;
 
   --ifm-background-color: var(--im-bg);
   --ifm-background-surface-color: var(--im-surface);
 
   --ifm-navbar-background-color: rgba(11, 12, 16, 0.78);
   --ifm-navbar-shadow: 0 1px 0 var(--im-border);
-  --ifm-code-background: rgba(251, 191, 36, 0.12);
+  --ifm-code-background: rgba(165, 180, 252, 0.14);
 
-  --docusaurus-highlighted-code-line-bg: rgba(251, 191, 36, 0.16);
+  --docusaurus-highlighted-code-line-bg: rgba(165, 180, 252, 0.18);
 }
 
 /* === Global base ====================================================== */
@@ -173,7 +175,7 @@ pre code,
 [data-theme='dark'] :not(pre) > code {
   color: var(--im-accent-fg);
   background: var(--im-accent-soft);
-  border-color: rgba(251, 191, 36, 0.18);
+  border-color: rgba(165, 180, 252, 0.22);
 }
 
 /* code-block titles */
@@ -234,9 +236,51 @@ pre code,
 }
 
 /* === Footer =========================================================== */
+/* Footer is always dark in both modes — pin its accents to light-on-dark   */
+/* values so they don't inherit the navy-on-dark primary that's invisible.  */
 .footer {
-  border-top: 1px solid var(--im-border);
+  border-top: 1px solid #262a33;
   background: #0b0c10;
+  color: #d6d8e3;
+}
+.footer__title {
+  color: #ffffff !important;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.footer__link-item,
+.footer__link-item:visited {
+  color: #c1ccfd !important;          /* light indigo — readable on near-black */
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.footer__link-item:hover,
+.footer__link-item:focus {
+  color: #ffffff !important;
+  text-decoration: underline;
+}
+.footer__copyright {
+  color: #8d909c;
+  font-size: 0.85rem;
+}
+
+/* === TOC sticky + toggle ============================================== */
+/* Force the right-rail TOC to stay pinned as the user scrolls. */
+.theme-doc-toc-desktop {
+  position: sticky !important;
+  top: calc(var(--ifm-navbar-height, 60px) + 1rem) !important;
+  max-height: calc(100vh - var(--ifm-navbar-height, 60px) - 2rem) !important;
+  overflow-y: auto !important;
+}
+
+/* When hidden, drop the TOC column entirely. Main column expansion is */
+/* handled via inline styles from the DocItem/Layout swizzle to defeat   */
+/* Docusaurus' own !important max-width: 75% on .docItemCol.            */
+html[data-toc-hidden='1'] .theme-doc-toc-desktop {
+  display: none !important;
+}
+html[data-toc-hidden='1'] .col.col--3 {
+  display: none !important;
 }
 
 /* === Reusable surface utilities ======================================= */
@@ -270,6 +314,389 @@ pre code,
   border-bottom-width: 2px;
   border-radius: 5px;
   color: var(--im-fg);
+}
+
+/* === Callouts ========================================================= */
+.im-callout {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--im-surface-2);
+  border: 1px solid var(--im-border);
+  border-left: 4px solid var(--im-accent);
+  border-radius: 0 12px 12px 0;
+  margin: 1.2rem 0;
+}
+.im-callout--warn  { border-left-color: var(--im-warn); }
+.im-callout--success { border-left-color: var(--im-success); }
+.im-callout--danger { border-left-color: var(--im-danger); }
+.im-callout p:last-child { margin-bottom: 0; }
+
+/* === Core Concept card ================================================= */
+/* Used to wrap "Core Concept" sections under DSA patterns so the ASCII   */
+/* diagrams + intuition text feel like a distinct teaching surface.       */
+.im-core-concept {
+  background: linear-gradient(180deg, rgba(51, 70, 179, 0.05), transparent 60%);
+  border: 1px solid var(--im-border);
+  border-left: 4px solid var(--im-accent);
+  border-radius: 0 14px 14px 0;
+  padding: 18px 22px 4px;
+  margin: 1.6rem 0;
+  position: relative;
+}
+.im-core-concept::before {
+  content: 'CORE CONCEPT';
+  display: inline-block;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--im-accent-fg);
+  background: var(--im-surface);
+  padding: 2px 8px;
+  border-radius: 4px;
+  position: absolute;
+  top: -10px;
+  left: 16px;
+  border: 1px solid var(--im-accent);
+}
+.im-core-concept h3,
+.im-core-concept h4 {
+  display: none;  /* the ::before label replaces the redundant inline heading */
+}
+.im-core-concept pre {
+  background: var(--im-surface) !important;
+  border: 1px solid var(--im-border) !important;
+  border-radius: 8px !important;
+  font-size: 0.86rem !important;
+  margin: 0 0 14px !important;
+}
+.im-core-concept p {
+  font-size: 0.96rem;
+  color: var(--im-fg-2);
+  margin-bottom: 0.9rem;
+}
+.im-core-concept ul,
+.im-core-concept ol {
+  margin-bottom: 0.9rem;
+}
+
+/* === Mermaid skin ===================================================== */
+/* JetBrains Mono on every label; indigo strokes; rounded class boxes;     */
+/* role-coloured classes via `cssClass "Name" imIface|imAbstract|imConcrete`. */
+/* Mermaid v11 classDiagram: nodes are `g.node.<role>`, labels are HTML       */
+/* spans inside foreignObject (`.nodeLabel`), and the box is a <path> inside  */
+/* `g.label-container.outer-path`. Mermaid injects per-SVG inline             */
+/* `#mermaid-svg-NNN { … }` styles, so we use `!important` to win specificity. */
+
+svg.classDiagram {
+  max-width: 760px;
+  margin: 0 auto;
+  display: block;
+}
+
+/* Font — every text-bearing element (SVG <text> + HTML spans in foreignObject) */
+svg.classDiagram,
+svg.classDiagram text,
+svg.classDiagram .nodeLabel,
+svg.classDiagram .label,
+svg.classDiagram .edgeLabel,
+svg.classDiagram foreignObject span,
+svg.classDiagram foreignObject p {
+  font-family: var(--ifm-font-family-monospace) !important;
+  font-size: 12.5px !important;
+  letter-spacing: 0 !important;
+}
+
+/* Default class node box — v11's "classic" look puts two unclassed <path>      */
+/* siblings inside g.label-container.outer-path: one paints the fill           */
+/* (stroke="none"), one paints the hand-drawn outline. We override fill+stroke */
+/* on both and leave stroke-width to Mermaid so the fill path stays at width 0.*/
+svg.classDiagram g.node .label-container > path,
+svg.classDiagram g.node .outer-path > path,
+svg.classDiagram g.node > rect {
+  fill: var(--im-surface) !important;
+  stroke: var(--im-border) !important;
+}
+
+/* Label text inside foreignObject (HTML span — needs CSS color, not SVG fill) */
+svg.classDiagram g.node .nodeLabel,
+svg.classDiagram g.node foreignObject span,
+svg.classDiagram g.node foreignObject p {
+  color: var(--im-fg) !important;
+}
+
+/* Class title (top section) */
+svg.classDiagram g.node .label-group .nodeLabel,
+svg.classDiagram g.node .label-group span,
+svg.classDiagram g.node .label-group p {
+  font-weight: 600 !important;
+}
+
+/* Stereotype line («interface», «abstract») — recolour, drop italic */
+svg.classDiagram g.node .annotation-group .nodeLabel,
+svg.classDiagram g.node .annotation-group span,
+svg.classDiagram g.node .annotation-group p {
+  color: var(--im-accent-fg) !important;
+  font-style: normal !important;
+  font-size: 11px !important;
+  letter-spacing: 0.04em !important;
+}
+
+/* Divider lines between title / fields / methods (rendered as <path> children) */
+svg.classDiagram g.node g.divider > path,
+svg.classDiagram g.node line.divider {
+  stroke: var(--im-border) !important;
+}
+
+/* Role-coloured classes (selected via `cssClass "Name" imIface|imAbstract|imConcrete`) */
+svg.classDiagram g.node.imIface .label-container > path,
+svg.classDiagram g.node.imIface .outer-path > path {
+  fill: var(--im-accent-soft) !important;
+  stroke: var(--im-accent) !important;
+}
+svg.classDiagram g.node.imAbstract .label-container > path,
+svg.classDiagram g.node.imAbstract .outer-path > path {
+  fill: var(--im-surface-2) !important;
+  stroke: var(--im-accent-fg) !important;
+  stroke-dasharray: 4 3 !important;
+}
+svg.classDiagram g.node.imConcrete .label-container > path,
+svg.classDiagram g.node.imConcrete .outer-path > path {
+  fill: var(--im-surface) !important;
+  stroke: var(--im-fg-2) !important;
+}
+
+/* Relationship arrows + arrowheads */
+svg.classDiagram .relation,
+svg.classDiagram path.relation {
+  stroke: var(--im-accent) !important;
+  stroke-width: 1.2px !important;
+  fill: none !important;
+}
+svg.classDiagram marker path {
+  fill: var(--im-accent) !important;
+  stroke: var(--im-accent) !important;
+}
+
+/* Edge labels ("creates", "returns").                                       */
+/* Mermaid emits one .edgeLabel per edge — including empty ones — so we      */
+/* avoid putting a background on the HTML wrapper (would show as a small box */
+/* on every blank edge). Only the SVG <rect> behind text-bearing labels gets */
+/* the page bg, and only HTML text-bearing spans get the chip styling.       */
+svg.classDiagram .edgeLabel,
+svg.classDiagram .edgeLabel span,
+svg.classDiagram .edgeLabel p {
+  background: transparent !important;
+  color: var(--im-fg-2) !important;
+}
+svg.classDiagram .edgeLabel:not(:empty) p:not(:empty) {
+  background: var(--im-bg) !important;
+  padding: 0 4px;
+  border-radius: 4px;
+}
+svg.classDiagram .edgeLabel rect {
+  fill: var(--im-bg) !important;
+}
+
+/* Notes (`note for ClassName "..."`) — Mermaid renders these as yellow      */
+/* sticky boxes by default. Restyle to a soft indigo card so they fit the    */
+/* palette. Mermaid emits notes as `g.nodes > g.node` with a label-container */
+/* whose first child is a rect with class containing "note"; safer to target */
+/* by the `.note` class on the inner path/rect rendered for note nodes.      */
+svg.classDiagram g.note > rect,
+svg.classDiagram g.nodes g.node > g.label-container.note > path,
+svg.classDiagram g.nodes g.node > g.label-container.note > rect,
+svg.classDiagram g.nodes g.node[id*="note"] .label-container > path,
+svg.classDiagram g.nodes g.node[id*="note"] .label-container > rect {
+  fill: var(--im-accent-soft) !important;
+  stroke: var(--im-accent) !important;
+  stroke-dasharray: 0 !important;
+}
+/* Notes — we DRAW THE BOX OURSELVES from the HTML inside the foreignObject  */
+/* because Mermaid pre-sizes the underlying <path> for the single-line       */
+/* measurement and then clips overflow at 39px, so any <br/> in the note     */
+/* text gets cropped. We:                                                    */
+/*   1. Hide Mermaid's note path/rect (the small clipped box outline).       */
+/*   2. Set the foreignObject to overflow:visible + auto size so the HTML    */
+/*      can grow with the wrapped text.                                      */
+/*   3. Style the inner <p> as the visible note card (bg, border, padding).   */
+/* Result: the box always fits the text, with proper light/dark contrast.    */
+
+/* 1. Hide the Mermaid-drawn note outline + the inner label rect.
+   Mermaid emits TWO shapes per note: the outer "sticky" path AND an
+   unstyled <rect> inside g.label.noteLabel that sits behind the
+   foreignObject. If we leave the inner rect visible it shows up as a
+   ghost card next to the styled <p>. Hide both. */
+svg.classDiagram g.nodes g.node[id*="note"] .label-container > path,
+svg.classDiagram g.nodes g.node[id*="note"] .outer-path > path,
+svg.classDiagram g.nodes g.node[id*="note"] > rect,
+svg.classDiagram g.nodes g.node[id*="note"] g.label > rect,
+svg.classDiagram g.nodes g.node[id*="note"] g.label.noteLabel > rect {
+  display: none !important;
+}
+
+/* 2. Keep the foreignObject at Mermaid's measured size. The inner <div>    */
+/*    becomes a flex container that centres the visible <p> inside the FO.   */
+/*    Crucially we DO NOT use overflow:visible — that's what lets the card  */
+/*    leak into neighbouring class boxes or other notes. Mermaid reserved   */
+/*    the FO area; the card must fit inside it.                              */
+svg.classDiagram g.nodes g.node[id*="note"] foreignObject {
+  overflow: visible !important;     /* still needed for the y-direction so the card height isn't clipped */
+}
+svg.classDiagram g.nodes g.node[id*="note"] foreignObject > div {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  white-space: normal !important;
+}
+
+/* 3. The visible note card is the <p> itself. Render it as a polished
+   "side-note" in the indigo accent palette: a subtle indigo-tinted card
+   with a 3px accent left border, sans-serif text, generous padding.
+   Sizes to content with width:max-content so the card hugs the text.   */
+/* The .nodeLabel <span> and the inner <p> are nested wrappers around
+   the note text. If we put the border/padding/bg on BOTH, they read as
+   two nested cards. Strip the span back to plain text and put the visible
+   card treatment ONLY on the <p>. */
+svg.classDiagram g.nodes g.node[id*="note"] .nodeLabel {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  font-size: 11.5px !important;
+  font-weight: 500 !important;
+  color: #1c2566 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Compact greyed-out supplement card. Wraps to multiple lines inside a
+   narrow rectangle so the note reads as a small annotation rather than
+   a wide banner. */
+svg.classDiagram g.nodes g.node[id*="note"] foreignObject p {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  font-size: 10.5px !important;
+  font-weight: 400 !important;
+  font-style: italic !important;
+  line-height: 1.35 !important;
+  letter-spacing: 0.01em !important;
+  color: #6b7280 !important;                              /* slate-500 — muted */
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: anywhere !important;
+  text-align: left !important;
+  margin: 0 !important;
+  padding: 6px 9px !important;
+  background: #f3f4f6 !important;                          /* slate-100 — neutral grey */
+  border: 1px solid #d1d5db !important;                    /* slate-300 — subtle */
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  opacity: 0.92 !important;
+  display: inline-block !important;
+  width: 180px !important;                                 /* narrow → forces wrap */
+  max-width: 180px !important;
+  box-sizing: border-box !important;
+}
+
+/* Dark-mode notes: indigo tinted surface with light indigo text on the
+   ONE element we treat as the visible card (the <p>). The wrapper span
+   stays transparent — single card, no nested-card illusion. */
+[data-theme='dark'] svg.classDiagram g.nodes g.node[id*="note"] .nodeLabel {
+  color: #e0e7ff !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+[data-theme='dark'] svg.classDiagram g.nodes g.node[id*="note"] foreignObject p {
+  color: #9ca3af !important;                              /* slate-400 — muted on dark */
+  background: rgba(148, 163, 184, 0.08) !important;       /* slate tint, very subtle */
+  border-color: rgba(148, 163, 184, 0.25) !important;     /* slate-400 @ 25% */
+  box-shadow: none !important;
+}
+
+/* Edges that connect notes to their target class — render softer.           */
+svg.classDiagram path.relation[id*="note"],
+svg.classDiagram .edge-thickness-normal.note-edge,
+svg.classDiagram path.relation.note-edge {
+  stroke: var(--im-accent) !important;
+  stroke-dasharray: 3 3 !important;
+  opacity: 0.5;
+}
+
+/* Dark-mode lift: in light mode the surface vars already pop against the    */
+/* page bg, but in dark mode the page bg is near-black (#0b0c10) and box     */
+/* fills can blend with it. Push concrete/abstract fills to a higher tier    */
+/* and bump strokes so silhouettes read clearly.                              */
+[data-theme='dark'] svg.classDiagram g.node.imConcrete .label-container > path,
+[data-theme='dark'] svg.classDiagram g.node.imConcrete .outer-path > path {
+  fill: #232733 !important;
+  stroke: #5b6175 !important;
+}
+[data-theme='dark'] svg.classDiagram g.node.imAbstract .label-container > path,
+[data-theme='dark'] svg.classDiagram g.node.imAbstract .outer-path > path {
+  fill: #2c303d !important;
+  stroke: #c7d2fe !important;
+  stroke-dasharray: 4 3 !important;
+}
+[data-theme='dark'] svg.classDiagram g.node.imIface .label-container > path,
+[data-theme='dark'] svg.classDiagram g.node.imIface .outer-path > path {
+  fill: rgba(165, 180, 252, 0.22) !important;
+  stroke: #a5b4fc !important;
+}
+
+/* === Dark-mode primary button =========================================
+   `--im-accent` is `#a5b4fc` (light indigo) in dark mode, used as an
+   accent text/border colour. As a button BACKGROUND with white text it
+   reads washed-out, so override the primary button (only) to use a
+   richer mid-indigo that pops against the near-black page background.
+================================================================== */
+[data-theme='dark'] [class*='primaryBtn'] {
+  background: #4f46e5 !important;
+  border-color: #4f46e5 !important;
+  color: #ffffff !important;
+}
+[data-theme='dark'] [class*='primaryBtn']:hover {
+  background: #6366f1 !important;
+  border-color: #6366f1 !important;
+  color: #ffffff !important;
+}
+
+/* === Mermaid dark-mode for non-classDef diagrams =====================
+   Mermaid v11 stamps `!important` on classDef inline styles, blocking
+   external CSS overrides. Flowchart classDef nodes are re-painted at
+   runtime by `src/clientModules/mermaidDarkPalette.ts`.
+   This block handles sequence + state diagrams (which don't use classDef).
+================================================================== */
+[data-theme='dark'] .docusaurus-mermaid-container .actor {
+  fill: #312e81 !important;
+  stroke: #818cf8 !important;
+}
+[data-theme='dark'] .docusaurus-mermaid-container .actor-line {
+  stroke: #6366f1 !important;
+}
+[data-theme='dark'] .docusaurus-mermaid-container text.actor > tspan,
+[data-theme='dark'] .docusaurus-mermaid-container .labelText,
+[data-theme='dark'] .docusaurus-mermaid-container .messageText {
+  fill: #e0e7ff !important;
+}
+[data-theme='dark'] .docusaurus-mermaid-container .messageLine0,
+[data-theme='dark'] .docusaurus-mermaid-container .messageLine1 {
+  stroke: #a5b4fc !important;
+}
+[data-theme='dark'] .docusaurus-mermaid-container g.statediagram-state > rect,
+[data-theme='dark'] .docusaurus-mermaid-container .state-shadow {
+  fill: #312e81 !important;
+  stroke: #818cf8 !important;
+}
+[data-theme='dark'] .docusaurus-mermaid-container g.statediagram-state .nodeLabel,
+[data-theme='dark'] .docusaurus-mermaid-container g.statediagram-state text {
+  color: #e0e7ff !important;
+  fill: #e0e7ff !important;
 }
 
 /* === Hide on small screens ============================================ */

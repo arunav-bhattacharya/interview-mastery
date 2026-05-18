@@ -1,0 +1,121 @@
+---
+title: Spring Security
+description: "Filter chain, OAuth2 resource server, method security."
+sidebar_position: 4
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Spring Security
+
+### Filter chain
+
+Spring Security is a chain of **filters** that run before your controller. The standard ones (in order):
+
+1. `SecurityContextPersistenceFilter` — restores session if present.
+2. `UsernamePasswordAuthenticationFilter` — form login.
+3. `BearerTokenAuthenticationFilter` — JWT / opaque token.
+4. `AuthorizationFilter` — checks roles / permissions.
+
+### Modern config
+
+```java
+@Configuration
+@EnableWebSecurity
+class SecurityConfig {
+  @Bean
+  SecurityFilterChain api(HttpSecurity http) throws Exception {
+    return http
+        .csrf(csrf -> csrf.disable())
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/health").permitAll()
+            .anyRequest().authenticated())
+        .oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults()))
+        .build();
+  }
+}
+```
+
+### Custom JWT filter
+
+Sometimes you need a custom filter to extract a non-standard JWT shape, dual-format tokens, or to attach extra claims to the `SecurityContext`:
+
+```java
+@Component
+public class JwtAuthFilter extends OncePerRequestFilter {
+
+    private final JwtDecoder decoder;
+    private final UserRepository users;
+
+    public JwtAuthFilter(JwtDecoder decoder, UserRepository users) {
+        this.decoder = decoder;
+        this.users = users;
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest req,
+                                    HttpServletResponse res,
+                                    FilterChain chain) throws ServletException, IOException {
+        String header = req.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            try {
+                Jwt jwt = decoder.decode(header.substring(7));
+                User user = users.findById(jwt.getSubject()).orElseThrow();
+                Authentication auth = new UsernamePasswordAuthenticationToken(
+                    user, jwt, user.getAuthorities());
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            } catch (JwtException ex) {
+                res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
+                return;
+            }
+        }
+        chain.doFilter(req, res);
+    }
+}
+```
+
+Register it before `UsernamePasswordAuthenticationFilter`:
+
+```java
+http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+```
+
+### JWT flow at a glance
+
+```text
+[ Client ] ──login(user,pass)──→ [ Auth Server ]
+                                       │
+                            issues JWT (signed by HS256/RS256)
+                                       ↓
+[ Client ] ──Authorization: Bearer <JWT>──→ [ Resource Server ]
+                                                   │
+                                       Verify signature + expiry
+                                       Extract roles, set SecurityContext
+```
+
+- **Stateless** — server doesn't store sessions.
+- **Self-contained** — claims (sub, roles, exp) live in the token.
+- **Revocation is hard** — keep TTL short (15 min) and refresh, or maintain a deny-list for emergencies.
+
+### OAuth2 / OIDC at a high level
+
+| Flow | When |
+| --- | --- |
+| **Authorization Code (+ PKCE)** | Browser / mobile SPAs. Default since 2022. |
+| **Client Credentials** | Service-to-service, no user context |
+| **Device Code** | TVs, CLIs that can't open a browser |
+| ~~Implicit~~, ~~Password~~ | Deprecated; don't use |
+
+Spring's `oauth2-resource-server` validates JWTs against the issuer's JWKS endpoint — no library code to write, just `jwt.set-uri` in config.
+
+### What to mention
+
+- **OAuth 2 / OIDC** for delegated auth; Spring's `oauth2-resource-server` validates JWTs.
+- **Method security** — `@PreAuthorize("hasRole('ADMIN')")` for finer-grained checks.
+- **CSRF**: enable for stateful (cookie/session) apps; disable for stateless (JWT) APIs.
+- **Password hashing**: BCrypt (or Argon2), not MD5 / SHA.
+- **Common patterns**: short-lived access token + long-lived refresh token; rotation on each refresh; refresh-token reuse detection = breach alarm.
+
+---

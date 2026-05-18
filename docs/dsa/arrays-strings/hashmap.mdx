@@ -1,0 +1,107 @@
+---
+title: HashMap / Frequency Count
+sidebar_position: 3
+---
+
+import TwoPointerViz from '@site/src/components/TwoPointerViz';
+import SlidingWindowViz from '@site/src/components/SlidingWindowViz';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+
+# HashMap / Frequency Count
+
+### What is HashMap / Frequency Count?
+
+A hash map gives **O(1) average lookup, insert, and delete by key**. The "frequency count" pattern uses one to count occurrences (characters, numbers, prefix sums) and answer questions in a single pass.
+
+### Why Does It Work?
+
+Many array / string problems reduce to "have I seen this before?" or "how many times?". A hash map answers both in constant time, eliminating an entire `O(n)` inner loop.
+
+### Mental Model
+
+Walk the array once. As you go, ask:
+
+- **Have I seen this value before?** → store it as you visit.
+- **Have I seen a complementary value?** → look it up to decide.
+
+### When to Use
+
+- Lookups against earlier values (Two Sum, prefix sums).
+- Counting / grouping (anagrams, top-K frequent).
+- Detecting duplicates or first-non-repeat.
+- O(1) presence check inside another loop.
+
+<div className="im-core-concept">
+
+### Core Concept
+
+```text
+For each element x:
+  if (target - x) in seen:  → found a pair
+  else:                      → seen[x] = index
+```
+
+</div>
+
+The same shape powers Two Sum, "longest substring without repeats" (with a window), "subarray sum equals K" (with prefix sums), and many more.
+
+### Template Code
+
+<CodeTabs
+  title="TwoSum"
+  java={`public int[] twoSum(int[] nums, int target) {
+  Map<Integer, Integer> seen = new HashMap<>();
+  for (int i = 0; i < nums.length; i++) {
+    int need = target - nums[i];
+    if (seen.containsKey(need)) return new int[] { seen.get(need), i };
+    seen.put(nums[i], i);
+  }
+  return new int[] { -1, -1 };
+}`}
+  kotlin={`fun twoSum(nums: IntArray, target: Int): IntArray {
+  val seen = HashMap<Int, Int>()
+  for ((i, v) in nums.withIndex()) {
+    seen[target - v]?.let { return intArrayOf(it, i) }
+    seen[v] = i
+  }
+  return intArrayOf(-1, -1)
+}`}
+  python={`def two_sum(nums: list[int], target: int) -> list[int]:
+    seen: dict[int, int] = {}
+    for i, v in enumerate(nums):
+        if (target - v) in seen:
+            return [seen[target - v], i]
+        seen[v] = i
+    return [-1, -1]`}
+  go={`func twoSum(nums []int, target int) []int {
+  seen := map[int]int{}
+  for i, v := range nums {
+    if j, ok := seen[target-v]; ok { return []int{j, i} }
+    seen[v] = i
+  }
+  return []int{-1, -1}
+}`}
+/>
+
+### Key Problems to Master
+
+| # | Problem | Difficulty | Pattern | LeetCode |
+| - | --- | --- | --- | --- |
+| 1 | Two Sum | <Difficulty>Easy</Difficulty> | seen-map | [LC 1](https://leetcode.com/problems/two-sum/) |
+| 2 | Group Anagrams | <Difficulty>Medium</Difficulty> | sort-key or histogram-key | [LC 49](https://leetcode.com/problems/group-anagrams/) |
+| 3 | Top K Frequent Elements | <Difficulty>Medium</Difficulty> | counts + bucket / heap | [LC 347](https://leetcode.com/problems/top-k-frequent-elements/) |
+| 4 | Subarray Sum Equals K | <Difficulty>Medium</Difficulty> | prefix sum + map | [LC 560](https://leetcode.com/problems/subarray-sum-equals-k/) |
+| 5 | Valid Anagram | <Difficulty>Easy</Difficulty> | frequency vector | [LC 242](https://leetcode.com/problems/valid-anagram/) |
+| 6 | Longest Consecutive Sequence | <Difficulty>Medium</Difficulty> | set membership | [LC 128](https://leetcode.com/problems/longest-consecutive-sequence/) |
+
+### Common Mistakes to Avoid
+
+- Storing the value instead of the index when the problem wants indices.
+- Inserting before lookup → an element matches against itself in Two Sum.
+- Using a `List` for frequency counts when a `Map` is cheaper.
+- Forgetting that hash collisions degrade hot loops; a bad `hashCode` can turn `O(1)` into `O(n)`.
+
+---

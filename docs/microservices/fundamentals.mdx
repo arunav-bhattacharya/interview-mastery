@@ -1,0 +1,171 @@
+---
+title: Microservices Fundamentals
+description: "When to split, sync vs async communication, service discovery, resilience."
+sidebar_position: 1
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Microservices Fundamentals
+
+### When to break a monolith
+
+- Teams are blocked by each other on deploys.
+- One subsystem has wildly different scaling needs.
+- A specific failure should not bring everything down.
+
+Microservices are an organizational decision before a technical one.
+
+### Service-to-service communication
+
+| Style | Use when |
+| --- | --- |
+| **Synchronous HTTP/gRPC** | Request needs an immediate response |
+| **Async (Kafka / SQS)** | Producer doesn't care when consumer runs |
+| **Service mesh** (Istio, Linkerd) | mTLS, retries, traffic shifting at infra level |
+
+### Service discovery
+
+- DNS-based (Kubernetes services).
+- Registry (Consul, Eureka — older).
+- Mesh sidecar.
+
+### Resilience
+
+- **Timeouts** on every call.
+- **Retries** with exponential backoff + jitter.
+- **Circuit breaker** (Resilience4j) — stop calling a sick service, give it time to recover.
+- **Bulkhead** — separate thread pools per dependency.
+
+### Service decomposition strategies
+
+How to draw the seam between services. Apply in this order:
+
+1. **Decompose by business capability.** Each service owns a verb of the business — `Checkout`, `Inventory`, `Notification`. Hard to misuse because language follows the org chart.
+2. **Decompose by subdomain (DDD bounded contexts).** When the business is complex enough that "order" means different things to fulfillment vs. finance, give each context its own service.
+3. **Decompose by data ownership.** One service per aggregate root. Two services should never write to the same table.
+4. **Decompose by deployability / scaling profile.** A 1000-req/s checkout has no business being deployed in the same JAR as a once-a-day batch.
+
+Anti-pattern: **decompose by technical layer** (e.g. one service for "all controllers", another for "all repos"). You inherit the worst of both worlds.
+
+### Circuit breaker with Resilience4j
+
+```java
+@Service
+public class PaymentClient {
+
+    private final RestTemplate rest;
+    private final CircuitBreaker breaker;
+
+    public PaymentClient(RestTemplate rest, CircuitBreakerRegistry registry) {
+        this.rest = rest;
+        this.breaker = registry.circuitBreaker("payment-service",
+            CircuitBreakerConfig.custom()
+                .failureRateThreshold(50)             // 50% failures → OPEN
+                .waitDurationInOpenState(Duration.ofSeconds(30))
+                .slidingWindowSize(20)                 // last 20 calls
+                .minimumNumberOfCalls(10)              // need >= 10 before opening
+                .permittedNumberOfCallsInHalfOpenState(3)
+                .build());
+    }
+
+    public PaymentResult charge(ChargeRequest req) {
+        Supplier<PaymentResult> call = () ->
+            rest.postForObject("/payments", req, PaymentResult.class);
+        return breaker.executeSupplier(call);
+    }
+}
+```
+
+Resilience4j has equivalents for **retry**, **rate limiter**, **bulkhead**, and **time limiter** — all composable. Wrap external calls; chain breakers.
+
+### Resilience patterns at a glance
+
+| Pattern | Problem | Resilience4j module |
+| --- | --- | --- |
+| **Timeout** | Slow downstream wedges your thread | `TimeLimiter` |
+| **Retry** | Transient errors (network blips, 503s) | `Retry` |
+| **Circuit breaker** | Persistent downstream failure → cascade | `CircuitBreaker` |
+| **Bulkhead** | One slow dependency starves the whole pool | `Bulkhead` (semaphore or thread-pool) |
+| **Rate limiter** | Protect a downstream from your own load | `RateLimiter` |
+| **Fallback** | Need a degraded response when all else fails | `@Recover` (Spring Retry) or `.recover(...)` |
+
+Compose them: `timeout → retry → circuit-breaker → bulkhead → fallback`.
+
+### Distributed tracing across services
+
+You can't debug a microservice failure from one service's logs alone. Three artefacts make multi-service request flow legible:
+
+1. **Trace ID** — one ID across every service the request touches. Carried in the `traceparent` header (W3C Trace Context).
+2. **Span ID** — per-service / per-operation unit of work; spans nest under the trace.
+3. **Baggage** — out-of-band context (e.g. `tenant_id`) propagated alongside.
+
+With OpenTelemetry + Spring Boot 3, instrumentation is auto-magic: every `RestTemplate` / `WebClient` / `KafkaTemplate` call carries `traceparent`. View traces in Jaeger / Tempo / Honeycomb.
+
+### Saga pattern (revisited for microservices)
+
+A multi-service business transaction implemented as a chain of local transactions, each with a compensating action. Two flavours:
+
+#### Choreography (event-driven)
+
+Each service publishes events; downstream services subscribe and react.
+
+```java
+@KafkaListener(topics = "order-created")
+public void on(OrderCreatedEvent e) {
+    try {
+        inventory.reserve(e.orderId(), e.items());
+        kafka.send("inventory-reserved", new InventoryReservedEvent(e.orderId()));
+    } catch (OutOfStockException ex) {
+        kafka.send("inventory-failed", new InventoryFailedEvent(e.orderId(), ex.getMessage()));
+    }
+}
+```
+
+Pros: loose coupling. Cons: hard to see the whole flow ("where did the order get stuck?").
+
+#### Orchestration (central coordinator)
+
+One service drives the saga state machine — Temporal, Camunda, AWS Step Functions, or a hand-rolled one.
+
+```java
+public OrderResult placeOrder(OrderRequest req) {
+    var inv = inventory.reserve(req.orderId(), req.items());
+    try {
+        var pay = payments.charge(req.userId(), req.total());
+        try {
+            shipping.create(req.orderId(), req.address());
+            return OrderResult.success(req.orderId());
+        } catch (Exception e) {
+            payments.refund(pay.id());
+            inventory.release(inv.id());
+            throw e;
+        }
+    } catch (Exception e) {
+        inventory.release(inv.id());
+        throw e;
+    }
+}
+```
+
+(A real orchestrator manages this state machine durably, not in memory.)
+
+Pros: visibility, easy to debug. Cons: orchestrator is a SPOF if not designed carefully.
+
+**Rule of thumb:** start choreographed; switch to orchestrated when the saga grows past 4-5 steps or auditability is critical.
+
+### API Gateway in a microservices context
+
+A single entry point for clients, in front of N services. Handles:
+
+- **Routing** — `/api/orders/*` → orders-service; `/api/users/*` → users-service.
+- **Authn / authz** — validate the JWT *once*, propagate `user_id` to downstream as a header.
+- **Rate limiting** — per-API-key or per-user limits.
+- **Response aggregation** — call 3 backends, fan-in the response.
+- **Protocol translation** — REST to gRPC, REST to GraphQL.
+
+Use a managed gateway (AWS API Gateway, Kong, Apigee, Istio Gateway, Envoy) over rolling your own. The cross-cutting concerns balloon fast.
+
+---

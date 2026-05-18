@@ -1,0 +1,118 @@
+---
+title: Structural Patterns
+description: Composition recipes — Adapter, Bridge, Composite, Decorator, Facade, Flyweight, Proxy.
+sidebar_position: 1
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Structural Patterns
+
+<Pillbar pills={[
+  { label: 'family', value: 'structural' },
+  { label: 'patterns', value: 7 },
+  { label: 'theme', value: 'composition' },
+]} />
+
+Structural patterns describe **how objects compose** to form larger structures while keeping the result efficient and flexible. They answer questions like: *how do I bolt incompatible APIs together?* *how do I add behaviour without subclassing?* *how do I treat one thing and a tree of things uniformly?*
+
+The shared trick: prefer **object composition** over class inheritance. Wrappers (Decorator, Proxy, Adapter), recursive aggregates (Composite), or bridges between parallel hierarchies (Bridge, Facade) let you reshape relationships at runtime instead of at compile time.
+
+<QuickNav items={[
+  { label: 'ADAPTER',    href: '/learn/java/design-patterns/structural/adapter' },
+  { label: 'BRIDGE',     href: '/learn/java/design-patterns/structural/bridge' },
+  { label: 'COMPOSITE',  href: '/learn/java/design-patterns/structural/composite' },
+  { label: 'DECORATOR',  href: '/learn/java/design-patterns/structural/decorator' },
+  { label: 'FACADE',     href: '/learn/java/design-patterns/structural/facade' },
+  { label: 'FLYWEIGHT',  href: '/learn/java/design-patterns/structural/flyweight' },
+  { label: 'PROXY',      href: '/learn/java/design-patterns/structural/proxy' },
+]} />
+
+## At a glance
+
+| Pattern | Intent | Reach for it when | Key collaborator |
+| --- | --- | --- | --- |
+| [Adapter](./adapter.mdx) | Translate one interface to another | Third-party API mismatches your contract | `Target` interface |
+| [Bridge](./bridge.mdx) | Split abstraction from implementation | Two orthogonal dimensions vary | `Implementor` interface |
+| [Composite](./composite.mdx) | Treat leaves and trees uniformly | Recursive structure (files, UI, AST) | shared `Component` interface |
+| [Decorator](./decorator.mdx) | Layer behaviour around an object | Cross-cutting concerns to stack | `Component` interface |
+| [Facade](./facade.mdx) | One simple front to a complex subsystem | Many subsystems behind one use-case | several subsystem classes |
+| [Flyweight](./flyweight.mdx) | Share fine-grained instances to save memory | Millions of near-identical objects | `Factory` cache |
+| [Proxy](./proxy.mdx) | Stand-in for the real object | Lazy loading, access control, RPC | `Subject` interface |
+
+## Smell → pattern lookup
+
+| Symptom in code | Pattern to consider |
+| --- | --- |
+| Two libraries that should talk but don't share an interface | **Adapter** |
+| `if (theme == DARK) ... else ...` repeated across widget types | **Bridge** |
+| Recursive tree where leaf and branch look slightly different | **Composite** |
+| Repeated `try/catch` + logging + retry around the same call | **Decorator** stack |
+| Caller has to call 8 subsystems in the right order | **Facade** |
+| GC churn from millions of small objects with mostly-shared state | **Flyweight** |
+| Object should construct/load on first use, not at startup | **Proxy** (virtual / lazy) |
+| You want auth + audit *around* a method without editing the method | **Proxy** (or Decorator) |
+
+## Practice Problems
+
+Structural patterns shine when you can't (or shouldn't) change an existing class but still need it to behave differently. Sketch the wrapping / composition first, then code.
+
+### 1. Make a synchronous API streamable
+
+A third-party SDK exposes `List<Record> fetchAll(Query q)` that returns everything at once. Your service needs to stream records lazily to avoid OOM on large queries.
+
+- **Pattern**: Adapter (wrap the SDK to return an `Iterator<Record>` / `Flow<Record>` that pages internally).
+
+### 2. Layered HTTP client
+
+Wrap a base HTTP client with: (a) logging, (b) retries with exponential backoff, (c) circuit breaker, (d) response caching. Each concern must be composable and independently testable.
+
+- **Pattern**: Decorator stack.
+- **Stretch**: What's the right outer→inner order? (Hint: cache outermost; circuit-breaker before retries.)
+
+### 3. File-system audit explorer
+
+Given a directory tree, compute total size, find the largest file, and print an ASCII tree — all by walking the same data model uniformly.
+
+- **Pattern**: Composite.
+- **Stretch**: Add a `visit(Visitor v)` method to leverage the Visitor pattern too.
+
+### 4. Bank-grade access proxy
+
+Wrap a `BankAccount.withdraw(amount)` method with: (a) authentication, (b) authorization for elevated transactions, (c) immutable audit log of every call. The original `BankAccount` must remain untouched.
+
+- **Pattern**: Proxy (security + auditing).
+- **Variant**: Spring AOP gives you proxy-based interception for free; sketch how `@Audited` and `@Authenticated` annotations would compose.
+
+### 5. Email subsystem facade
+
+Your team integrates SES, SendGrid, and Postmark depending on environment. Each has a different API. Provide a single `EmailService.send(to, subject, body, attachments)` for the rest of the codebase.
+
+- **Pattern**: Facade (single entry point) combined with Adapter (each vendor SDK adapted to a common `MailProvider` interface).
+
+### 6. Theme × widget UI
+
+You're building a desktop UI with three themes (light, dark, high-contrast) and ten widget types (button, dialog, menu, etc.). A naive design produces 30 classes. Refactor to two orthogonal hierarchies.
+
+- **Pattern**: Bridge — `Widget` × `Theme`.
+
+### 7. Text editor glyph cache
+
+A code editor renders 200,000 characters per file. A naive design creates one `Glyph` object per character. Reduce memory by sharing glyphs by `(char, font, weight)`.
+
+- **Pattern**: Flyweight.
+- **Stretch**: How does ASCII range `0..127` differ from the long tail (Unicode CJK)? When does caching stop paying off?
+
+### 8. CSV / JSON / Avro multi-format reader
+
+The same in-memory `Record` schema must be readable from CSV, JSON, and Avro files. Application code must not branch on format.
+
+- **Pattern**: Adapter per format — each format adapter implements `RecordReader<Record>`.
+
+### 9. Lazy database connection
+
+`Connection` objects are expensive to open. Wrap them so that the actual JDBC connection is established only on the **first method call**, not at construction time.
+
+- **Pattern**: Proxy (lazy loading).
+- **Stretch**: Combine with a connection pool — what's the layering order?

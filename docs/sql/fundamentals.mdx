@@ -1,0 +1,100 @@
+---
+title: SQL Fundamentals
+description: Logical clause order, NULL semantics, sample schema, basic SELECT patterns.
+sidebar_position: 2
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+
+# SQL Fundamentals
+
+<Pillbar pills={[
+  { label: 'must-know', value: 'clause order' },
+  { label: 'reach for', value: 'when reading queries' },
+]} />
+
+## Logical order of clauses
+
+The clauses run in a specific logical order — different from the written order:
+
+```text
+1. FROM        (which tables, joined how)
+2. WHERE       (row-level filter)
+3. GROUP BY    (collapse rows into groups)
+4. HAVING      (group-level filter)
+5. SELECT      (pick columns, apply aggregates)
+6. ORDER BY    (sort)
+7. LIMIT       (cap)
+```
+
+You can only use a column in `WHERE` if it exists *after* the `FROM` / `JOIN` stage. You can only use an aggregate in `HAVING`, not in `WHERE`.
+
+## NULL semantics
+
+- `NULL = NULL` is `NULL`, not `TRUE`.
+- Use `IS NULL` / `IS NOT NULL`.
+- `COUNT(col)` skips NULLs; `COUNT(*)` does not.
+- `SUM(col)` of all-NULL returns `NULL`, not zero.
+- Arithmetic with NULL returns NULL (`5 + NULL = NULL`). Use `COALESCE(col, 0)` to fold.
+
+## Sample schema (used across this section)
+
+```sql
+-- Customers
+CREATE TABLE customers (
+  id         BIGSERIAL PRIMARY KEY,
+  name       TEXT NOT NULL,
+  signed_up_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- Orders
+CREATE TABLE orders (
+  id           BIGSERIAL PRIMARY KEY,
+  customer_id  BIGINT NOT NULL REFERENCES customers(id),
+  amount       NUMERIC(12,2) NOT NULL,
+  status       TEXT NOT NULL,        -- 'pending' | 'fulfilled' | 'cancelled'
+  placed_at    TIMESTAMP NOT NULL
+);
+
+-- Employees (for self-joins, hierarchical queries)
+CREATE TABLE employees (
+  id            BIGSERIAL PRIMARY KEY,
+  name          TEXT NOT NULL,
+  manager_id    BIGINT REFERENCES employees(id),
+  department_id BIGINT,
+  salary        NUMERIC(12,2) NOT NULL
+);
+```
+
+## Basic SELECT patterns
+
+```sql
+-- Filter + sort + paginate
+SELECT id, name, amount
+FROM orders
+WHERE status = 'fulfilled'
+  AND placed_at >= '2024-01-01'
+ORDER BY placed_at DESC
+LIMIT 50 OFFSET 0;
+
+-- DISTINCT
+SELECT DISTINCT department_id FROM employees;
+
+-- Conditional column
+SELECT id,
+       CASE
+         WHEN amount < 50    THEN 'small'
+         WHEN amount < 500   THEN 'medium'
+         ELSE                     'large'
+       END AS bucket
+FROM orders;
+```
+
+## What makes a query "good"
+
+- **Reads top-down.** Join → filter → group → project → sort. If your query mixes these, it's harder to optimize.
+- **Names temporaries.** Use CTEs (`WITH foo AS (...)`) rather than nested subqueries when something is reused.
+- **Uses sargable predicates.** `WHERE date >= '2024-01-01'` lets the index help; `WHERE YEAR(date) = 2024` does not.
+- **Picks the right join shape.** If you only need a flag ("did this customer ever order?"), use `EXISTS`, not `LEFT JOIN + COUNT`.
+
+Next: [Joins](./joins.mdx).

@@ -1,0 +1,107 @@
+---
+title: Stack
+sidebar_position: 2
+---
+
+import LinkedListViz from '@site/src/components/LinkedListViz';
+import TreeViz from '@site/src/components/TreeViz';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+
+# Stack
+
+### What is a Stack?
+
+A LIFO container. Push, pop, and peek are all `O(1)`. In Java, prefer `ArrayDeque` over the legacy `Stack` class; in Python, a plain list works; in Go, a slice.
+
+### Why Does It Work?
+
+Many "match each X with its closest preceding Y" problems are solved by pushing candidates and popping when a match is found. The stack stores **work that's been deferred**, in the exact order it needs to be resolved.
+
+### Mental Model
+
+A pile of waiting decisions. Each new element either resolves the top of the pile or extends it.
+
+### When to Use
+
+- Balanced parentheses, bracket matching.
+- "Next greater element" / "previous smaller element" (monotonic stack).
+- Expression evaluation, infix → postfix conversion.
+- DFS with explicit stack (no recursion).
+- Backtracking state.
+
+<div className="im-core-concept">
+
+### Core Concept
+
+The **monotonic stack** trick: maintain a stack where values are strictly increasing (or decreasing). When you push a new value, pop anything that violates the order, and use those pops to compute answers.
+
+</div>
+### Template Code
+
+<CodeTabs
+  title="NextGreaterElement"
+  java={`public int[] nextGreater(int[] a) {
+  int n = a.length;
+  int[] ans = new int[n];
+  Arrays.fill(ans, -1);
+  Deque<Integer> stack = new ArrayDeque<>();
+  for (int i = 0; i < n; i++) {
+    while (!stack.isEmpty() && a[stack.peek()] < a[i]) {
+      ans[stack.pop()] = a[i];
+    }
+    stack.push(i);
+  }
+  return ans;
+}`}
+  kotlin={`fun nextGreater(a: IntArray): IntArray {
+  val ans = IntArray(a.size) { -1 }
+  val stack: ArrayDeque<Int> = ArrayDeque()
+  for (i in a.indices) {
+    while (stack.isNotEmpty() && a[stack.last()] < a[i]) ans[stack.removeLast()] = a[i]
+    stack.addLast(i)
+  }
+  return ans
+}`}
+  python={`def next_greater(a: list[int]) -> list[int]:
+    ans = [-1] * len(a)
+    stack: list[int] = []
+    for i, v in enumerate(a):
+        while stack and a[stack[-1]] < v:
+            ans[stack.pop()] = v
+        stack.append(i)
+    return ans`}
+  go={`func nextGreater(a []int) []int {
+  ans := make([]int, len(a))
+  for i := range ans { ans[i] = -1 }
+  stack := []int{}
+  for i, v := range a {
+    for len(stack) > 0 && a[stack[len(stack)-1]] < v {
+      ans[stack[len(stack)-1]] = v
+      stack = stack[:len(stack)-1]
+    }
+    stack = append(stack, i)
+  }
+  return ans
+}`}
+/>
+
+### Key Problems to Master
+
+| # | Problem | Difficulty | Pattern | LeetCode |
+| - | --- | --- | --- | --- |
+| 1 | Valid Parentheses | <Difficulty>Easy</Difficulty> | Bracket match | [LC 20](https://leetcode.com/problems/valid-parentheses/) |
+| 2 | Min Stack | <Difficulty>Medium</Difficulty> | Two stacks | [LC 155](https://leetcode.com/problems/min-stack/) |
+| 3 | Daily Temperatures | <Difficulty>Medium</Difficulty> | Monotonic stack | [LC 739](https://leetcode.com/problems/daily-temperatures/) |
+| 4 | Largest Rectangle in Histogram | <Difficulty>Hard</Difficulty> | Monotonic + indices | [LC 84](https://leetcode.com/problems/largest-rectangle-in-histogram/) |
+| 5 | Evaluate Reverse Polish Notation | <Difficulty>Medium</Difficulty> | Operator stack | [LC 150](https://leetcode.com/problems/evaluate-reverse-polish-notation/) |
+
+### Common Mistakes to Avoid
+
+- Using Java `Stack` (synchronized, slow). Use `ArrayDeque`.
+- Pushing values when the algorithm needs indices.
+- Forgetting to handle an unmatched stack at the end (leftover open brackets).
+
+---

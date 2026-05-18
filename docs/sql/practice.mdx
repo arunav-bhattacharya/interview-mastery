@@ -1,0 +1,253 @@
+---
+title: Practice & Reference
+description: 10 worked SQL problems, the "what to reach for" cheat-sheet, and a practice checklist.
+sidebar_position: 9
+---
+
+import CodeTabs from '@site/src/components/CodeTabs';
+import { Checklist, ChecklistItem } from '@site/src/components/Checklist';
+
+# SQL Practice & Quick Reference
+
+10 worked problems that map onto the patterns you've just read about. After each, the "tag" tells you which spoke it lives in.
+
+## Problem 1 — Nth highest salary
+
+```sql
+-- OFFSET approach
+SELECT DISTINCT salary
+FROM employees
+ORDER BY salary DESC
+OFFSET 1
+LIMIT 1;   -- 2nd highest
+
+-- DENSE_RANK approach
+WITH ranked AS (
+  SELECT salary, DENSE_RANK() OVER (ORDER BY salary DESC) AS rk
+  FROM employees
+)
+SELECT salary FROM ranked WHERE rk = 2 LIMIT 1;
+```
+
+*Tags: [window-functions](./window-functions.mdx)*
+
+## Problem 2 — Employees earning more than their manager
+
+```sql
+SELECT e.name
+FROM employees e
+JOIN employees m ON e.manager_id = m.id
+WHERE e.salary > m.salary;
+```
+
+*Tags: [joins](./joins.mdx) (self-join)*
+
+## Problem 3 — Department with highest average salary
+
+```sql
+WITH dept_avg AS (
+  SELECT department_id, AVG(salary) AS avg_salary
+  FROM employees
+  GROUP BY department_id
+)
+SELECT department_id, avg_salary
+FROM dept_avg
+ORDER BY avg_salary DESC
+LIMIT 1;
+```
+
+*Tags: [aggregations](./aggregations.mdx), [ctes](./ctes.mdx)*
+
+## Problem 4 — Customers who never placed an order
+
+```sql
+SELECT c.id, c.name
+FROM customers c
+WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id);
+```
+
+*Tags: [subqueries](./subqueries.mdx) (NOT EXISTS anti-pattern)*
+
+## Problem 5 — Consecutive days login (3 in a row)
+
+<CodeTabs
+  title="ConsecutiveDaysLogin"
+  sql={`WITH logins AS (
+  SELECT
+    user_id,
+    DATE(at) AS day,
+    LAG(DATE(at), 1) OVER (PARTITION BY user_id ORDER BY DATE(at)) AS prev_day,
+    LAG(DATE(at), 2) OVER (PARTITION BY user_id ORDER BY DATE(at)) AS prev_prev_day
+  FROM login_events
+)
+SELECT DISTINCT user_id
+FROM logins
+WHERE prev_day      = day - INTERVAL '1 day'
+  AND prev_prev_day = day - INTERVAL '2 day';`}
+/>
+
+*Tags: [window-functions](./window-functions.mdx) (LAG)*
+
+## Problem 6 — Customer retention (cohort)
+
+> Of users who signed up in March, how many returned in April?
+
+```sql
+WITH march_signups AS (
+  SELECT id
+  FROM customers
+  WHERE signed_up_at >= '2024-03-01' AND signed_up_at < '2024-04-01'
+),
+april_active AS (
+  SELECT DISTINCT customer_id
+  FROM orders
+  WHERE placed_at >= '2024-04-01' AND placed_at < '2024-05-01'
+)
+SELECT
+  COUNT(*)                                              AS march_cohort,
+  COUNT(*) FILTER (WHERE id IN (SELECT customer_id FROM april_active)) AS retained,
+  ROUND(
+    100.0 *
+    COUNT(*) FILTER (WHERE id IN (SELECT customer_id FROM april_active))
+    / NULLIF(COUNT(*), 0), 1
+  ) AS retention_pct
+FROM march_signups;
+```
+
+*Tags: [ctes](./ctes.mdx), [aggregations](./aggregations.mdx)*
+
+## Problem 7 — Running balance (bank transactions)
+
+```sql
+SELECT
+  txn_id,
+  account_id,
+  occurred_at,
+  amount,
+  SUM(amount) OVER (
+    PARTITION BY account_id
+    ORDER BY occurred_at, txn_id
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS running_balance
+FROM transactions;
+```
+
+*Tags: [window-functions](./window-functions.mdx) (running total)*
+
+## Problem 8 — Top 3 products per category
+
+```sql
+WITH ranked AS (
+  SELECT
+    p.*,
+    ROW_NUMBER() OVER (
+      PARTITION BY category_id
+      ORDER BY revenue_30d DESC
+    ) AS rn
+  FROM products p
+)
+SELECT id, category_id, name, revenue_30d
+FROM ranked
+WHERE rn <= 3;
+```
+
+*Tags: [window-functions](./window-functions.mdx) (top-N per group)*
+
+## Problem 9 — Year-over-year revenue growth
+
+```sql
+WITH yearly AS (
+  SELECT
+    EXTRACT(YEAR FROM placed_at) AS yr,
+    SUM(amount)                  AS revenue
+  FROM orders
+  WHERE status = 'fulfilled'
+  GROUP BY EXTRACT(YEAR FROM placed_at)
+)
+SELECT
+  yr,
+  revenue,
+  LAG(revenue) OVER (ORDER BY yr) AS prev_revenue,
+  ROUND(
+    100.0 * (revenue - LAG(revenue) OVER (ORDER BY yr))
+          / NULLIF(LAG(revenue) OVER (ORDER BY yr), 0), 1
+  ) AS yoy_pct
+FROM yearly
+ORDER BY yr;
+```
+
+*Tags: [aggregations](./aggregations.mdx), [window-functions](./window-functions.mdx)*
+
+## Problem 10 — Median salary
+
+```sql
+SELECT AVG(salary) AS median
+FROM (
+  SELECT salary,
+         ROW_NUMBER() OVER (ORDER BY salary) AS rn,
+         COUNT(*)     OVER ()                AS cnt
+  FROM employees
+) t
+WHERE rn IN ((cnt + 1) / 2, (cnt + 2) / 2);
+```
+
+For even N this averages the two middle values; for odd N both `(cnt+1)/2` and `(cnt+2)/2` resolve to the same row.
+
+*Tags: [window-functions](./window-functions.mdx), [subqueries](./subqueries.mdx)*
+
+## Bonus — Find duplicate emails
+
+```sql
+SELECT email, COUNT(*) AS dupes
+FROM person
+GROUP BY email
+HAVING COUNT(*) > 1;
+```
+
+*Tags: [aggregations](./aggregations.mdx)*
+
+---
+
+## SQL Interview Quick Reference
+
+| You hear / see... | Reach for... |
+| --- | --- |
+| "Top N per group" | Window function with `ROW_NUMBER() OVER (PARTITION BY ...)` |
+| "Running total" | `SUM() OVER (ORDER BY ...)` |
+| "Compare consecutive rows" | `LAG()` / `LEAD()` |
+| "All A and matching B (or nothing)" | `LEFT JOIN` |
+| "Customers who never X" | `NOT EXISTS` (preferred) or `LEFT JOIN ... IS NULL` |
+| "Find duplicates" | `GROUP BY ... HAVING COUNT(*) > 1` |
+| "Stack two result sets vertically" | `UNION ALL` (or `UNION` if you need dedup) |
+| "Recursive / hierarchical" | `WITH RECURSIVE` |
+| "Optimize a slow query" | `EXPLAIN ANALYZE`, then index |
+| "Pivot rows to columns" | `CASE WHEN ... THEN ... END` aggregations |
+| "First / latest per group" | `ROW_NUMBER()` window |
+| "Date gap-fill" | `generate_series` + `LEFT JOIN` |
+| "Year-over-year" | `LAG()` over yearly aggregate |
+| "Median" | `PERCENTILE_CONT(0.5)` or `ROW_NUMBER` trick |
+
+## Red flags to avoid in interviews
+
+- Reaching for `SELECT *` on a join.
+- Using `OFFSET 1000000` for pagination.
+- Writing `NOT IN (subquery)` without checking for NULLs.
+- Putting a function on an indexed column in the `WHERE`.
+- Skipping `EXPLAIN ANALYZE` when the interviewer says "this is slow."
+
+---
+
+## Practice Checklist
+
+<Checklist>
+  <ChecklistItem id="sql-practice-0-walk-through-the-logical-clause-order-fr">Walk through the logical clause order from memory.</ChecklistItem>
+  <ChecklistItem id="sql-practice-0-write-a-self-join-from-scratch">Write a self-join from scratch.</ChecklistItem>
+  <ChecklistItem id="sql-practice-0-write-a-3-table-query-with-two-joins-and">Write a 3-table query with two joins and a `GROUP BY`.</ChecklistItem>
+  <ChecklistItem id="sql-practice-0-solve-nth-highest-salary-two-ways-subque">Solve "Nth highest salary" two ways (subquery + window).</ChecklistItem>
+  <ChecklistItem id="sql-practice-0-write-a-recursive-cte-for-an-org-hierarc">Write a recursive CTE for an org hierarchy.</ChecklistItem>
+  <ChecklistItem id="sql-practice-0-use-rownumber-rank-denserank-lag-lead-ea">Use `ROW_NUMBER`, `RANK`, `DENSE_RANK`, `LAG`, `LEAD` each at least once.</ChecklistItem>
+  <ChecklistItem id="sql-practice-0-compute-a-running-total-and-a-moving-ave">Compute a running total and a moving average.</ChecklistItem>
+  <ChecklistItem id="sql-practice-0-read-an-explain-analyze-plan-and-identif">Read an `EXPLAIN ANALYZE` plan and identify the bottleneck.</ChecklistItem>
+  <ChecklistItem id="sql-practice-0-add-a-covering-index-that-flips-a-sequen">Add a covering index that flips a sequential scan to an index-only scan.</ChecklistItem>
+  <ChecklistItem id="sql-practice-0-use-keyset-pagination-instead-of-offset">Use keyset pagination instead of `OFFSET`.</ChecklistItem>
+</Checklist>

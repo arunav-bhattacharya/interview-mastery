@@ -1,0 +1,158 @@
+---
+title: REST & API Design
+description: "RESTful controllers, status codes, validation, error handling."
+sidebar_position: 3
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# REST & API Design
+
+### Resource style
+
+```java
+@RestController
+@RequestMapping("/api/orders")
+public class OrderController {
+
+  @GetMapping("/{id}")
+  public ResponseEntity<OrderDto> get(@PathVariable long id) {
+    return orders.findById(id)
+        .map(ResponseEntity::ok)
+        .orElseGet(() -> ResponseEntity.notFound().build());
+  }
+
+  @PostMapping
+  public ResponseEntity<OrderDto> create(@Valid @RequestBody CreateOrder body) {
+    OrderDto created = orders.create(body);
+    return ResponseEntity.created(URI.create("/api/orders/" + created.id())).body(created);
+  }
+}
+```
+
+### Status codes that matter
+
+- **200** OK with body / **204** OK no body.
+- **201** Created for POST; set `Location` header.
+- **400** Bad Request — validation errors.
+- **401** vs. **403** — not authenticated vs. authenticated but forbidden.
+- **404** Not Found — also for resources you intentionally hide.
+- **409** Conflict — optimistic concurrency, duplicate keys.
+- **422** Unprocessable Entity — request well-formed but semantically wrong.
+- **429** Too Many Requests — rate limited.
+- **5xx** server errors — log + page on-call.
+
+### Validation
+
+JSR-380 (`@NotNull`, `@Size`, `@Email`) on DTOs + `@Valid` on parameter. Centralize errors via `@ControllerAdvice`:
+
+```java
+@RestControllerAdvice
+class GlobalErrorHandler {
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  ResponseEntity<Problem> onValidation(MethodArgumentNotValidException ex) {
+    /* return RFC 7807 problem+json */
+  }
+}
+```
+
+### Global exception handling — full pattern
+
+```java
+@RestControllerAdvice
+@Slf4j
+public class GlobalErrorHandler {
+
+  @ExceptionHandler(MethodArgumentNotValidException.class)
+  ResponseEntity<ProblemDetail> onValidation(MethodArgumentNotValidException ex) {
+    var detail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+    detail.setTitle("Validation failed");
+    detail.setDetail(ex.getBindingResult().getFieldErrors().stream()
+        .map(e -> e.getField() + ": " + e.getDefaultMessage())
+        .collect(Collectors.joining(", ")));
+    return ResponseEntity.badRequest().body(detail);
+  }
+
+  @ExceptionHandler(NoSuchElementException.class)
+  ResponseEntity<ProblemDetail> onNotFound(NoSuchElementException ex) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage()));
+  }
+
+  @ExceptionHandler(Exception.class)
+  ResponseEntity<ProblemDetail> onUnknown(Exception ex) {
+    log.error("Unhandled exception", ex);
+    return ResponseEntity.internalServerError()
+        .body(ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR,
+            "Unexpected error — please retry"));
+  }
+}
+```
+
+Spring 6 / Boot 3 ship `ProblemDetail` natively — RFC 7807 `application/problem+json` out of the box. Keep handlers narrow; never leak stack traces.
+
+### Idempotency
+
+`PUT` and `DELETE` are idempotent by HTTP definition. `POST` is **not** — make it so for any operation that mutates state:
+
+```http
+POST /api/payments
+Idempotency-Key: 7c2a-9b3f-4d1e-...
+Content-Type: application/json
+
+{"amount": 4500, "currency": "USD", "source": "tok_..."}
+```
+
+Server-side: hash the request body, store `(idempotency_key → response)` for ~24 h. On replay, return the cached response without re-executing.
+
+```java
+@PostMapping("/payments")
+ResponseEntity<PaymentDto> charge(
+    @RequestHeader("Idempotency-Key") String key,
+    @Valid @RequestBody ChargeRequest body) {
+
+  var cached = idempotencyStore.lookup(key);
+  if (cached.isPresent()) return cached.get();
+
+  PaymentDto result = payments.charge(body);
+  idempotencyStore.save(key, result);
+  return ResponseEntity.status(HttpStatus.CREATED).body(result);
+}
+```
+
+### API versioning
+
+| Style | Looks like | Pros | Cons |
+| --- | --- | --- | --- |
+| **URL prefix** | `/api/v2/orders` | Easy to route, easy to cache | URLs change; clients hard-code version |
+| **Custom header** | `Accept: application/vnd.acme.v2+json` | URLs stay stable | Awkward to test in a browser |
+| **Query param** | `/api/orders?v=2` | Simplest | Not REST-y; caches behave oddly |
+| **Default-and-deprecate** | `/api/orders` always points at the latest; old clients pinned via header | Smallest churn | Requires server to support multiple versions concurrently |
+
+Pick **URL prefix** for public APIs (it's the convention), **header** for internal microservices (URLs survive across versions).
+
+### Content negotiation & CORS
+
+- **Content negotiation** — set `Accept: application/json` on the client; Spring picks the right `HttpMessageConverter`. For multi-format APIs configure `WebMvcConfigurer.configureContentNegotiation`.
+- **CORS** — for browser-facing APIs hit from another origin. Configure explicitly:
+
+```java
+@Configuration
+class CorsConfig implements WebMvcConfigurer {
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/api/**")
+                .allowedOrigins("https://app.acme.com")
+                .allowedMethods("GET", "POST", "PUT", "DELETE")
+                .allowedHeaders("*")
+                .allowCredentials(true)
+                .maxAge(3600);
+    }
+}
+```
+
+Don't use `allowedOrigins("*")` with credentials — browsers reject it.
+
+---

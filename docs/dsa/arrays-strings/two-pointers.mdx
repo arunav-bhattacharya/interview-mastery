@@ -1,0 +1,127 @@
+---
+title: Two Pointers
+sidebar_position: 1
+---
+
+import TwoPointerViz from '@site/src/components/TwoPointerViz';
+import SlidingWindowViz from '@site/src/components/SlidingWindowViz';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+
+# Two Pointers
+
+### What is Two Pointers?
+
+Two Pointers is a technique that uses **two index variables** to traverse an array or string, advancing them strategically based on the data. Instead of nested `O(n²)` loops, two pointers often achieve `O(n)` time.
+
+The key insight: by moving pointers intelligently, you can eliminate large portions of the search space in each step — similar in spirit to binary search, but applied to different problem shapes.
+
+### Why Does It Work?
+
+- **Sorted data has structure.** If `a[l] + a[r]` is too small, growing `l` is the only way to grow the sum. If it's too big, shrinking `r` is the only way to shrink it.
+- **Each move eliminates possibilities** that brute force would have re-checked.
+- **Invariants are maintained** — "everything before `l` is processed", "everything after `r` is done" — and these invariants prove correctness.
+
+### Mental Model
+
+Two pointers form a pincer:
+
+- **Opposite-end pointers** are two people searching a sorted bookshelf from both ends, meeting in the middle.
+- **Same-direction (fast / slow) pointers** are runners on a track at different speeds — perfect for detecting cycles or maintaining a window.
+
+<TwoPointerViz />
+
+### When to Use
+
+- Sorted arrays.
+- Finding pairs / triplets that satisfy a condition.
+- Removing duplicates in place.
+- Palindrome problems.
+- Comparing elements from both ends.
+
+<div className="im-core-concept">
+
+### Core Concept
+
+```text
+Two Pointers Pattern
+┌─────────────────────────────────────────────────────────┐
+│  Array: [1, 2, 3, 4, 5, 6, 7, 8, 9]                     │
+│           ↑                       ↑                      │
+│          left                   right                    │
+│                                                          │
+│  Move pointers based on a condition:                    │
+│    • If sum < target  →  l++                            │
+│    • If sum > target  →  r--                            │
+│    • If sum == target →  done                           │
+└─────────────────────────────────────────────────────────┘
+```
+
+</div>
+
+### Template Code
+
+<CodeTabs
+  title="PairSum"
+  java={`public int[] pairSum(int[] a, int target) {
+  int l = 0, r = a.length - 1;
+  while (l < r) {
+    int s = a[l] + a[r];
+    if (s == target) return new int[] { l, r };
+    if (s < target) l++;
+    else            r--;
+  }
+  return new int[] { -1, -1 };
+}`}
+  kotlin={`fun pairSum(a: IntArray, target: Int): IntArray {
+  var l = 0; var r = a.size - 1
+  while (l < r) {
+    val s = a[l] + a[r]
+    when {
+      s == target -> return intArrayOf(l, r)
+      s < target  -> l++
+      else        -> r--
+    }
+  }
+  return intArrayOf(-1, -1)
+}`}
+  python={`def pair_sum(a: list[int], target: int) -> tuple[int, int] | None:
+    l, r = 0, len(a) - 1
+    while l < r:
+        s = a[l] + a[r]
+        if s == target: return l, r
+        if s < target:  l += 1
+        else:           r -= 1
+    return None`}
+  go={`func pairSum(a []int, target int) (int, int, bool) {
+  l, r := 0, len(a)-1
+  for l < r {
+    s := a[l] + a[r]
+    if s == target { return l, r, true }
+    if s < target { l++ } else { r-- }
+  }
+  return -1, -1, false
+}`}
+/>
+
+### Key Problems to Master
+
+| # | Problem | Difficulty | Pattern Variant | LeetCode |
+| - | --- | --- | --- | --- |
+| 1 | Two Sum II — Sorted Array | <Difficulty>Easy</Difficulty> | Opposite | [LC 167](https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/) |
+| 2 | 3-Sum | <Difficulty>Medium</Difficulty> | Opposite + outer loop | [LC 15](https://leetcode.com/problems/3sum/) |
+| 3 | Container With Most Water | <Difficulty>Medium</Difficulty> | Opposite | [LC 11](https://leetcode.com/problems/container-with-most-water/) |
+| 4 | Remove Duplicates | <Difficulty>Easy</Difficulty> | Same direction | [LC 26](https://leetcode.com/problems/remove-duplicates-from-sorted-array/) |
+| 5 | Valid Palindrome | <Difficulty>Easy</Difficulty> | Opposite | [LC 125](https://leetcode.com/problems/valid-palindrome/) |
+| 6 | Trapping Rain Water | <Difficulty>Hard</Difficulty> | Opposite | [LC 42](https://leetcode.com/problems/trapping-rain-water/) |
+
+### Common Mistakes to Avoid
+
+- Forgetting to handle empty arrays.
+- Off-by-one with `l < r` vs. `l <= r` — opposite-end search uses **strict** `<`.
+- Not skipping duplicates in 3-Sum → duplicate triplets in the output.
+- Modifying the array while iterating with stale pointer logic.
+
+---

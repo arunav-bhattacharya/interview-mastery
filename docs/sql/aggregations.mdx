@@ -1,0 +1,82 @@
+---
+title: Aggregations & GROUP BY
+description: GROUP BY, HAVING, aggregate functions, and the rules around them.
+sidebar_position: 4
+---
+
+# Aggregations & `GROUP BY`
+
+```sql
+SELECT department_id,
+       COUNT(*)        AS headcount,
+       AVG(salary)     AS avg_salary,
+       MAX(salary)     AS max_salary,
+       MIN(salary)     AS min_salary,
+       SUM(salary)     AS total_salary
+FROM employees
+WHERE salary > 0
+GROUP BY department_id
+HAVING COUNT(*) > 10
+ORDER BY avg_salary DESC;
+```
+
+## Rules
+
+- Every non-aggregate column in `SELECT` must be in `GROUP BY` (strict SQL — relaxed in MySQL with `ONLY_FULL_GROUP_BY` off, but interviewers expect strict).
+- **`WHERE` filters rows; `HAVING` filters groups.** You cannot use `HAVING` without an aggregate (otherwise you wanted `WHERE`).
+- `COUNT(DISTINCT col)` is much more expensive than `COUNT(col)` — it triggers a sort or hash.
+
+## Aggregate functions
+
+| Function | Returns |
+| --- | --- |
+| `COUNT(*)` | All rows in the group |
+| `COUNT(col)` | Non-NULL values |
+| `COUNT(DISTINCT col)` | Unique non-NULL values |
+| `SUM(col)` | Sum of non-NULLs; `NULL` if all NULL |
+| `AVG(col)` | Mean of non-NULLs; integer division traps unless cast |
+| `MIN(col)` / `MAX(col)` | Smallest / largest |
+| `STRING_AGG(col, sep)` (PG) / `GROUP_CONCAT` (MySQL) | Concatenate values |
+| `ARRAY_AGG(col)` | Collect into array |
+
+## Conditional aggregation (`SUM(CASE WHEN ...)`)
+
+Pivot-style queries lean on this:
+
+```sql
+SELECT
+  department_id,
+  COUNT(*)                                              AS total,
+  SUM(CASE WHEN salary > 100000 THEN 1 ELSE 0 END)      AS senior_count,
+  AVG(CASE WHEN gender = 'F' THEN salary END)           AS female_avg
+FROM employees
+GROUP BY department_id;
+```
+
+`AVG(CASE WHEN ... THEN salary END)` averages only the matching rows because the `ELSE` defaults to `NULL` and `AVG` skips nulls.
+
+## `GROUPING SETS`, `ROLLUP`, `CUBE`
+
+Want subtotals **and** totals in one query?
+
+```sql
+-- Subtotals per department, plus grand total
+SELECT department_id, SUM(salary) AS total
+FROM employees
+GROUP BY ROLLUP (department_id);
+
+-- Every combination
+SELECT department_id, gender, SUM(salary)
+FROM employees
+GROUP BY CUBE (department_id, gender);
+```
+
+`ROLLUP(a, b)` is shorthand for `GROUPING SETS ((a, b), (a), ())`.
+
+## Gotchas
+
+- **`AVG` on integers**: `AVG(int_col)` returns a float in PG but truncates in some dialects — cast: `AVG(int_col::numeric)`.
+- **`COUNT(*) = 0`** is impossible inside a `GROUP BY` — a group only exists if it has rows.
+- **`HAVING` without `GROUP BY`** treats the whole table as one group; valid but rarely what you mean.
+
+Next: [Subqueries](./subqueries.mdx).

@@ -1,0 +1,151 @@
+---
+title: "SD Cases: Media & Storage"
+description: Designing YouTube / video streaming, Dropbox / Google Drive, and Google Docs collaboration.
+sidebar_position: 5
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import Pillbar from '@site/src/components/Pillbar';
+
+# System Design Case Studies — Part 2
+
+<Pillbar pills={[
+  { label: 'time', value: '3–4 hours' },
+  { label: 'designs', value: 3 },
+]} />
+
+**Media, Storage & Collaboration** — YouTube, Dropbox, Google Docs.
+
+<QuickNav items={[
+  { label: 'DESIGN 5: YOUTUBE / VIDEO STREAMING', href: '#design-5-youtube--video-streaming' },
+  { label: 'DESIGN 6: DROPBOX / GOOGLE DRIVE', href: '#design-6-dropbox--google-drive' },
+  { label: 'DESIGN 7: GOOGLE DOCS', href: '#design-7-google-docs' },
+]} />
+
+## Design 5: YouTube / Video Streaming
+
+### Functional
+
+- Users upload videos, watch others' videos.
+- Search, comments, likes, recommendations.
+- Multi-resolution streaming (240p → 4K).
+
+### Numbers
+
+- 2.5B monthly users, 500 hours uploaded per minute.
+- 1B hours watched daily → very high read fan-out.
+
+### Architecture
+
+```text
+[ Uploader ] → [ Upload Service ] → [ Object Store (S3) ]
+                       ↓
+              [ Encoding Pipeline ]
+                       ↓
+              [ Encoded variants in S3 ]
+                       ↓
+              [ Manifest (HLS/DASH) ]
+                       ↓
+              [ CDN ]  ←  [ Viewer ]
+
+[ Metadata DB ]  ←→  [ View counts (sharded) ]  ←→  [ Recs ]
+```
+
+### Key design points
+
+- **Upload**: resumable multipart upload directly to S3 (pre-signed URL). Skip your servers.
+- **Encoding**: queue-driven (SQS / Kafka) farm of FFmpeg workers; encode in N resolutions + adaptive bitrate manifest (HLS / DASH).
+- **Storage**: S3 (or equivalent) — cheap per GB, eleven nines durable.
+- **Delivery**: CDN with 99% cache hit rate; origin reads are rare.
+- **View counts**: sharded counters; eventually consistent.
+- **Recommendations**: separate ML pipeline (Spark / Flink) writing to a feature store.
+
+### Tradeoffs
+
+- Encode all resolutions upfront (storage cost) vs. encode on demand (latency).
+- ABR (HLS/DASH) → smooth playback at the cost of more files.
+
+---
+
+## Design 6: Dropbox / Google Drive
+
+### Functional
+
+- Users upload, sync, share files.
+- Multiple devices stay in sync.
+- Versioning, conflict resolution.
+
+### Numbers
+
+- 700M users, average 30 GB stored each → ~21 EB total.
+- Sync traffic dominates: every device touch produces a "have I missed an update?" call.
+
+### Architecture
+
+```text
+[ Client desktop / mobile ]
+        │
+        ▼
+  [ Sync Service ]  ←→  [ Notifier / Pub-Sub ]
+        │
+        ├──→ [ Metadata DB ]
+        ├──→ [ Block Store (S3) ]
+        └──→ [ Index for search ]
+```
+
+### Key design points
+
+- **Block-level dedupe**: split each file into 4-MB blocks, hash with SHA-256, dedupe by hash. Saves storage massively when users share files.
+- **Incremental sync**: client computes block hashes locally, only uploads missing blocks.
+- **Conflict resolution**: last-write-wins per file; for true conflicts, keep both with `(conflict copy)` suffix.
+- **Sharing**: ACL list per file/folder; sharing via signed URLs for public.
+
+### Tradeoffs
+
+- Dedup reduces storage but increases metadata complexity.
+- Push notifications (WebSocket) vs. polling for sync.
+
+---
+
+## Design 7: Google Docs (Real-Time Collaboration)
+
+### Functional
+
+- Multiple users edit the same document simultaneously.
+- See each other's cursors and changes in real time.
+- Offline edits sync when reconnected.
+
+### Numbers
+
+- ~1B users.
+- Average doc has 1–2 active editors at peak.
+- Operations are tiny (single character) but very frequent.
+
+### Architecture
+
+```text
+[ Client ] ←─WSS─→ [ Collab Server ] ←─→ [ Op log ]
+                          │
+                          ▼
+                   [ Persistence / snapshots ]
+```
+
+### Two algorithms
+
+| Algorithm | How it works | Used by |
+| --- | --- | --- |
+| **OT** (Operational Transform) | Server linearizes operations; transforms each op against concurrent ones | Google Docs |
+| **CRDT** (Conflict-Free Replicated Data Type) | Each op carries enough metadata to merge anywhere; no central server required | Figma, modern collab tools |
+
+### Key design points
+
+- **Op log per document**: every edit is an append-only operation; reconstruct doc by replaying.
+- **Snapshots**: periodic compaction so loading doesn't replay millions of ops.
+- **Presence**: cursors / selections in a separate ephemeral channel.
+- **Offline**: client buffers ops; server merges on reconnect using OT / CRDT.
+
+### Tradeoffs
+
+- OT → simpler ops but requires a central server.
+- CRDT → harder data design but allows peer-to-peer / offline-first.
+- Long history → expensive to load; snapshot frequently.

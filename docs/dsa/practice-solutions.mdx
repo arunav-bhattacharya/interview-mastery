@@ -1,0 +1,720 @@
+---
+title: Practice Solutions
+description: Detailed solutions for nine canonical DSA problems with pattern recognition.
+sidebar_position: 7
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# Practice Problems with Detailed Solutions
+
+<Pillbar pills={[
+  { label: 'role', value: 'reference' },
+  { label: 'problems', value: 9 },
+]} />
+
+A focused set of nine problems that, between them, exercise every DSA pattern. Read the solution, type it out, then attempt a similar problem from the [Problem Checklist](./problem-checklist).
+
+<QuickNav items={[
+  { label: 'PROBLEM SET OVERVIEW', href: '#problem-set-overview' },
+  { label: 'PROBLEM 1: Two Sum', href: '#problem-1-two-sum' },
+  { label: 'PROBLEM 2: Two Sum II', href: '#problem-2-two-sum-ii-sorted' },
+  { label: 'PROBLEM 3: 3Sum', href: '#problem-3-3sum' },
+  { label: 'PROBLEM 4: Container With Most Water', href: '#problem-4-container-with-most-water' },
+  { label: 'PROBLEM 5: Longest Substring Without Repeating', href: '#problem-5-longest-substring-without-repeating' },
+  { label: 'PROBLEM 6: Minimum Window Substring', href: '#problem-6-minimum-window-substring' },
+  { label: 'PROBLEM 7: Group Anagrams', href: '#problem-7-group-anagrams' },
+  { label: 'PROBLEM 8: Top K Frequent', href: '#problem-8-top-k-frequent-elements' },
+  { label: 'PROBLEM 9: Product Except Self', href: '#problem-9-product-of-array-except-self' },
+  { label: 'PATTERN RECOGNITION SUMMARY', href: '#pattern-recognition-summary' },
+]} />
+
+## Problem Set Overview
+
+| # | Problem | Pattern | Time | Space |
+| - | --- | --- | --- | --- |
+| 1 | Two Sum | Hash map | `O(n)` | `O(n)` |
+| 2 | Two Sum II — Sorted | Opposite-end two-pointer | `O(n)` | `O(1)` |
+| 3 | 3-Sum | Sort + opposite-end | `O(n²)` | `O(1)` extra |
+| 4 | Container With Most Water | Opposite-end | `O(n)` | `O(1)` |
+| 5 | Longest Substring Without Repeating Chars | Variable sliding window | `O(n)` | `O(min(n, alphabet))` |
+| 6 | Minimum Window Substring | Variable sliding window | `O(n + m)` | `O(m)` |
+| 7 | Group Anagrams | Hash map + sort-key | `O(n · k log k)` | `O(n · k)` |
+| 8 | Top K Frequent | Bucket sort or heap | `O(n)` / `O(n log K)` | `O(n)` |
+| 9 | Product of Array Except Self | Prefix + suffix products | `O(n)` | `O(1)` extra |
+
+---
+
+## Problem 1: Two Sum
+
+> Given an array of integers `nums` and an integer `target`, return the indices of the two numbers that add up to `target`. ([LC 1](https://leetcode.com/problems/two-sum/))
+
+**Idea.** As you walk the array, ask: have I seen the complement (`target − v`) before? Store each value's index in a hash map.
+
+<CodeTabs
+  title="TwoSum"
+  java={`public int[] twoSum(int[] nums, int target) {
+  Map<Integer, Integer> seen = new HashMap<>();
+  for (int i = 0; i < nums.length; i++) {
+    int need = target - nums[i];
+    if (seen.containsKey(need)) {
+      return new int[] { seen.get(need), i };
+    }
+    seen.put(nums[i], i);
+  }
+  return new int[] { -1, -1 };
+}`}
+  kotlin={`fun twoSum(nums: IntArray, target: Int): IntArray {
+  val seen = mutableMapOf<Int, Int>()
+  for (i in nums.indices) {
+    val need = target - nums[i]
+    seen[need]?.let { return intArrayOf(it, i) }
+    seen[nums[i]] = i
+  }
+  return intArrayOf(-1, -1)
+}`}
+  python={`def two_sum(nums: list[int], target: int) -> list[int]:
+    seen: dict[int, int] = {}
+    for i, v in enumerate(nums):
+        if (target - v) in seen:
+            return [seen[target - v], i]
+        seen[v] = i
+    return [-1, -1]`}
+  go={`func twoSum(nums []int, target int) []int {
+    seen := make(map[int]int)
+    for i, v := range nums {
+        if j, ok := seen[target-v]; ok {
+            return []int{j, i}
+        }
+        seen[v] = i
+    }
+    return []int{-1, -1}
+}`}
+/>
+
+---
+
+## Problem 2: Two Sum II (Sorted)
+
+> The input is sorted. Return the **1-indexed** positions. ([LC 167](https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/))
+
+**Idea.** Because the array is sorted, opposite-end two-pointer is `O(n)` and `O(1)` extra space — strictly better than the hash-map version above.
+
+<CodeTabs
+  title="TwoSumSorted"
+  java={`public int[] twoSum(int[] a, int target) {
+  int l = 0, r = a.length - 1;
+  while (l < r) {
+    int s = a[l] + a[r];
+    if (s == target) return new int[] { l + 1, r + 1 };
+    if (s < target)  l++;
+    else             r--;
+  }
+  return new int[] { -1, -1 };
+}`}
+  kotlin={`fun twoSum(a: IntArray, target: Int): IntArray {
+  var l = 0
+  var r = a.size - 1
+  while (l < r) {
+    val s = a[l] + a[r]
+    when {
+      s == target -> return intArrayOf(l + 1, r + 1)
+      s < target  -> l++
+      else        -> r--
+    }
+  }
+  return intArrayOf(-1, -1)
+}`}
+  python={`def two_sum(a: list[int], target: int) -> list[int]:
+    l, r = 0, len(a) - 1
+    while l < r:
+        s = a[l] + a[r]
+        if s == target:
+            return [l + 1, r + 1]
+        if s < target:
+            l += 1
+        else:
+            r -= 1
+    return [-1, -1]`}
+  go={`func twoSum(a []int, target int) []int {
+    l, r := 0, len(a)-1
+    for l < r {
+        s := a[l] + a[r]
+        switch {
+        case s == target:
+            return []int{l + 1, r + 1}
+        case s < target:
+            l++
+        default:
+            r--
+        }
+    }
+    return []int{-1, -1}
+}`}
+/>
+
+---
+
+## Problem 3: 3-Sum
+
+> Find all unique triplets that sum to zero. ([LC 15](https://leetcode.com/problems/3sum/))
+
+**Idea.** Sort. For each `i`, run opposite-end two-pointer on the right of `i`. Skip duplicates at every level to avoid duplicate triplets.
+
+<CodeTabs
+  title="ThreeSum"
+  java={`public List<List<Integer>> threeSum(int[] nums) {
+  Arrays.sort(nums);
+  List<List<Integer>> ans = new ArrayList<>();
+  for (int i = 0; i < nums.length - 2; i++) {
+    if (i > 0 && nums[i] == nums[i - 1]) continue;
+    int l = i + 1, r = nums.length - 1;
+    while (l < r) {
+      int s = nums[i] + nums[l] + nums[r];
+      if (s == 0) {
+        ans.add(List.of(nums[i], nums[l], nums[r]));
+        while (l < r && nums[l] == nums[l + 1]) l++;
+        while (l < r && nums[r] == nums[r - 1]) r--;
+        l++;
+        r--;
+      } else if (s < 0) {
+        l++;
+      } else {
+        r--;
+      }
+    }
+  }
+  return ans;
+}`}
+  kotlin={`fun threeSum(nums: IntArray): List<List<Int>> {
+  nums.sort()
+  val ans = mutableListOf<List<Int>>()
+  for (i in 0 until nums.size - 2) {
+    if (i > 0 && nums[i] == nums[i - 1]) continue
+    var l = i + 1
+    var r = nums.size - 1
+    while (l < r) {
+      val s = nums[i] + nums[l] + nums[r]
+      when {
+        s == 0 -> {
+          ans.add(listOf(nums[i], nums[l], nums[r]))
+          while (l < r && nums[l] == nums[l + 1]) l++
+          while (l < r && nums[r] == nums[r - 1]) r--
+          l++; r--
+        }
+        s < 0 -> l++
+        else  -> r--
+      }
+    }
+  }
+  return ans
+}`}
+  python={`def three_sum(nums: list[int]) -> list[list[int]]:
+    nums.sort()
+    ans: list[list[int]] = []
+    for i in range(len(nums) - 2):
+        if i > 0 and nums[i] == nums[i - 1]:
+            continue
+        l, r = i + 1, len(nums) - 1
+        while l < r:
+            s = nums[i] + nums[l] + nums[r]
+            if s == 0:
+                ans.append([nums[i], nums[l], nums[r]])
+                while l < r and nums[l] == nums[l + 1]:
+                    l += 1
+                while l < r and nums[r] == nums[r - 1]:
+                    r -= 1
+                l += 1
+                r -= 1
+            elif s < 0:
+                l += 1
+            else:
+                r -= 1
+    return ans`}
+  go={`func threeSum(nums []int) [][]int {
+    sort.Ints(nums)
+    var ans [][]int
+    for i := 0; i < len(nums)-2; i++ {
+        if i > 0 && nums[i] == nums[i-1] {
+            continue
+        }
+        l, r := i+1, len(nums)-1
+        for l < r {
+            s := nums[i] + nums[l] + nums[r]
+            switch {
+            case s == 0:
+                ans = append(ans, []int{nums[i], nums[l], nums[r]})
+                for l < r && nums[l] == nums[l+1] {
+                    l++
+                }
+                for l < r && nums[r] == nums[r-1] {
+                    r--
+                }
+                l++
+                r--
+            case s < 0:
+                l++
+            default:
+                r--
+            }
+        }
+    }
+    return ans
+}`}
+/>
+
+---
+
+## Problem 4: Container With Most Water
+
+> Given heights, find two lines that form the container holding the most water. ([LC 11](https://leetcode.com/problems/container-with-most-water/))
+
+**Idea.** Opposite-end pointers. Area = `min(height[l], height[r]) × (r − l)`. Shrink **the shorter side** — that's the only side where moving could grow the area.
+
+<CodeTabs
+  title="ContainerMostWater"
+  java={`public int maxArea(int[] h) {
+  int l = 0, r = h.length - 1, best = 0;
+  while (l < r) {
+    best = Math.max(best, Math.min(h[l], h[r]) * (r - l));
+    if (h[l] < h[r]) {
+      l++;
+    } else {
+      r--;
+    }
+  }
+  return best;
+}`}
+  kotlin={`fun maxArea(h: IntArray): Int {
+  var l = 0
+  var r = h.size - 1
+  var best = 0
+  while (l < r) {
+    best = maxOf(best, minOf(h[l], h[r]) * (r - l))
+    if (h[l] < h[r]) l++ else r--
+  }
+  return best
+}`}
+  python={`def max_area(h: list[int]) -> int:
+    l, r, best = 0, len(h) - 1, 0
+    while l < r:
+        best = max(best, min(h[l], h[r]) * (r - l))
+        if h[l] < h[r]:
+            l += 1
+        else:
+            r -= 1
+    return best`}
+  go={`func maxArea(h []int) int {
+    l, r, best := 0, len(h)-1, 0
+    for l < r {
+        area := min(h[l], h[r]) * (r - l)
+        if area > best {
+            best = area
+        }
+        if h[l] < h[r] {
+            l++
+        } else {
+            r--
+        }
+    }
+    return best
+}
+
+func min(a, b int) int {
+    if a < b {
+        return a
+    }
+    return b
+}`}
+/>
+
+---
+
+## Problem 5: Longest Substring Without Repeating
+
+> Return the length of the longest substring without repeating characters. ([LC 3](https://leetcode.com/problems/longest-substring-without-repeating-characters/))
+
+**Idea.** Variable sliding window. Track the last index seen for each character; when a repeat falls inside the window, jump the left pointer past it.
+
+<CodeTabs
+  title="LongestNoRepeat"
+  java={`public int lengthOfLongestSubstring(String s) {
+  Map<Character, Integer> last = new HashMap<>();
+  int l = 0, best = 0;
+  for (int r = 0; r < s.length(); r++) {
+    Integer p = last.get(s.charAt(r));
+    if (p != null && p >= l) {
+      l = p + 1;
+    }
+    last.put(s.charAt(r), r);
+    best = Math.max(best, r - l + 1);
+  }
+  return best;
+}`}
+  kotlin={`fun lengthOfLongestSubstring(s: String): Int {
+  val last = mutableMapOf<Char, Int>()
+  var l = 0
+  var best = 0
+  for (r in s.indices) {
+    val c = s[r]
+    last[c]?.let { if (it >= l) l = it + 1 }
+    last[c] = r
+    best = maxOf(best, r - l + 1)
+  }
+  return best
+}`}
+  python={`def length_of_longest_substring(s: str) -> int:
+    last: dict[str, int] = {}
+    l = best = 0
+    for r, c in enumerate(s):
+        if c in last and last[c] >= l:
+            l = last[c] + 1
+        last[c] = r
+        best = max(best, r - l + 1)
+    return best`}
+  go={`func lengthOfLongestSubstring(s string) int {
+    last := make(map[byte]int)
+    l, best := 0, 0
+    for r := 0; r < len(s); r++ {
+        c := s[r]
+        if p, ok := last[c]; ok && p >= l {
+            l = p + 1
+        }
+        last[c] = r
+        if r-l+1 > best {
+            best = r - l + 1
+        }
+    }
+    return best
+}`}
+/>
+
+---
+
+## Problem 6: Minimum Window Substring
+
+> Find the smallest window in `s` that contains all characters of `t`. ([LC 76](https://leetcode.com/problems/minimum-window-substring/))
+
+**Idea.** Variable sliding window with a `need` frequency map and a **match count**. Expand `r` until `match == |t|`; then shrink `l` while still matching, recording the best.
+
+<CodeTabs
+  title="MinWindow"
+  java={`public String minWindow(String s, String t) {
+  if (s.length() < t.length()) return "";
+  int[] need = new int[128];
+  for (char c : t.toCharArray()) need[c]++;
+  int required = t.length();
+  int have = 0;
+  int l = 0;
+  int bestL = 0;
+  int bestLen = Integer.MAX_VALUE;
+  int[] window = new int[128];
+  for (int r = 0; r < s.length(); r++) {
+    char c = s.charAt(r);
+    if (++window[c] <= need[c]) have++;
+    while (have == required) {
+      if (r - l + 1 < bestLen) {
+        bestLen = r - l + 1;
+        bestL = l;
+      }
+      char lc = s.charAt(l++);
+      if (--window[lc] < need[lc]) have--;
+    }
+  }
+  return bestLen == Integer.MAX_VALUE ? "" : s.substring(bestL, bestL + bestLen);
+}`}
+  kotlin={`fun minWindow(s: String, t: String): String {
+  if (s.length < t.length) return ""
+  val need = IntArray(128)
+  for (c in t) need[c.code]++
+  val window = IntArray(128)
+  val required = t.length
+  var have = 0
+  var l = 0
+  var bestL = 0
+  var bestLen = Int.MAX_VALUE
+  for (r in s.indices) {
+    val c = s[r].code
+    if (++window[c] <= need[c]) have++
+    while (have == required) {
+      if (r - l + 1 < bestLen) {
+        bestLen = r - l + 1
+        bestL = l
+      }
+      val lc = s[l].code
+      l++
+      if (--window[lc] < need[lc]) have--
+    }
+  }
+  return if (bestLen == Int.MAX_VALUE) "" else s.substring(bestL, bestL + bestLen)
+}`}
+  python={`from collections import Counter
+
+def min_window(s: str, t: str) -> str:
+    if len(s) < len(t):
+        return ""
+    need, window = Counter(t), Counter()
+    required, have = len(need), 0
+    res, best = (0, 0), float("inf")
+    l = 0
+    for r, c in enumerate(s):
+        window[c] += 1
+        if c in need and window[c] == need[c]:
+            have += 1
+        while have == required:
+            if r - l + 1 < best:
+                best, res = r - l + 1, (l, r)
+            window[s[l]] -= 1
+            if s[l] in need and window[s[l]] < need[s[l]]:
+                have -= 1
+            l += 1
+    return s[res[0]:res[1] + 1] if best != float("inf") else ""`}
+  go={`func minWindow(s, t string) string {
+    if len(s) < len(t) {
+        return ""
+    }
+    var need, window [128]int
+    for i := 0; i < len(t); i++ {
+        need[t[i]]++
+    }
+    required := len(t)
+    have, l, bestL, bestLen := 0, 0, 0, -1
+    for r := 0; r < len(s); r++ {
+        c := s[r]
+        window[c]++
+        if window[c] <= need[c] {
+            have++
+        }
+        for have == required {
+            if bestLen == -1 || r-l+1 < bestLen {
+                bestLen = r - l + 1
+                bestL = l
+            }
+            lc := s[l]
+            l++
+            window[lc]--
+            if window[lc] < need[lc] {
+                have--
+            }
+        }
+    }
+    if bestLen == -1 {
+        return ""
+    }
+    return s[bestL : bestL+bestLen]
+}`}
+/>
+
+---
+
+## Problem 7: Group Anagrams
+
+> Group strings that are anagrams of each other. ([LC 49](https://leetcode.com/problems/group-anagrams/))
+
+**Idea.** Two strings are anagrams iff their **sorted character sequences** are equal (or their 26-int histograms match). Bucket by that key in a hash map.
+
+<CodeTabs
+  title="GroupAnagrams"
+  java={`public List<List<String>> groupAnagrams(String[] strs) {
+  Map<String, List<String>> buckets = new HashMap<>();
+  for (String s : strs) {
+    char[] k = s.toCharArray();
+    Arrays.sort(k);
+    buckets.computeIfAbsent(new String(k), x -> new ArrayList<>()).add(s);
+  }
+  return new ArrayList<>(buckets.values());
+}`}
+  kotlin={`fun groupAnagrams(strs: Array<String>): List<List<String>> {
+  val buckets = mutableMapOf<String, MutableList<String>>()
+  for (s in strs) {
+    val key = s.toCharArray().also { it.sort() }.concatToString()
+    buckets.getOrPut(key) { mutableListOf() }.add(s)
+  }
+  return buckets.values.toList()
+}`}
+  python={`from collections import defaultdict
+
+def group_anagrams(strs: list[str]) -> list[list[str]]:
+    buckets: dict[str, list[str]] = defaultdict(list)
+    for s in strs:
+        key = "".join(sorted(s))
+        buckets[key].append(s)
+    return list(buckets.values())`}
+  go={`func groupAnagrams(strs []string) [][]string {
+    buckets := map[string][]string{}
+    for _, s := range strs {
+        b := []byte(s)
+        sort.Slice(b, func(i, j int) bool { return b[i] < b[j] })
+        key := string(b)
+        buckets[key] = append(buckets[key], s)
+    }
+    out := make([][]string, 0, len(buckets))
+    for _, v := range buckets {
+        out = append(out, v)
+    }
+    return out
+}`}
+/>
+
+---
+
+## Problem 8: Top K Frequent Elements
+
+> Return the K most frequent elements. ([LC 347](https://leetcode.com/problems/top-k-frequent-elements/))
+
+**Idea.** Count frequencies, then either:
+
+- **Bucket sort** — frequency can't exceed `n`; place each value into a bucket indexed by its frequency. Walk buckets from the top. `O(n)`.
+- **Bounded heap** — min-heap of size K on `(count, value)`. `O(n log K)`.
+
+<CodeTabs
+  title="TopKFrequent (bucket sort)"
+  java={`public int[] topKFrequent(int[] nums, int k) {
+  Map<Integer, Integer> count = new HashMap<>();
+  for (int v : nums) count.merge(v, 1, Integer::sum);
+  List<List<Integer>> buckets = new ArrayList<>();
+  for (int i = 0; i <= nums.length; i++) buckets.add(new ArrayList<>());
+  count.forEach((v, c) -> buckets.get(c).add(v));
+  int[] ans = new int[k];
+  int idx = 0;
+  for (int i = buckets.size() - 1; i >= 0 && idx < k; i--) {
+    for (int v : buckets.get(i)) {
+      ans[idx++] = v;
+      if (idx == k) break;
+    }
+  }
+  return ans;
+}`}
+  kotlin={`fun topKFrequent(nums: IntArray, k: Int): IntArray {
+  val count = mutableMapOf<Int, Int>()
+  for (v in nums) count.merge(v, 1) { a, b -> a + b }
+  val buckets = Array(nums.size + 1) { mutableListOf<Int>() }
+  count.forEach { (v, c) -> buckets[c].add(v) }
+  val ans = IntArray(k)
+  var idx = 0
+  for (i in buckets.indices.reversed()) {
+    for (v in buckets[i]) {
+      ans[idx++] = v
+      if (idx == k) return ans
+    }
+  }
+  return ans
+}`}
+  python={`from collections import Counter
+
+def top_k_frequent(nums: list[int], k: int) -> list[int]:
+    count = Counter(nums)
+    buckets: list[list[int]] = [[] for _ in range(len(nums) + 1)]
+    for v, c in count.items():
+        buckets[c].append(v)
+    ans: list[int] = []
+    for i in range(len(buckets) - 1, -1, -1):
+        for v in buckets[i]:
+            ans.append(v)
+            if len(ans) == k:
+                return ans
+    return ans`}
+  go={`func topKFrequent(nums []int, k int) []int {
+    count := map[int]int{}
+    for _, v := range nums {
+        count[v]++
+    }
+    buckets := make([][]int, len(nums)+1)
+    for v, c := range count {
+        buckets[c] = append(buckets[c], v)
+    }
+    ans := make([]int, 0, k)
+    for i := len(buckets) - 1; i >= 0 && len(ans) < k; i-- {
+        for _, v := range buckets[i] {
+            ans = append(ans, v)
+            if len(ans) == k {
+                return ans
+            }
+        }
+    }
+    return ans
+}`}
+/>
+
+---
+
+## Problem 9: Product of Array Except Self
+
+> Return an array where `ans[i]` is the product of every element of `nums` except `nums[i]`. Don't use division. ([LC 238](https://leetcode.com/problems/product-of-array-except-self/))
+
+**Idea.** Two passes. First pass builds **prefix products** (everything to the left). Second pass walks right-to-left maintaining a running **suffix product** and multiplies it into the result.
+
+<CodeTabs
+  title="ProductExceptSelf"
+  java={`public int[] productExceptSelf(int[] nums) {
+  int n = nums.length;
+  int[] ans = new int[n];
+  ans[0] = 1;
+  for (int i = 1; i < n; i++) {
+    ans[i] = ans[i - 1] * nums[i - 1];
+  }
+  int suffix = 1;
+  for (int i = n - 1; i >= 0; i--) {
+    ans[i] *= suffix;
+    suffix *= nums[i];
+  }
+  return ans;
+}`}
+  kotlin={`fun productExceptSelf(nums: IntArray): IntArray {
+  val n = nums.size
+  val ans = IntArray(n)
+  ans[0] = 1
+  for (i in 1 until n) {
+    ans[i] = ans[i - 1] * nums[i - 1]
+  }
+  var suffix = 1
+  for (i in n - 1 downTo 0) {
+    ans[i] *= suffix
+    suffix *= nums[i]
+  }
+  return ans
+}`}
+  python={`def product_except_self(nums: list[int]) -> list[int]:
+    n = len(nums)
+    ans = [1] * n
+    for i in range(1, n):
+        ans[i] = ans[i - 1] * nums[i - 1]
+    suffix = 1
+    for i in range(n - 1, -1, -1):
+        ans[i] *= suffix
+        suffix *= nums[i]
+    return ans`}
+  go={`func productExceptSelf(nums []int) []int {
+    n := len(nums)
+    ans := make([]int, n)
+    ans[0] = 1
+    for i := 1; i < n; i++ {
+        ans[i] = ans[i-1] * nums[i-1]
+    }
+    suffix := 1
+    for i := n - 1; i >= 0; i-- {
+        ans[i] *= suffix
+        suffix *= nums[i]
+    }
+    return ans
+}`}
+/>
+
+---
+
+## Pattern Recognition Summary
+
+| You see in the problem statement... | Reach for... |
+| --- | --- |
+| "sum to target" + unsorted | Hash map (Two Sum) |
+| "sum to target" + sorted | Opposite-end two-pointer |
+| "longest / shortest contiguous" | Sliding window |
+| "all anagrams" / "all permutations" | Hash key (sort-key or histogram) |
+| "top K" anything | Heap or bucket sort |
+| "without division" / "except self" | Prefix + suffix products |
+| "find pair / triplet" with duplicates | Sort first, skip duplicates |
+| Constraint depends on previous answer | Dynamic programming |
+| "minimum moves / shortest path" | BFS |
+| "any path / cycle / order" | DFS |

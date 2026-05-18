@@ -1,0 +1,103 @@
+---
+title: Intervals
+sidebar_position: 1
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import Difficulty from '@site/src/components/Difficulty';
+
+# Intervals
+
+### What is the Intervals Pattern?
+
+Many problems boil down to **a list of `[start, end]` pairs**: meetings, ranges, intervals on a number line. The pattern almost always begins with **sorting by start** (or by end), then scanning once and merging / measuring as you go.
+
+### Why Does It Work?
+
+After sorting, you only need to compare each interval with the **previous** one. Overlap detection collapses to a single inequality (`prev.end ≥ curr.start`). What was an `O(n²)` pairwise comparison becomes `O(n log n)` sort plus `O(n)` scan.
+
+### Mental Model
+
+A number line with brackets drawn on it. Walk left to right, deciding whether the current bracket extends, ends, or starts a new merged interval.
+
+### When to Use
+
+- Merging overlapping intervals.
+- Counting / finding the **minimum number of resources** (meeting rooms, CPUs).
+- Insert / delete intervals in a sorted set.
+- Calendar / scheduling conflicts.
+
+<div className="im-core-concept">
+
+### Core Concept
+
+Two ideas you'll reach for most:
+
+1. **Sort by start, then sweep** for merge / insert problems.
+2. **Sort by end, then greedy** for "minimum number of arrows / removals" problems.
+
+For meeting-rooms-II specifically: track end-times in a **min-heap** as you sweep starts.
+
+</div>
+### Template Code
+
+<CodeTabs
+  title="MergeIntervals"
+  java={`public int[][] merge(int[][] intervals) {
+  Arrays.sort(intervals, (a, b) -> a[0] - b[0]);
+  List<int[]> out = new ArrayList<>();
+  for (int[] iv : intervals) {
+    if (out.isEmpty() || out.get(out.size() - 1)[1] < iv[0]) out.add(iv);
+    else out.get(out.size() - 1)[1] = Math.max(out.get(out.size() - 1)[1], iv[1]);
+  }
+  return out.toArray(new int[0][]);
+}`}
+  kotlin={`fun merge(intervals: Array<IntArray>): Array<IntArray> {
+  intervals.sortBy { it[0] }
+  val out = mutableListOf<IntArray>()
+  for (iv in intervals) {
+    if (out.isEmpty() || out.last()[1] < iv[0]) out += iv
+    else out.last()[1] = maxOf(out.last()[1], iv[1])
+  }
+  return out.toTypedArray()
+}`}
+  python={`def merge(intervals: list[list[int]]) -> list[list[int]]:
+    intervals.sort(key=lambda x: x[0])
+    out: list[list[int]] = []
+    for iv in intervals:
+        if not out or out[-1][1] < iv[0]: out.append(iv)
+        else: out[-1][1] = max(out[-1][1], iv[1])
+    return out`}
+  go={`func merge(intervals [][]int) [][]int {
+  sort.Slice(intervals, func(i, j int) bool { return intervals[i][0] < intervals[j][0] })
+  out := [][]int{}
+  for _, iv := range intervals {
+    if len(out) == 0 || out[len(out)-1][1] < iv[0] {
+      out = append(out, iv)
+    } else if iv[1] > out[len(out)-1][1] {
+      out[len(out)-1][1] = iv[1]
+    }
+  }
+  return out
+}`}
+/>
+
+### Key Problems to Master
+
+| # | Problem | Difficulty | Twist | LeetCode |
+| - | --- | --- | --- | --- |
+| 1 | Merge Intervals | <Difficulty>Medium</Difficulty> | Sort + sweep | [LC 56](https://leetcode.com/problems/merge-intervals/) |
+| 2 | Insert Interval | <Difficulty>Medium</Difficulty> | Sorted insert | [LC 57](https://leetcode.com/problems/insert-interval/) |
+| 3 | Non-overlapping Intervals | <Difficulty>Medium</Difficulty> | Greedy by end | [LC 435](https://leetcode.com/problems/non-overlapping-intervals/) |
+| 4 | Meeting Rooms II | <Difficulty>Medium</Difficulty> | Min-heap of ends | [LC 253](https://leetcode.com/problems/meeting-rooms-ii/) |
+| 5 | Minimum Arrows to Burst Balloons | <Difficulty>Medium</Difficulty> | Greedy by end | [LC 452](https://leetcode.com/problems/minimum-number-of-arrows-to-burst-balloons/) |
+
+### Common Mistakes to Avoid
+
+- Forgetting to sort first — the algorithm only works on sorted input.
+- Tie-breaking edge cases (`[1,2]` and `[2,3]` — do they touch or overlap? The problem statement decides.)
+- Mutating the input array when the caller expects it untouched.
+
+---

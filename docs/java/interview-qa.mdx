@@ -1,0 +1,125 @@
+---
+title: Interview Q&A & Checklist
+description: "Fast Java Q&A reference and the senior-Java self-assessment checklist."
+sidebar_position: 5
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import { Checklist, ChecklistItem } from '@site/src/components/Checklist';
+
+# Interview Q&A & Checklist
+
+<Pillbar pills={[
+  { label: 'use', value: 'last-mile drill' },
+  { label: 'format', value: 'Q&A + checklist' },
+  { label: 'pairs with', value: 'all other Java pages' },
+]} />
+
+A curated set of questions that interviewers reach for again and again, plus a self-assessment checklist to confirm you can give those answers under pressure. Run through this the week of your interview — not as your primary study material, but as the last-mile recall drill once you've worked through [Core](./core.mdx), [Concurrency](./concurrency.mdx), and [Modern Java](./modern.mdx).
+
+<QuickNav items={[
+  { label: 'JVM & MEMORY', href: '#jvm--memory' },
+  { label: 'COLLECTIONS', href: '#collections' },
+  { label: 'STREAMS & FUNCTIONAL', href: '#streams--functional' },
+  { label: 'CONCURRENCY', href: '#concurrency' },
+  { label: 'MODERN JAVA', href: '#modern-java' },
+  { label: 'CHECKLIST', href: '#checklist' },
+]} />
+
+## JVM & Memory
+
+**Q: Why does `Integer.valueOf(128) == Integer.valueOf(128)` return `false`?**
+A: Java caches boxed integers in `[-128, 127]`. Outside that range, each `valueOf` returns a new object; `==` compares references, not values. Use `.equals()`.
+
+**Q: What lives where in the JVM memory model?**
+A: Heap (Young + Old) for objects; Metaspace (off-heap since Java 8) for class metadata; one Stack per thread for method frames and primitive locals; PC register per thread; native method stack for JNI.
+
+**Q: What does the GC actually reclaim?**
+A: Unreachable objects — those with no live reference chain from a GC root (stack vars, statics, JNI). Reachable objects are kept regardless of whether they're "useful." That's why static collections leak.
+
+**Q: G1, ZGC, Shenandoah — when to pick which?**
+A: G1 is the default and right for almost everything (pause goal in tens of ms). ZGC / Shenandoah give sub-ms pauses for **latency-sensitive** apps (trading, real-time bidding) at slightly higher throughput cost. Parallel GC for raw throughput jobs.
+
+**Q: How do you debug a memory leak in production?**
+A: `-XX:+HeapDumpOnOutOfMemoryError`, or `jmap -dump:format=b,file=heap.bin <pid>` ad-hoc, then load in Eclipse MAT and look for the largest dominator tree → trace path-to-GC-root.
+
+## Collections
+
+**Q: How does `HashMap.get` degrade from `O(1)` to `O(log n)`?**
+A: When a bucket grows past 8 entries and the table is large enough, that bucket promotes to a balanced tree.
+
+**Q: What's the difference between `HashMap` and `ConcurrentHashMap`?**
+A: `HashMap` is **not thread-safe** — concurrent modification can corrupt the structure. `ConcurrentHashMap` uses per-bin locking for writes and lock-free reads. Use it instead of `Collections.synchronizedMap` whenever you need a thread-safe map.
+
+**Q: When should you use `LinkedList` instead of `ArrayList`?**
+A: Almost never. `LinkedList` only wins on **constant-time insert at the head/middle when you already have the iterator** — which is rare. `ArrayList` is cache-friendlier and faster for everything else, including iteration.
+
+**Q: What's the difference between `Comparable` and `Comparator`?**
+A: `Comparable` defines a class's natural ordering via `compareTo`. `Comparator` is an external strategy that imposes a custom ordering. Use `Comparator` for ad-hoc sorts.
+
+**Q: Fail-fast vs. fail-safe iterators?**
+A: Fail-fast (`ArrayList`, `HashMap`) throws `ConcurrentModificationException` on detect — it's a debugging aid, not a thread-safety mechanism. Fail-safe (`CopyOnWriteArrayList`, `ConcurrentHashMap.entrySet()`) iterates over a snapshot or weakly-consistent view.
+
+**Q: What's the contract between `equals` and `hashCode`?**
+A: Equal objects must have equal hash codes. Override both, or neither — overriding only `equals` silently breaks `HashMap` / `HashSet`. Use records for value types where possible.
+
+## Streams & Functional
+
+**Q: What does `Stream.iterate(...).limit(...)` do that a for-loop doesn't?**
+A: It allows lazy evaluation — downstream operators can short-circuit (`anyMatch`, `findFirst`) without computing the full sequence.
+
+**Q: When should you use `parallelStream`?**
+A: Only for **CPU-bound** work on large in-memory collections. For I/O or small input it's a pessimization — the fork/join overhead dwarfs the gain. Profile first.
+
+**Q: When is `Optional` the right return type — and when isn't it?**
+A: Use it for return types where absence is meaningful. Don't use it as a field, parameter, or wrapper for `List` / `Map` (return empty collection instead).
+
+## Concurrency
+
+**Q: Volatile vs. AtomicInteger?**
+A: `volatile` guarantees visibility (a write is immediately visible to other threads) but not atomicity for compound operations like `i++`. `AtomicInteger` uses CAS for atomic read-modify-write.
+
+**Q: What does the Java Memory Model give you?**
+A: A formal "happens-before" relation. Without `volatile` / `synchronized` / `Atomic*`, one thread is **not** guaranteed to see another's writes. The JMM defines exactly what synchronisation primitives establish hb edges.
+
+**Q: When do you reach for virtual threads vs. an executor?**
+A: Virtual threads for **blocking I/O concurrency** (DB calls, HTTP). Platform-thread executors for **CPU-bound work** with a bounded pool sized to your core count.
+
+**Q: How do you wait for multiple async operations to finish?**
+A: `CompletableFuture.allOf(a, b, c).join()` — and pass an explicit executor to the underlying `supplyAsync` calls. Don't rely on `commonPool()` in a service that may saturate it.
+
+**Q: What's a deadlock? How do you avoid it?**
+A: Two threads each hold one lock and wait for the other. Avoid by **always acquiring locks in a fixed global order**, or use `tryLock(timeout)` and bail out.
+
+**Q: Articulate three Java concurrency pitfalls.**
+A: (1) Double-checked locking without `volatile` (partially-constructed object leaks). (2) `ThreadLocal` not removed in pooled threads (memory leak across requests). (3) Blocking call inside `ForkJoinPool.commonPool()` (saturates the shared pool, stalls unrelated work).
+
+## Modern Java
+
+**Q: What problem do `record` classes solve?**
+A: They auto-generate canonical `equals` / `hashCode` / `toString` / accessors / constructor for value types. Replaces hand-rolled DTOs and removes a class of bugs around forgotten field updates.
+
+**Q: What's a sealed class and why use one?**
+A: A class that explicitly enumerates its permitted subclasses. Combined with pattern matching for `switch`, the compiler can prove exhaustiveness — useful for sum types (e.g. `Result.Ok | Result.Err`).
+
+**Q: What's the difference between virtual threads and reactive (Project Reactor)?**
+A: Virtual threads give you the *programming model* of blocking calls with the *scalability* of non-blocking I/O. Reactive achieves the same scalability but with a different model (operators, backpressure). For new code on Java 21+, virtual threads are usually simpler.
+
+---
+
+---
+
+## Checklist
+
+
+<Checklist>
+  <ChecklistItem id="java-interview-qa-0-can-name-the-jvm-memory-regions-and-what">Can name the JVM memory regions and what each holds.</ChecklistItem>
+  <ChecklistItem id="java-interview-qa-0-can-pick-the-right-collection-for-a-give">Can pick the right collection for a given access pattern.</ChecklistItem>
+  <ChecklistItem id="java-interview-qa-0-can-read-a-stream-pipeline-and-call-out">Can read a stream pipeline and call out what's lazy vs. eager.</ChecklistItem>
+  <ChecklistItem id="java-interview-qa-0-can-implement-a-bounded-buffer-with-reen">Can implement a bounded buffer with `ReentrantLock` and two `Condition`s.</ChecklistItem>
+  <ChecklistItem id="java-interview-qa-0-have-written-code-with-virtual-threads-a">Have written code with virtual threads at least once.</ChecklistItem>
+  <ChecklistItem id="java-interview-qa-0-can-articulate-three-java-concurrency-pi">Can articulate three Java concurrency pitfalls and how to avoid them.</ChecklistItem>
+  <ChecklistItem id="java-interview-qa-0-use-records-sealed-types-pattern-matchin">Use records / sealed types / pattern matching in your sample code.</ChecklistItem>
+</Checklist>

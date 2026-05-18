@@ -1,0 +1,443 @@
+---
+title: Low-Level Design
+description: OOP design problems — Parking Lot, Elevator, Library, Vending Machine, Tic-Tac-Toe.
+sidebar_position: 7
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+import { Checklist, ChecklistItem } from '@site/src/components/Checklist';
+
+# Low-Level Design (LLD) / Object-Oriented Design
+
+<Pillbar pills={[
+  { label: 'time', value: '4–5 hours' },
+  { label: 'rounds', value: '45–60 min' },
+  { label: 'output', value: 'class diagrams + code' },
+]} />
+
+<QuickNav items={[
+  { label: 'OVERVIEW', href: '#overview' },
+  { label: 'OOP PRINCIPLES FOR LLD', href: '#oop-principles-for-lld' },
+  { label: 'LLD APPROACH FRAMEWORK', href: '#lld-approach-framework' },
+  { label: 'PROBLEM 1: PARKING LOT', href: '#problem-1-parking-lot-system' },
+  { label: 'PROBLEM 2: ELEVATOR SYSTEM', href: '#problem-2-elevator-system' },
+  { label: 'PROBLEM 3: LIBRARY MANAGEMENT', href: '#problem-3-library-management-system' },
+  { label: 'PROBLEM 4: VENDING MACHINE', href: '#problem-4-vending-machine' },
+  { label: 'PROBLEM 5: TIC-TAC-TOE GAME', href: '#problem-5-tic-tac-toe-game' },
+  { label: 'LLD INTERVIEW CHECKLIST', href: '#lld-interview-checklist' },
+]} />
+
+## Overview
+
+Low-Level Design (LLD) interviews test your ability to model a real-world problem in **classes, relationships, and responsibilities**. The output is a class diagram and (often) skeleton code. The interviewer is grading:
+
+- Clear class names and responsibilities (each class does one thing).
+- Use of OOP principles — inheritance, composition, encapsulation.
+- Recognition of GoF patterns where they fit (and absence where they don't).
+- Awareness of edge cases — empty state, concurrent access, extension.
+
+LLD is a 45–60 minute round at most senior-IC and engineering-manager loops.
+
+---
+
+## OOP Principles for LLD
+
+| Principle | What it means in LLD |
+| --- | --- |
+| **Encapsulation** | Each class hides its data; clients use methods. |
+| **Inheritance** | Use for genuine "is-a" relationships only; prefer composition. |
+| **Polymorphism** | Multiple concrete classes implement an abstract interface; clients depend on the interface. |
+| **Abstraction** | Model the problem with intent-revealing types, not raw primitives. |
+
+### The SOLID lens
+
+| Letter | Meaning | LLD reading |
+| --- | --- | --- |
+| **S** | Single Responsibility | One class, one reason to change. |
+| **O** | Open / Closed | Open for extension, closed for modification. |
+| **L** | Liskov Substitution | Subclasses must honor base contracts. |
+| **I** | Interface Segregation | Many small interfaces > one fat interface. |
+| **D** | Dependency Inversion | Depend on abstractions, not concretes. |
+
+If you've cited all five during your design, you've covered the OOP-principles dimension of the rubric.
+
+---
+
+## LLD Approach Framework
+
+A five-step framework that works for almost any LLD prompt:
+
+1. **Clarify requirements** — functional, non-functional, scope. *"Are we modelling a single parking lot or a chain? Do we charge by the minute or the hour?"*
+2. **Identify entities** — extract nouns from the requirements; promote each to a class.
+3. **Identify relationships** — "has a" / "is a" / "uses a". Draw arrows.
+4. **Identify behaviours** — extract verbs; place them on the right classes.
+5. **Choose patterns** — Strategy for swappable algorithms, Factory for variant creation, Observer for change notification, State for finite state machines.
+
+Common patterns by problem family:
+
+| Problem family | Likely pattern |
+| --- | --- |
+| Multiple ways to do X | Strategy |
+| Creation logic varies | Factory / Abstract Factory |
+| Sequential workflow | Chain of Responsibility |
+| Finite state machine | State |
+| Listeners on change | Observer |
+| Wrapped behaviour | Decorator |
+| Single instance | Singleton (rarely — be cautious) |
+
+---
+
+## Problem 1: Parking Lot System
+
+### Requirements
+
+- Multiple floors with multiple spots per floor.
+- Spot sizes: motorcycle, compact, large.
+- Vehicles: motorcycle, car, truck — each fits certain spot sizes.
+- Ticket on entry, charge on exit; rate per hour.
+- Multiple entry/exit gates.
+
+### Class skeleton
+
+<CodeTabs
+  title="ParkingLot"
+  java={`enum VehicleType { MOTORCYCLE, CAR, TRUCK }
+enum SpotSize     { MOTORCYCLE, COMPACT, LARGE }
+
+abstract class Vehicle {
+  String licensePlate;
+  VehicleType type;
+  abstract boolean fitsIn(SpotSize size);
+}
+
+class Spot {
+  SpotSize size;
+  Vehicle parked;     // null when free
+  boolean fits(Vehicle v) { return parked == null && v.fitsIn(size); }
+}
+
+class Floor {
+  List<Spot> spots;
+  Spot findFreeFor(Vehicle v) { /* scan */ return null; }
+}
+
+class Ticket {
+  String id;
+  Vehicle vehicle;
+  Spot spot;
+  Instant entryAt;
+}
+
+interface PricingStrategy {
+  long compute(Ticket t, Instant exitAt);
+}
+
+class ParkingLot {
+  List<Floor> floors;
+  PricingStrategy pricing;
+
+  Ticket park(Vehicle v) {
+    for (Floor f : floors) {
+      Spot s = f.findFreeFor(v);
+      if (s != null) { s.parked = v; return new Ticket(/*...*/); }
+    }
+    throw new LotFullException();
+  }
+
+  long exit(Ticket t) {
+    t.spot.parked = null;
+    return pricing.compute(t, Instant.now());
+  }
+}`}
+/>
+
+### Discussion points
+
+- Pricing as **Strategy** — flat, hourly, surge.
+- Spot search — linear scan vs. maintain a per-size free list (O(1) lookup).
+- Thread safety on a multi-gate parking lot — lock per floor, or per spot.
+
+---
+
+## Problem 2: Elevator System
+
+### Requirements
+
+- Multiple elevators in a building.
+- External request buttons (per floor) with direction (up/down).
+- Internal request buttons (inside cabin) for destination floor.
+- Optimal dispatching.
+
+### Class skeleton
+
+<CodeTabs
+  title="Elevator"
+  java={`enum Direction { UP, DOWN, IDLE }
+
+class Elevator {
+  int id;
+  int currentFloor;
+  Direction direction = Direction.IDLE;
+  TreeSet<Integer> requestsUp = new TreeSet<>();
+  TreeSet<Integer> requestsDown = new TreeSet<>(Comparator.reverseOrder());
+
+  void addRequest(int floor, Direction dir) {
+    (dir == Direction.UP ? requestsUp : requestsDown).add(floor);
+  }
+
+  void step() {
+    if (direction == Direction.UP) {
+      if (!requestsUp.isEmpty()) currentFloor = requestsUp.pollFirst();
+      else if (!requestsDown.isEmpty()) direction = Direction.DOWN;
+      else direction = Direction.IDLE;
+    } // symmetric for DOWN
+  }
+}
+
+class ElevatorController {
+  List<Elevator> elevators;
+
+  void requestFromFloor(int floor, Direction dir) {
+    Elevator best = pickBest(floor, dir);
+    best.addRequest(floor, dir);
+  }
+
+  Elevator pickBest(int floor, Direction dir) {
+    // Lowest-cost dispatcher: minimize travel time
+    Elevator best = null; int bestCost = Integer.MAX_VALUE;
+    for (Elevator e : elevators) {
+      int c = cost(e, floor, dir);
+      if (c < bestCost) { bestCost = c; best = e; }
+    }
+    return best;
+  }
+}`}
+/>
+
+### Discussion points
+
+- **Scheduling**: SCAN (elevator) algorithm — service all requests in current direction before reversing.
+- **Dispatcher** as a separate class so policy is swappable.
+- **State machine**: IDLE → MOVING → DOORS_OPENING → BOARDING → DOORS_CLOSING → MOVING.
+
+---
+
+## Problem 3: Library Management System
+
+### Requirements
+
+- Books with multiple copies.
+- Members can borrow / return / reserve.
+- Late fees on overdue returns.
+- Search by title / author / ISBN.
+
+### Class skeleton
+
+<CodeTabs
+  title="Library"
+  java={`class Book {
+  String isbn;
+  String title;
+  List<String> authors;
+}
+
+class BookCopy {
+  String id;
+  Book book;
+  boolean available = true;
+}
+
+class Member {
+  String id;
+  String name;
+  List<Loan> activeLoans = new ArrayList<>();
+}
+
+class Loan {
+  BookCopy copy;
+  Member member;
+  Instant borrowedAt;
+  Instant dueAt;
+  Instant returnedAt;     // null while active
+}
+
+interface FeeStrategy { long compute(Loan l); }
+
+class Library {
+  Map<String, Book> books;
+  List<BookCopy> copies;
+  FeeStrategy fees;
+
+  Loan borrow(String memberId, String isbn) {
+    BookCopy c = findAvailable(isbn);
+    if (c == null) throw new NotAvailableException();
+    c.available = false;
+    return new Loan(/*...*/);
+  }
+
+  long returnCopy(Loan l) {
+    l.copy.available = true;
+    l.returnedAt = Instant.now();
+    return fees.compute(l);
+  }
+}`}
+/>
+
+### Discussion points
+
+- Search index built separately (Lucene-style inverted index).
+- Reservation queue per book — first-in-first-out when a copy returns.
+- Member tiers (Strategy for max loans / fees).
+
+---
+
+## Problem 4: Vending Machine
+
+### Requirements
+
+- Items with stock and price.
+- Coin / note input; change calculation.
+- Item selection → dispense + change.
+- Refund on cancel.
+
+### Approach — State Pattern
+
+<CodeTabs
+  title="VendingMachine"
+  java={`interface State {
+  void insertMoney(int cents);
+  void selectItem(String code);
+  void cancel();
+  void dispense();
+}
+
+class IdleState implements State {
+  VendingMachine m;
+  public void insertMoney(int cents) {
+    m.deposit += cents;
+    m.setState(new HasMoneyState(m));
+  }
+  // selectItem / cancel / dispense throw IllegalState
+}
+
+class HasMoneyState implements State {
+  VendingMachine m;
+  public void selectItem(String code) {
+    Item i = m.inventory.get(code);
+    if (i == null || i.stock == 0) throw new OutOfStockException();
+    if (m.deposit < i.price) throw new InsufficientFundsException();
+    m.selected = i;
+    m.setState(new DispensingState(m));
+  }
+  public void cancel() {
+    m.refund(m.deposit);
+    m.deposit = 0;
+    m.setState(new IdleState(m));
+  }
+}
+
+class DispensingState implements State {
+  VendingMachine m;
+  public void dispense() {
+    m.selected.stock--;
+    int change = m.deposit - m.selected.price;
+    if (change > 0) m.dispenseChange(change);
+    m.reset();
+    m.setState(new IdleState(m));
+  }
+}
+
+class VendingMachine {
+  Map<String, Item> inventory;
+  int deposit;
+  Item selected;
+  State state = new IdleState(this);
+}`}
+/>
+
+### Discussion points
+
+- **State pattern** keeps invalid transitions out of the main class.
+- **Change-making** — greedy with available denominations; fallback to "exact change only" sign.
+- Concurrency — only one user at a time, but the inventory may be inspected by an external "restock" API.
+
+---
+
+## Problem 5: Tic-Tac-Toe Game
+
+### Requirements
+
+- 3×3 board (or N×N).
+- Two players, alternating turns.
+- Detect win (row / column / diagonal) and draw.
+- Bonus: extensible to other board games.
+
+### Class skeleton
+
+<CodeTabs
+  title="TicTacToe"
+  java={`enum Mark { X, O, EMPTY }
+
+class Board {
+  int n;
+  Mark[][] cells;
+
+  void place(int r, int c, Mark m) {
+    if (cells[r][c] != Mark.EMPTY) throw new IllegalMoveException();
+    cells[r][c] = m;
+  }
+
+  boolean isWin(Mark m) {
+    // rows, columns, two diagonals
+    for (int i = 0; i < n; i++) {
+      if (rowAll(i, m) || colAll(i, m)) return true;
+    }
+    return diagAll(m) || antiDiagAll(m);
+  }
+
+  boolean isFull() { /* ... */ }
+}
+
+class Player {
+  String name;
+  Mark mark;
+}
+
+class TicTacToeGame {
+  Board board;
+  List<Player> players;
+  int turn = 0;
+
+  String play(int r, int c) {
+    Player p = players.get(turn % players.size());
+    board.place(r, c, p.mark);
+    if (board.isWin(p.mark)) return p.name + " wins";
+    if (board.isFull())      return "draw";
+    turn++;
+    return null;
+  }
+}`}
+/>
+
+### Discussion points
+
+- For N×N, win-check in `O(N)` rather than scanning the whole board: track row / col / diag counters for each mark.
+- Extensible: extract a `WinCondition` interface to support Connect-Four etc.
+- AI opponent: minimax with α-β pruning for 3×3 (cheap), heuristics for larger boards.
+
+---
+
+## LLD Interview Checklist
+
+<Checklist>
+  <ChecklistItem id="system-design-low-level-design-0-asked-clarifying-requirements-before-dra">Asked clarifying requirements before drawing classes.</ChecklistItem>
+  <ChecklistItem id="system-design-low-level-design-0-listed-entities-nouns-and-behaviors-verb">Listed entities (nouns) and behaviors (verbs).</ChecklistItem>
+  <ChecklistItem id="system-design-low-level-design-0-used-inheritance-only-for-is-a-preferred">Used inheritance only for "is-a"; preferred composition.</ChecklistItem>
+  <ChecklistItem id="system-design-low-level-design-0-cited-at-least-one-solid-principle-and-p">Cited at least one SOLID principle and pointed at where you applied it.</ChecklistItem>
+  <ChecklistItem id="system-design-low-level-design-0-identified-one-gof-pattern-in-your-desig">Identified one GoF pattern in your design and justified it.</ChecklistItem>
+  <ChecklistItem id="system-design-low-level-design-0-handled-at-least-one-edge-case-empty-sta">Handled at least one edge case (empty state, concurrency, extension).</ChecklistItem>
+  <ChecklistItem id="system-design-low-level-design-0-skeleton-code-compiles-in-your-head-corr">Skeleton code compiles in your head (correct types, no obvious bugs).</ChecklistItem>
+  <ChecklistItem id="system-design-low-level-design-0-discussed-how-the-design-would-change-fo">Discussed how the design would change for 10× scale or new requirements.</ChecklistItem>
+</Checklist>

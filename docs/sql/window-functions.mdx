@@ -1,0 +1,151 @@
+---
+title: Window Functions
+description: ROW_NUMBER, RANK, LAG, LEAD, FIRST_VALUE, running totals — the modern interview separator.
+sidebar_position: 7
+---
+
+import CodeTabs from '@site/src/components/CodeTabs';
+
+# Window Functions
+
+Aggregate **without collapsing rows**. Every row keeps its identity; an extra column is computed against a **window** of related rows.
+
+```sql
+function() OVER (PARTITION BY ... ORDER BY ... [frame])
+```
+
+- `PARTITION BY` — split rows into groups (like `GROUP BY`, but rows survive).
+- `ORDER BY` — order within each partition (required for ranking and frame-based aggregates).
+- `frame` — optional sliding window definition, e.g. `ROWS BETWEEN 2 PRECEDING AND CURRENT ROW`.
+
+## The four families
+
+| Function | Returns |
+| --- | --- |
+| `ROW_NUMBER()` | Unique sequential per partition |
+| `RANK()` / `DENSE_RANK()` | Ties tied; `RANK` leaves gaps, `DENSE_RANK` doesn't |
+| `LAG(col, n)` / `LEAD(col, n)` | Value n rows behind / ahead |
+| `SUM` / `AVG` / `MIN` / `MAX` with `OVER` | Aggregate over the frame |
+| `FIRST_VALUE(col)` / `LAST_VALUE(col)` | First / last value in the window frame |
+| `NTH_VALUE(col, n)` | Nth value in the window frame |
+| `NTILE(n)` | Bucket rows into `n` equal-ish buckets |
+
+## Ranking — `ROW_NUMBER` vs. `RANK` vs. `DENSE_RANK`
+
+```sql
+SELECT
+  name,
+  salary,
+  ROW_NUMBER() OVER (ORDER BY salary DESC) AS rn,
+  RANK()       OVER (ORDER BY salary DESC) AS rk,
+  DENSE_RANK() OVER (ORDER BY salary DESC) AS drk
+FROM employees;
+```
+
+If two rows tie on salary:
+
+| salary | rn | rk | drk |
+| ---: | ---: | ---: | ---: |
+| 100 | 1 | 1 | 1 |
+| 100 | 2 | 1 | 1 |
+| 90  | 3 | **3** (gap) | **2** (no gap) |
+
+- Use `ROW_NUMBER` when you need to pick exactly one row per group (deduplicate, top-1-per-group).
+- Use `RANK` when ties should tie and gaps in numbering are OK.
+- Use `DENSE_RANK` for "nth distinct value" semantics.
+
+## Top-N per group
+
+<CodeTabs
+  title="TopNPerGroup"
+  sql={`WITH ranked AS (
+  SELECT
+    o.*,
+    ROW_NUMBER() OVER (
+      PARTITION BY o.customer_id
+      ORDER BY o.amount DESC, o.placed_at DESC
+    ) AS rk
+  FROM orders o
+)
+SELECT id, customer_id, amount, placed_at
+FROM ranked
+WHERE rk <= 3;`}
+/>
+
+## Running totals + moving averages
+
+<CodeTabs
+  title="RunningTotals"
+  sql={`SELECT
+  day,
+  daily_revenue,
+  SUM(daily_revenue) OVER (
+    ORDER BY day
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS cumulative_revenue,
+  AVG(daily_revenue) OVER (
+    ORDER BY day
+    ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+  ) AS ma_7d
+FROM daily_sales
+ORDER BY day;`}
+/>
+
+## `LAG` / `LEAD` — compare to neighbours
+
+```sql
+SELECT
+  user_id,
+  event_at,
+  event_at - LAG(event_at) OVER (PARTITION BY user_id ORDER BY event_at) AS gap_since_prev
+FROM events;
+```
+
+Use cases: streaks, gap detection, day-over-day deltas, "did this event change the value?".
+
+<CodeTabs
+  title="ConsecutiveStreaks"
+  sql={`-- Users who logged in three consecutive days
+WITH logins AS (
+  SELECT
+    user_id,
+    DATE(at) AS day,
+    LAG(DATE(at), 1) OVER (PARTITION BY user_id ORDER BY DATE(at)) AS prev_day,
+    LAG(DATE(at), 2) OVER (PARTITION BY user_id ORDER BY DATE(at)) AS prev_prev_day
+  FROM login_events
+)
+SELECT DISTINCT user_id
+FROM logins
+WHERE prev_day      = day - INTERVAL '1 day'
+  AND prev_prev_day = day - INTERVAL '2 day';`}
+/>
+
+## `FIRST_VALUE` / `LAST_VALUE`
+
+```sql
+SELECT
+  user_id,
+  event_at,
+  FIRST_VALUE(event_type) OVER (
+    PARTITION BY user_id ORDER BY event_at
+  ) AS first_event,
+  LAST_VALUE(event_type) OVER (
+    PARTITION BY user_id ORDER BY event_at
+    ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+  ) AS last_event
+FROM events;
+```
+
+⚠️ **`LAST_VALUE` trap**: the default frame is `ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`, so `LAST_VALUE` returns the current row's value unless you widen the frame.
+
+## Frame syntax cheat-sheet
+
+```text
+ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW           -- running total
+ROWS BETWEEN 6 PRECEDING        AND CURRENT ROW           -- 7-row moving window
+ROWS BETWEEN CURRENT ROW        AND UNBOUNDED FOLLOWING   -- remaining
+ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING  -- whole partition
+RANGE BETWEEN INTERVAL '7 days' PRECEDING AND CURRENT ROW -- value-based (PG)
+```
+
+Next: [Optimization](./optimization.mdx).

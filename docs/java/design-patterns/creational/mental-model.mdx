@@ -1,0 +1,76 @@
+---
+title: Mental Model
+description: "One-glance recall card for all five Creational patterns — trigger words, mnemonics, and when to reach for each."
+sidebar_position: 0
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+
+# Creational — Mental Model
+
+<Pillbar pills={[
+  { label: 'role', value: 'recall card' },
+  { label: 'family', value: 'creational' },
+  { label: 'patterns', value: 5 },
+]} />
+
+One page to glance at when you can't remember which Creational pattern fits. Every row has a **trigger word** (the smell that should make you reach for it) and a **mental anchor** (a real-world image that locks in the idea).
+
+## The five at a glance
+
+| Pattern | One-liner | Trigger word | Mental anchor |
+| --- | --- | --- | --- |
+| [Singleton](./singleton.mdx) | Exactly **one** instance, globally accessible | "the one" | Government of a country |
+| [Factory Method](./factory-method.mdx) | Subclass / method picks **which class** to instantiate | "big `switch` on type" | Pizzeria — same menu, different kitchens |
+| [Abstract Factory](./abstract-factory.mdx) | **Family** of related products that vary together | "everything must match" | Furniture catalogue — full matching set |
+| [Builder](./builder.mdx) | **Stepwise** construction of a complex object | "many optional parts" | Subway-style sandwich order |
+| [Prototype](./prototype.mdx) | **Clone** an existing instance | "`new` is expensive" | Cell division |
+
+## Smell → pattern in one line
+
+- "I keep typing `new Foo()`; I wanted one shared instance" → **Singleton** (or a DI-managed bean).
+- "I'm reading a discriminator field and picking a class to construct" → **Factory Method**.
+- "Mac UI parts and Windows UI parts must never mix on one screen" → **Abstract Factory**.
+- "My constructor has 6+ parameters and most are nullable" → **Builder**.
+- "Building this object is slow and I need many copies" → **Prototype**.
+
+## Three-bucket sort
+
+Every Creational pattern answers a different version of *"who decides which concrete class to construct?"*:
+
+- **The class itself** → **Singleton** (one instance, forever) and **Prototype** (clone yourself).
+- **A factory** → **Factory Method** (one class), **Abstract Factory** (a family of related classes).
+- **A stepwise assembler** → **Builder** (fluent construction of one complex target).
+
+## Common collaborations
+
+| You picked... | …commonly pairs with |
+| --- | --- |
+| Singleton | DI container; Multiton (key→instance) |
+| Factory Method | Strategy (factory picks which strategy to use) |
+| Abstract Factory | Singleton (one factory per family per process) |
+| Builder | Records (modern Java replaces simple builders) |
+| Prototype | Composite (trees often clone via Prototype) |
+
+## Decision flowchart
+
+```text
+Need an object?
+│
+├── Truly shared resource, exactly one?               → Singleton
+│
+├── Picking class by input / config?
+│   │
+│   ├── One class, many subtypes                      → Factory Method
+│   └── Family that must match (UI sets, drivers)     → Abstract Factory
+│
+├── Many optional parts, immutable target?            → Builder
+│
+└── Expensive to construct, need copies?              → Prototype
+```
+
+## Memory hooks
+
+- **S**ingleton, **F**actory, **A**bstract factory, **B**uilder, **P**rototype = **"SFABP"** — sing it as *"Some Frameworks Are Built Properly"*.
+- All five hide `new` from the caller. Always ask: *who would otherwise be calling `new` here?*
+- Bloch's enum-Singleton is the JVM's most-correct singleton. **Don't roll your own.**

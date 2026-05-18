@@ -1,0 +1,148 @@
+---
+title: REST & Reactive (Mutiny)
+description: "RESTEasy Reactive, Uni / Multi, blocking vs. reactive endpoints."
+sidebar_position: 3
+---
+
+import CodeTabs from '@site/src/components/CodeTabs';
+import Pillbar from '@site/src/components/Pillbar';
+
+# REST & Reactive (Mutiny)
+
+<Pillbar pills={[
+  { label: 'extension', value: 'quarkus-rest' },
+  { label: 'reactive lib', value: 'Mutiny' },
+]} />
+
+Quarkus's REST stack is **RESTEasy Reactive** — Jakarta REST (JAX-RS) annotations on top of Vert.x, with first-class reactive support via Mutiny.
+
+## Basic JAX-RS endpoint
+
+<CodeTabs
+  title="GreetingResource"
+  java={`@Path("/api/orders")
+public class OrderResource {
+
+  @Inject OrderService orders;
+
+  @GET
+  @Path("/{id}")
+  public Order get(@PathParam("id") long id) {
+    return orders.findById(id).orElseThrow(() ->
+        new WebApplicationException(Response.Status.NOT_FOUND));
+  }
+
+  @POST
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response create(@Valid CreateOrder body) {
+    Order created = orders.create(body);
+    return Response.created(URI.create("/api/orders/" + created.id())).entity(created).build();
+  }
+}`}
+  kotlin={`@Path("/api/orders")
+class OrderResource(private val orders: OrderService) {
+
+  @GET @Path("/{id}")
+  fun get(@PathParam("id") id: Long): Order =
+    orders.findById(id) ?: throw WebApplicationException(Response.Status.NOT_FOUND)
+
+  @POST @Consumes(MediaType.APPLICATION_JSON)
+  fun create(@Valid body: CreateOrder): Response =
+    orders.create(body).let {
+      Response.created(URI.create("/api/orders/\${it.id}")).entity(it).build()
+    }
+}`}
+/>
+
+Familiar territory for anyone who's used JAX-RS. JSON serialisation comes from the `rest-jackson` (or `rest-jsonb`) extension.
+
+## Mutiny — `Uni` and `Multi`
+
+Quarkus's reactive primitives:
+
+- **`Uni<T>`** — zero or one element. Like `CompletionStage<T>` but with a richer fluent API.
+- **`Multi<T>`** — zero, one, or many elements. Like a `Publisher<T>` (Reactive Streams).
+
+```java
+public Uni<Order> get(long id) {
+  return orderRepo.findById(id);                  // returns Uni<Order>
+}
+
+public Multi<Order> stream() {
+  return orderRepo.streamAll();                   // returns Multi<Order>
+}
+```
+
+### Operators (a small sample)
+
+```java
+public Uni<Receipt> checkout(long orderId) {
+  return orderRepo.findById(orderId)
+      .onItem().ifNull().failWith(NotFoundException::new)
+      .onItem().transformToUni(order -> payments.charge(order))
+      .onItem().transform(this::toReceipt)
+      .onFailure(PaymentDeclined.class).recoverWithItem(Receipt::declined);
+}
+```
+
+The chain reads as a sentence: *find → if-null fail → charge → transform → on-failure recover*.
+
+### `Multi` example — server-sent events
+
+```java
+@GET @Path("/heartbeat")
+@Produces(MediaType.SERVER_SENT_EVENTS)
+public Multi<Long> heartbeat() {
+  return Multi.createFrom().ticks().every(Duration.ofSeconds(1))
+      .map(tick -> System.currentTimeMillis());
+}
+```
+
+Hit `GET /heartbeat` and you get a continuous SSE stream.
+
+## Reactive vs. blocking endpoints
+
+A reactive method (returns `Uni`, `Multi`, or `suspend` in Kotlin) runs on the **I/O event loop**. A method that returns a regular value runs on a worker thread.
+
+```java
+@GET                                  // worker thread (blocking-friendly)
+public List<Order> list() { ... }
+
+@GET                                  // I/O thread (must not block)
+public Uni<List<Order>> list() { ... }
+```
+
+**Rule**: never block on the I/O thread. If a reactive method needs to call blocking code, wrap with `@Blocking` or `Uni.createFrom().item(() -> ...)` on a worker.
+
+```java
+@GET
+@Blocking
+public Uni<Report> report() {
+  // Blocking JDBC call wrapped — runs on the worker thread pool
+  return Uni.createFrom().item(this::fetchReport);
+}
+```
+
+## Validation & error handling
+
+JSR-380 (`@Valid`, `@NotNull`, etc.) works as in JAX-RS. Centralize errors via an `ExceptionMapper`:
+
+```java
+@Provider
+public class GlobalExceptionMapper implements ExceptionMapper<Throwable> {
+  @Override
+  public Response toResponse(Throwable t) {
+    if (t instanceof ConstraintViolationException cve) {
+      return Response.status(400).entity(toProblem(cve)).build();
+    }
+    Log.error("unhandled", t);
+    return Response.status(500).entity(Problem.serverError()).build();
+  }
+}
+```
+
+## Performance posture
+
+- **JVM mode**: roughly comparable to Spring Boot 3.x on Netty. Quarkus startup ~5× faster.
+- **Native mode**: the win — same throughput, ~10× faster startup, ~5× lower RAM. Great for serverless / scale-to-zero.
+- **Reactive endpoints** scale further than blocking ones under high concurrency on the same hardware, at the cost of code complexity. Default to blocking; reach for reactive when you have a measured need.

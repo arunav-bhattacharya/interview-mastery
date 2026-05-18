@@ -1,0 +1,204 @@
+---
+title: "SD Cases: Social & Infra"
+description: Designing Twitter / News Feed, WhatsApp, Uber, and a Rate Limiter from scratch.
+sidebar_position: 4
+---
+
+import QuickNav from '@site/src/components/QuickNav';
+import Pillbar from '@site/src/components/Pillbar';
+
+# System Design Case Studies — Part 1
+
+<Pillbar pills={[
+  { label: 'time', value: '3–4 hours' },
+  { label: 'designs', value: 4 },
+]} />
+
+**Social, Messaging & Infrastructure** — Twitter, WhatsApp, Uber, Rate Limiter.
+
+<QuickNav items={[
+  { label: 'DESIGN 1: TWITTER / NEWS FEED', href: '#design-1-twitter--news-feed' },
+  { label: 'DESIGN 2: WHATSAPP / REAL-TIME CHAT', href: '#design-2-whatsapp--real-time-chat' },
+  { label: 'DESIGN 3: UBER / LYFT (Ride-Sharing)', href: '#design-3-uber--lyft-ride-sharing' },
+  { label: 'DESIGN 4: RATE LIMITER', href: '#design-4-rate-limiter' },
+]} />
+
+## Design 1: Twitter / News Feed
+
+### Functional
+
+- A user posts tweets.
+- A user's home timeline shows recent tweets from people they follow.
+- Reads dominate by 100×.
+
+### Numbers
+
+- 200M DAU, 500M tweets/day, average 200 followers each.
+- ~5800 tweets/s average → ~30k tweets/s peak (5× burst).
+- Each tweet read 100× → ~3M timeline-views/s.
+
+### API
+
+```http
+POST /tweets               body: { text }       → { id }
+GET  /users/:id/timeline   → [ tweet, ... ]
+POST /follow/:id
+```
+
+### Architecture choices
+
+| Strategy | Read cost | Write cost | When to use |
+| --- | --- | --- | --- |
+| **Pull** (fan-out on read) | High | Tiny | Influencers with millions of followers |
+| **Push** (fan-out on write) | Tiny | Huge | Normal users |
+| **Hybrid** | Medium | Medium | Production — push for normal users, pull for celebrities |
+
+### Storage
+
+- **Tweets**: write-optimized store (Cassandra / DynamoDB) keyed on `tweet_id`.
+- **Timeline**: per-user KV store (capped to ~800 tweets); regenerated on demand for inactive users.
+- **Follow graph**: Postgres / managed graph DB; cache hot users in Redis.
+- **Media**: blob store (S3) + CDN.
+
+### Bottlenecks
+
+- **Hot users (celebrities)** → don't fan-out their tweets; pull on read.
+- **Search**: separate index (Elasticsearch).
+- **Notifications**: separate fan-out path with throttling.
+
+---
+
+## Design 2: WhatsApp / Real-time Chat
+
+### Functional
+
+- Users send 1:1 and group messages, see delivery + read receipts, presence.
+- End-to-end encrypted.
+- Offline → online sync.
+
+### Numbers
+
+- 2B users, 100B messages/day → ~1.15M messages/s.
+- Average message: 200 bytes payload.
+
+### API (WebSocket-based)
+
+```text
+connect    ws://chat.example.com/?token=...
+send       { to, msgId, text }
+receipt    { msgId, status: delivered | read }
+typing     { to, on }
+```
+
+### Architecture
+
+```text
+[ Client ] ←─ WSS ─→ [ Connection servers ]
+                              │
+                              ▼
+                       [ Routing layer ]
+                              │
+                       ┌──────┼──────┐
+                       ▼      ▼      ▼
+                    [Cassandra/Spanner] [Queue] [Push to APNs/FCM]
+                     (history)
+```
+
+### Key design points
+
+- **Sticky WebSocket** to a connection server; user→server mapping in Redis.
+- **Message store** is append-only per-conversation; Cassandra excels here.
+- **Delivery semantics**: at-least-once + idempotent `msgId` from client.
+- **Offline**: store undelivered messages keyed by recipient; push notification fires.
+- **Encryption**: E2E (Signal protocol). The server is a relay; it can never see plaintext.
+
+### Tradeoffs
+
+- WebSocket → cheap incremental updates but heavy connection state.
+- Long-polling fallback → for restrictive networks.
+
+---
+
+## Design 3: Uber / Lyft (Ride-Sharing)
+
+### Functional
+
+- Riders request a trip; nearest available driver is matched.
+- Live location for both parties.
+- Dynamic pricing (surge).
+
+### Numbers
+
+- 100M monthly riders, 5M daily drivers online.
+- ~1k matches/s peak.
+- Each driver pings location every 5s → 1M pings/s.
+
+### Architecture
+
+```text
+[ Rider ] ←──→ [ Trip Service ] ←──→ [ Matching Service ]
+                       │                     │
+                       ▼                     ▼
+                [ Trip DB ]          [ Geospatial Index ]
+                                              ▲
+                                              │
+                           Driver pings ──────┘
+```
+
+### Key design choices
+
+- **Geospatial index**: H3 / S2 cell IDs, or PostGIS / Redis GEO. Bucket the world into cells; match within a cell + neighbours.
+- **Driver location**: high-frequency writes → in-memory (Redis) with periodic snapshot to durable store.
+- **Matching**: hexagonal cells; pick the K nearest drivers, send simultaneous offers, take first acceptance.
+- **Surge pricing**: aggregate demand/supply per cell; apply multiplier.
+
+### Tradeoffs
+
+- Polling driver location every 5s → bandwidth cost.
+- Stronger consistency for trip state (avoid double-booking) but weaker for location.
+
+---
+
+## Design 4: Rate Limiter
+
+### Functional
+
+- Reject requests exceeding a per-user / per-IP / per-route threshold.
+- Configurable: requests per minute, per hour, with burst allowance.
+- Distributed across many API servers.
+
+### Numbers
+
+- 1M API users.
+- ~50k req/s peak across the fleet.
+- Single API server: ~5k req/s → must be cheap per request.
+
+### Architecture
+
+```text
+[ Client ] → [ API Gateway / Sidecar ] ──(decision)──→ [ Backend ]
+                          │
+                          ▼
+                   [ Redis cluster ]
+                   (counters, TTL)
+```
+
+### Algorithm choices
+
+| Algorithm | Memory | Accuracy | Use when |
+| --- | --- | --- | --- |
+| Fixed window | `O(1)` | Allows 2× burst | Coarse limits |
+| Sliding window log | `O(N)` | Exact | Strict, low traffic |
+| Sliding window counter | `O(1)` | Approximate | Production default |
+| Token bucket | `O(1)` | Smooth bursts | Senior answer |
+
+### Implementation notes
+
+- Use **Redis Lua scripts** to read+update atomically — avoids race conditions across replicas.
+- **Local cache** with periodic flush for very high RPS; trades some accuracy for less network.
+- Return `429 Too Many Requests` with `Retry-After` header.
+
+### Tradeoffs
+
+- Stricter limit → fewer false negatives, more false positives.
+- Edge rate-limiting → catches abuse early but split state across edges.
