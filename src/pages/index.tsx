@@ -38,6 +38,15 @@ export default function Home() {
             <Link className={styles.ghostBtn} to="/learn/dsa/arrays-strings">Jump into DSA</Link>
           </div>
 
+          {/* Mobile-only quick-links row — visible navigation that doesn't
+              depend on the hamburger drawer working on every device. */}
+          <nav className={styles.mobileQuickNav} aria-label="Quick navigation">
+            <Link to="/learn/guide/master-guide">Master Guide</Link>
+            <Link to="/learn/dsa/arrays-strings">Learn</Link>
+            <Link to="/study-plan">Study Plan</Link>
+            <Link to="/progress">Progress</Link>
+          </nav>
+
           <div className={styles.codePeek}>
             <CodeBlock language="java" title="example.java">
               {sampleJava}

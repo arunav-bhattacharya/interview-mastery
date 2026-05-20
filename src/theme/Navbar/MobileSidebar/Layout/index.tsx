@@ -1,17 +1,13 @@
 // Swizzled NavbarMobileSidebar/Layout
-// Originally renders primary + secondary as two side-by-side panels with a
-// transform-based slide. That hides the primary navbar items on doc pages and,
-// in some browsers (notably iOS Safari WebKit), leaves the drawer looking
-// empty on the homepage.
 //
-// Stack them vertically instead — primary nav items first (always visible),
-// then a divider and the secondary content (e.g. the doc sidebar) when
-// present on doc pages.
+// Stacks primary nav items + secondary doc sidebar vertically so the 4 navbar
+// links are always visible in the mobile drawer (including on the homepage).
 //
-// Styles live in src/css/custom.css (global selectors) rather than a CSS
-// module so cascade order and specificity behave predictably across browsers.
+// Layout-critical styles are applied INLINE rather than via a stylesheet,
+// because external CSS module/global rules can lose specificity races on some
+// mobile browsers (iOS Safari WebKit in particular). Inline styles always win.
 
-import React, {version, type ReactNode} from 'react';
+import React, {version, type ReactNode, type CSSProperties} from 'react';
 import clsx from 'clsx';
 import {useNavbarSecondaryMenu} from '@docusaurus/theme-common/internal';
 import {ThemeClassNames} from '@docusaurus/theme-common';
@@ -24,13 +20,36 @@ function inertProps(inert: boolean): Record<string, string | boolean | undefined
   return {inert};
 }
 
+const itemsStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  overflowY: 'auto',
+  overflowX: 'hidden',
+  transform: 'none',
+  WebkitTransform: 'none',
+  height: 'calc(100% - var(--ifm-navbar-height, 60px))',
+};
+
+const panelStyle: CSSProperties = {
+  width: '100%',
+  flexShrink: 0,
+};
+
+const secondaryPanelStyle: CSSProperties = {
+  ...panelStyle,
+  borderTop: '1px solid var(--ifm-toc-border-color, rgba(0, 0, 0, 0.1))',
+  marginTop: '0.25rem',
+  paddingTop: '0.25rem',
+};
+
 interface PanelProps {
   children: ReactNode;
   inert?: boolean;
   className?: string;
+  style?: CSSProperties;
 }
 
-function MobilePanel({children, inert = false, className}: PanelProps): React.ReactElement {
+function MobilePanel({children, inert = false, className, style}: PanelProps): React.ReactElement {
   return (
     <div
       className={clsx(
@@ -38,6 +57,7 @@ function MobilePanel({children, inert = false, className}: PanelProps): React.Re
         'navbar-sidebar__item menu',
         className,
       )}
+      style={style}
       {...inertProps(inert)}>
       {children}
     </div>
@@ -66,9 +86,13 @@ export default function NavbarMobileSidebarLayout({
         'im-msb',
       )}>
       {header}
-      <div className={clsx('navbar-sidebar__items', 'im-msb-stack')}>
-        <MobilePanel className="im-msb-primary">{primaryMenu}</MobilePanel>
-        <MobilePanel className="im-msb-secondary">{secondaryMenu}</MobilePanel>
+      <div className={clsx('navbar-sidebar__items', 'im-msb-stack')} style={itemsStyle}>
+        <MobilePanel className="im-msb-primary" style={panelStyle}>
+          {primaryMenu}
+        </MobilePanel>
+        <MobilePanel className="im-msb-secondary" style={secondaryPanelStyle}>
+          {secondaryMenu}
+        </MobilePanel>
       </div>
     </div>
   );
