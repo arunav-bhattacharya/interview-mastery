@@ -30,8 +30,12 @@ const seed: Topic[] = [
   { id: 'spring',          label: 'Spring & Microservices', group: 'Java' },
   { id: 'design-patterns', label: 'Design Patterns',        group: 'Java' },
   { id: 'sql',             label: 'SQL Practice',           group: 'SQL' },
+  { id: 'genai-curriculum', label: '8-Week Curriculum',     group: 'GenAI' },
+  { id: 'genai-rag',        label: 'RAG & Context',         group: 'GenAI' },
+  { id: 'genai-agents',     label: 'Agents & LangGraph',    group: 'GenAI' },
+  { id: 'genai-evals',      label: 'Evals & Observability', group: 'GenAI' },
+  { id: 'genai-capstone',   label: 'Capstone Build',        group: 'GenAI' },
   { id: 'aws',             label: 'AWS & Cloud Architecture', group: 'Cloud' },
-  { id: 'genai',           label: 'GenAI & LLM Engineering', group: 'Cloud' },
   { id: 'behavioral',      label: 'Behavioral Prep',        group: 'Behavioral' },
 ];
 

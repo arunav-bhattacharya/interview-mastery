@@ -1,0 +1,212 @@
+---
+title: 'Week 6 — Evals, Observability & Production'
+sidebar_label: 'Week 6 — Evals & Observability'
+description: Manual labeling, failure clustering, LLM-as-judge, golden datasets, Langfuse, OWASP LLM Top-10 and guardrails.
+sidebar_position: 16
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Difficulty from '@site/src/components/Difficulty';
+import { ResourceCard, ResourceGrid } from '@site/src/components/ResourceCard';
+
+# Week 6 — Evals, Observability & Production
+
+<Pillbar pills={[
+  { label: 'time', value: '~10 hrs' },
+  { label: 'build', value: '7 hrs' },
+  { label: 'read', value: '3 hrs' },
+  { label: 'deliverable', value: 'week-06-evals' },
+]} />
+
+<QuickNav items={[
+  { label: '6.1 Why evals matter', href: '#61-why-evaluations-are-everything' },
+  { label: '6.2 Build evals', href: '#62-build-evaluations' },
+  { label: '6.3 Observability', href: '#63-observability' },
+  { label: '6.4 Security & red-teaming', href: '#64-security--red-teaming' },
+]} />
+
+<div className="im-core-concept">
+
+**Core concept.** Evaluations are the highest-leverage discipline in applied AI, and they're also the one most teams skip. Building good evals is what separates "fiddled with prompts for three months" from "shipped measurable improvements." This week is the one most likely to make you better than 90% of engineers calling themselves "AI engineers."
+
+</div>
+
+## 6.1 Why evaluations are everything
+
+The frontier-model providers iterate fast. The frameworks change. What persists is the discipline of *measuring whether your system is getting better or worse*. Evals are how you do that.
+
+Three distinctions that prevent confusion later:
+
+- **Offline evals** run against a fixed dataset. Cheap, repeatable, useful as a CI gate.
+- **Online evals** measure live traffic — user thumbs, regret rate, downstream conversion. Slow but reflect reality.
+- **Eval datasets** ≠ *training data*. Training data teaches the model; eval data is held out so you can tell whether changes help.
+
+Hamel Husain's *LLM Evals FAQ* is the single best primer in the field. Bookmark it; you'll come back to it for years.
+
+<ResourceGrid>
+  <ResourceCard
+    kind="article"
+    title="LLM Evals FAQ"
+    source="Hamel Husain"
+    url="https://hamel.dev/blog/posts/llm-judge/"
+    duration="~2 hrs">
+    Read it cover to cover, take notes, re-read in a month.
+  </ResourceCard>
+  <ResourceCard
+    kind="article"
+    title="Your AI product needs evals"
+    source="Hamel Husain"
+    url="https://hamel.dev/blog/posts/evals/"
+    duration="45 min">
+    The three-part series. The case for spending Week 6 on this and not on prompts.
+  </ResourceCard>
+  <ResourceCard
+    kind="article"
+    title="Patterns for Building LLM-based Systems"
+    source="Eugene Yan"
+    url="https://eugeneyan.com/writing/llm-patterns/"
+    duration="40 min" />
+  <ResourceCard
+    kind="paid"
+    title="AI Evals for Engineers & PMs"
+    source="Hamel Husain · Shreya Shankar"
+    url="https://maven.com/parlance-labs/evals"
+    duration="cohort, ~$2k">
+    The paid alternative; highest ROI of any course in this space if your company will reimburse.
+  </ResourceCard>
+</ResourceGrid>
+
+## 6.2 Build evaluations
+
+The flow that produces useful evals — applied to the agent you built in Week 4:
+
+**Step 1 — Manual labeling.** Run your agent on 100 real or realistic queries. Paste the inputs, outputs and traces into a spreadsheet. For each, label PASS or FAIL and write a one-line note about *why* it failed.
+
+**Step 2 — Failure clustering.** Read your 100 traces and group failures into 5–8 categories: *wrong tool chosen*, *tool returned but model ignored the result*, *hallucinated citation*, *got stuck in a loop*, *exceeded token budget*. These categories are your evaluation surface.
+
+**Step 3 — LLM-as-judge per failure mode.** For each category, write a tiny LLM prompt that takes (input, output, expected) and returns PASS / FAIL with a one-line rationale. Test each judge on your manually-labeled set and measure **TPR** (when it should say FAIL, does it?) and **TNR** (when it should say PASS, does it?). A judge with TPR > 0.85 and TNR > 0.85 is usable.
+
+<CodeTabs python={`# A single LLM-as-judge for "wrong tool chosen"
+import anthropic
+client = anthropic.Anthropic()
+
+JUDGE_PROMPT = """You are evaluating whether an AI agent chose appropriate tools.
+
+User question: {question}
+Tools called: {tool_calls}
+Final answer: {answer}
+
+Did the agent choose tools that were necessary and sufficient to answer?
+Reply with exactly one line: 'PASS — <reason>' or 'FAIL — <reason>'."""
+
+def judge_tool_choice(question, tool_calls, answer) -> tuple[bool, str]:
+    resp = client.messages.create(
+        model="claude-haiku-4-5-20251001", max_tokens=100,
+        messages=[{"role": "user", "content": JUDGE_PROMPT.format(
+            question=question, tool_calls=tool_calls, answer=answer)}],
+    )
+    text = resp.content[0].text.strip()
+    return (text.startswith("PASS"), text)`} />
+
+**Step 4 — Golden dataset.** Pick 20–30 of your labeled examples as a *golden set*: cases you commit to never regressing on. Wire them into CI — every prompt or code change has to pass them before merging.
+
+**Step 5 — Iterate.** Now changes have signal. You can A/B prompts, swap models, tune retrieval — and the evals tell you whether it actually helped.
+
+<ResourceGrid>
+  <ResourceCard
+    kind="course"
+    title="Evaluating AI Agents"
+    source="DeepLearning.AI"
+    url="https://www.deeplearning.ai/short-courses/evaluating-ai-agents/"
+    duration="1.5 hrs" />
+</ResourceGrid>
+
+**Build activity** <Difficulty>Hard</Difficulty> — Label 100 traces from your Week-4 agent. Cluster failures. Build at least 3 LLM judges, measure TPR / TNR for each. Stand up a 20–30 example golden dataset that runs as a CI gate.
+
+## 6.3 Observability
+
+You need three things logged for every LLM call: cost, latency, and tool calls. Langfuse gives you all three with a one-line decorator.
+
+<CodeTabs python={`from langfuse.decorators import observe, langfuse_context
+import anthropic
+
+client = anthropic.Anthropic()
+
+@observe()
+def answer(question: str) -> str:
+    resp = client.messages.create(
+        model="claude-sonnet-4-6", max_tokens=300,
+        messages=[{"role": "user", "content": question}],
+    )
+    langfuse_context.update_current_observation(
+        input=question, output=resp.content[0].text,
+        usage={"input": resp.usage.input_tokens,
+               "output": resp.usage.output_tokens},
+    )
+    return resp.content[0].text`} />
+
+Build a dashboard that surfaces:
+- Cost per session and per user.
+- p50 / p95 / p99 latency by endpoint.
+- Tool-call frequency and failure rate per tool.
+- Failed-eval rate over the last 24 hours (using your judges from §6.2 sampled on production traffic).
+
+The single most useful dashboard is "failed tool calls grouped by tool" — it tells you exactly which integration is rotting first.
+
+<ResourceGrid>
+  <ResourceCard
+    kind="tool"
+    title="Langfuse"
+    source="self-hostable, MIT"
+    url="https://langfuse.com/" />
+</ResourceGrid>
+
+## 6.4 Security & red-teaming
+
+**OWASP LLM Top-10** is the canonical security checklist for LLM apps. Treat it like the regular OWASP Top-10 — go through each, identify your exposure, document a mitigation.
+
+The four most common attacks in practice:
+
+- **Prompt injection** — user input contains instructions that override your system prompt. Mitigations: structured input fences, output validation, separating untrusted text from instructions.
+- **Sensitive data leakage** — model echoes back secrets that ended up in context. Mitigations: PII scrubbing on input, output filtering, never put credentials in prompts.
+- **Excessive agency** — agent has tools more powerful than it needs (DELETE on a DB, payment authorisation). Mitigations: least-privilege tool design, human-in-the-loop for irreversible actions.
+- **Insecure tool execution** — `python_repl` running arbitrary code without sandboxing. Mitigations: subprocess isolation, network egress filtering, resource caps.
+
+Play [Lakera Gandalf](https://gandalf.lakera.ai/) once. The first 4 levels can be done in 20 minutes; you'll learn more about prompt injection than from any reading.
+
+<ResourceGrid>
+  <ResourceCard
+    kind="docs"
+    title="OWASP Top 10 for LLM Applications"
+    source="OWASP"
+    url="https://owasp.org/www-project-top-10-for-large-language-model-applications/"
+    duration="reference" />
+  <ResourceCard
+    kind="tool"
+    title="Lakera Gandalf"
+    source="Lakera"
+    url="https://gandalf.lakera.ai/"
+    duration="30 min">
+    Interactive prompt-injection challenge. The fastest way to internalise the attack surface.
+  </ResourceCard>
+  <ResourceCard
+    kind="tool"
+    title="NeMo Guardrails"
+    source="NVIDIA"
+    url="https://github.com/NVIDIA/NeMo-Guardrails"
+    duration="2 hr setup">
+    Declarative guardrails: input filters, output filters, dialog rails.
+  </ResourceCard>
+</ResourceGrid>
+
+**Build activity** <Difficulty>Medium</Difficulty> — Run 10 prompt-injection attacks against your Week-4 agent. For each, document what happened and add a mitigation (input scrub, output filter, regex sentinel, judge-based rejection). Commit the attack scripts to the repo as a red-team suite.
+
+## Deliverable
+
+A repo `week-06-evals/` containing:
+- A full eval suite running against the Week-4 agent.
+- A Langfuse instance (cloud or self-hosted) with at least one dashboard saved.
+- ≥ 3 LLM judges with measured TPR / TNR per category.
+- A `red-team.md` documenting 10 attacks attempted and the mitigations in place.

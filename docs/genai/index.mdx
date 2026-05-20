@@ -1,0 +1,60 @@
+---
+title: GenAI & AI Engineering
+sidebar_label: GenAI
+description: Hands-on 8-week AI engineering curriculum for senior JVM engineers — Python, RAG, agents, LangGraph, MCP, fine-tuning, evals, capstone.
+sidebar_position: 1
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+import QuickNav from '@site/src/components/QuickNav';
+
+# GenAI & AI Engineering
+
+<Pillbar pills={[
+  { label: 'duration', value: '8 weeks' },
+  { label: 'time', value: '~10 hrs/week' },
+  { label: 'audience', value: 'senior JVM → AI' },
+  { label: 'style', value: '70% build, 30% read' },
+]} />
+
+A hands-on path from "Java backend who's curious about LLMs" to "engineer who can ship an agentic system to production." Adapted from Maven's *Mastering Agentic AI* and shaped for backend engineers who already know how to design systems, not for first-time programmers.
+
+<QuickNav items={[
+  { label: 'Curriculum overview', href: './overview' },
+  { label: 'Day-1 setup', href: './setup' },
+  { label: 'Topic tracker', href: './checklist' },
+  { label: 'All resources', href: './resources' },
+  { label: 'Reference cram-sheet', href: './reference' },
+]} />
+
+## How the path is shaped
+
+Each week has the same shape: read or watch for ~2 hours, build for ~4 hours, write up what you learned for ~2 hours, with a buffer for debugging. You finish the week with a **deliverable repo** — by Week 8 you have eight of them, plus a capstone agent that hiring managers can poke at.
+
+The curriculum deliberately resists framework-first thinking. You build a RAG pipeline before touching LangChain. You write a ReAct loop in 100 lines of Python before reaching for LangGraph. The frameworks are easier once you've felt the shape of the problem they solve.
+
+## The 8 weeks
+
+- **[Week 1 — Python & GenAI Building Blocks](./week-1-basics.mdx)** — Python for JVM devs, tokens & context windows, three raw-API scripts.
+- **[Week 2 — Context Engineering & RAG](./week-2-rag.mdx)** — Embeddings, chunking, chromadb pipeline, hybrid search, re-rankers.
+- **[Week 3 — Agents from Scratch](./week-3-agents.mdx)** — ReAct loop in ~100 lines, Anthropic's five agentic patterns.
+- **[Week 4 — LangChain, LangGraph & MCP](./week-4-langgraph-mcp.mdx)** — State graphs, checkpointing, MCP server, A2A skim.
+- **[Week 5 — Fine-Tuning & Local Models](./week-5-finetuning.mdx)** — LoRA / QLoRA decision tree, Ollama + vLLM, quantization.
+- **[Week 6 — Evals, Observability & Production](./week-6-evals.mdx)** — Failure clustering, LLM-as-judge, Langfuse, OWASP LLM Top-10.
+- **[Week 7 — Capstone Build (Part 1)](./week-7-capstone.mdx)** — Scope, design, integrate, deploy one agentic system.
+- **[Week 8 — Polish & Career](./week-8-polish.mdx)** — Architecture writeup, portfolio, AI-native productivity.
+
+## Supporting pages
+
+- **[Curriculum Overview](./overview.mdx)** — study budget, the 70/30 rule, anti-patterns to dodge, Python onboarding pointers.
+- **[Day-1 Setup](./setup.mdx)** — `uv`, API keys, Ollama, Chroma, Langfuse, repo layout.
+- **[Topic Tracker](./checklist.mdx)** — interactive checklist across every weekly milestone, persisted locally.
+- **[All Resources](./resources.mdx)** — every linked course, video, article and book in one place.
+- **[Reference cram-sheet](./reference.mdx)** — the dense one-pager (LLM fundamentals, prompt engineering, RAG, multi-model, fine-tuning, interview Q&A).
+
+## Anti-patterns to avoid
+
+- **Tutorial dependency** — finishing courses without shipping anything.
+- **Framework hopping** — rewriting your agent in three different frameworks before knowing which problem you're trying to solve.
+- **Chasing every model release** — most weeks, the model isn't the bottleneck.
+- **Over-engineering with backend rigor too early** — AI code is messier than your usual JVM stack; let it stay messy until evals tell you what's actually broken.

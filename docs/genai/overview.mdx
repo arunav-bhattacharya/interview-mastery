@@ -1,0 +1,89 @@
+---
+title: Curriculum Overview
+sidebar_label: Curriculum overview
+description: Study guidelines, time budget, 70/30 build rule, anti-patterns and Python onboarding pointers for the 8-week GenAI path.
+sidebar_position: 2
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+import { ResourceCard, ResourceGrid } from '@site/src/components/ResourceCard';
+
+# Curriculum Overview
+
+<Pillbar pills={[
+  { label: 'weekly commitment', value: '~10 hrs' },
+  { label: 'build vs read', value: '70 / 30' },
+  { label: 'output', value: '8 repos + capstone' },
+]} />
+
+## The 70/30 rule
+
+Most "learn AI" plans flip the ratio — 70% reading, 30% building. That's how you end up with a head full of vocabulary and no working systems. This curriculum inverts it: you spend the bulk of your hours typing code into a working LLM and watching it fail, then reading just enough to understand *why* it failed.
+
+The weekly budget — for one slow, sustainable week, not a sprint:
+
+| Block | Hours | What it looks like |
+|---|---|---|
+| Reading / watching | 2 | One video, one article, maybe a course module |
+| Building | 4 | Hands-on code: scripts, agents, pipelines |
+| Writing | 2 | README, architecture notes, decision log |
+| Buffer / review | 2 | Debugging, re-running, refactoring |
+
+## Recommended loop per topic
+
+1. **15 min — Read the intro.** Just enough to know what the thing is.
+2. **30–45 min — Watch the canonical video at 1.5×.** Karpathy, Hamel, Chase — they're worth your time even at full speed.
+3. **45 min — Build a minimal demonstration.** No framework. Just the smallest possible thing that exhibits the concept.
+4. **45 min — Rebuild it with a framework** (LangChain / LangGraph / etc.). Notice what got easier and what got hidden.
+5. **15 min — Document.** Three bullet points in the repo README about what you learned and where it'd break in production.
+
+## Python for Kotlin / Java developers
+
+You already know how to program. You don't need a Python course. You need a cheat sheet, an editor that yells when you make Java assumptions, and a week of doing.
+
+<ResourceGrid>
+  <ResourceCard
+    kind="article"
+    title="Python for Java developers cheat sheet"
+    source="Real Python"
+    url="https://realpython.com/switching-to-python/"
+    duration="30 min">
+    The fastest possible "what's different" tour: typing, scoping, comprehensions, decorators.
+  </ResourceCard>
+  <ResourceCard
+    kind="docs"
+    title="uv quickstart"
+    source="Astral"
+    url="https://docs.astral.sh/uv/"
+    duration="15 min">
+    The Python package manager that feels like Gradle: lockfiles, virtualenvs, scripts. Skip pip / poetry for this curriculum.
+  </ResourceCard>
+</ResourceGrid>
+
+A few JVM-to-Python pitfalls worth knowing before you write your first script:
+
+- **Mutable default arguments** are a footgun: `def f(x=[])` shares that list across calls. Use `None` and create inside.
+- **`self` is explicit** in every method signature. Forgetting it is the most common compile-equivalent error.
+- **`asyncio` is cooperative**, not preemptive — `await` is the only place your function can be paused. Don't expect Java's executor semantics.
+- **`pyproject.toml`** is the equivalent of `pom.xml` or `build.gradle`. Combined with `uv`, you get reproducible installs.
+- **Type hints are advisory** by default — they don't enforce anything until you run `mypy` / `pyright`. Useful, but don't trust them to catch runtime bugs.
+
+## Anti-patterns to dodge
+
+- **Tutorial dependency.** Finishing courses isn't progress. Shipping something — even a 50-line script — is progress.
+- **Framework hopping.** Three weeks of "LangChain vs LlamaIndex vs Haystack" debates produces zero working code.
+- **Chasing every model release.** Most of your tradeoffs are about retrieval, prompting and orchestration. The model is a knob, not the system.
+- **Backend-rigor too early.** When you're learning, your agent code will be ugly — long prompts, branchy logic, half-baked retries. Resist the urge to refactor it into Clean Architecture before you have evals to tell you what's actually wrong.
+
+## What you'll have at the end of 8 weeks
+
+- 8 weekly repos demonstrating distinct skills (raw API, RAG, ReAct, LangGraph + MCP, LoRA fine-tune, eval suite, capstone, polish).
+- One capstone system worth demoing to a hiring manager — a multi-step agent with structured outputs, RAG, MCP tools, evals and observability.
+- A 1500-word architecture writeup describing the capstone's tradeoffs and what "10× scale" would change.
+- Resume bullets you can actually defend in interviews ("reduced RAG p95 latency from 800ms to 180ms via hybrid search + reranking").
+
+## Next steps
+
+- Start with **[Day-1 Setup](./setup.mdx)** to get your environment ready.
+- Open the **[Topic Tracker](./checklist.mdx)** and pin it as a tab — it remembers your progress.
+- Then jump to **[Week 1 — Python & GenAI Building Blocks](./week-1-basics.mdx)**.

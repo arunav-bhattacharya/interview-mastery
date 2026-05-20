@@ -1,0 +1,180 @@
+---
+title: All GenAI Resources
+sidebar_label: Resources
+description: Every course, video, article, book and tool referenced across the 8-week GenAI curriculum, grouped by week.
+sidebar_position: 85
+---
+
+import { ResourceCard, ResourceGrid } from '@site/src/components/ResourceCard';
+
+# All GenAI Resources
+
+Every external resource referenced across the 8-week curriculum, in one place. Bookmark this page; the weekly pages link out, this page is the lookup.
+
+## Foundational reading
+
+<ResourceGrid>
+  <ResourceCard kind="article" title="Building effective agents" source="Anthropic"
+    url="https://www.anthropic.com/research/building-effective-agents" duration="30 min">
+    The reference for the whole curriculum. Re-read in Week 3.
+  </ResourceCard>
+  <ResourceCard kind="article" title="LLM-powered autonomous agents" source="Lilian Weng"
+    url="https://lilianweng.github.io/posts/2023-06-23-agent/" duration="40 min" />
+  <ResourceCard kind="article" title="Patterns for Building LLM-based Systems" source="Eugene Yan"
+    url="https://eugeneyan.com/writing/llm-patterns/" duration="40 min" />
+  <ResourceCard kind="article" title="LLM Evals FAQ" source="Hamel Husain"
+    url="https://hamel.dev/blog/posts/llm-judge/" duration="~2 hrs">
+    The single best primer on evals in applied AI.
+  </ResourceCard>
+</ResourceGrid>
+
+## Week 1 — Python & GenAI Basics
+
+<ResourceGrid>
+  <ResourceCard kind="article" title="Switching to Python: cheat sheet for Java devs" source="Real Python"
+    url="https://realpython.com/switching-to-python/" duration="30 min" />
+  <ResourceCard kind="docs" title="uv quickstart" source="Astral"
+    url="https://docs.astral.sh/uv/" duration="15 min" />
+  <ResourceCard kind="video" title="Intro to Large Language Models" source="Andrej Karpathy"
+    url="https://www.youtube.com/watch?v=zjkBMFhNj_g" duration="1 hr" />
+  <ResourceCard kind="video" title="Let's build the GPT tokenizer" source="Andrej Karpathy"
+    url="https://www.youtube.com/watch?v=zduSFxRajkE" duration="2 hrs" />
+  <ResourceCard kind="course" title="Prompt Engineering Interactive Tutorial" source="Anthropic"
+    url="https://github.com/anthropics/prompt-eng-interactive-tutorial" duration="~6 hrs" />
+  <ResourceCard kind="course" title="ChatGPT Prompt Engineering for Developers" source="DeepLearning.AI"
+    url="https://www.deeplearning.ai/short-courses/chatgpt-prompt-engineering-for-developers/" duration="1.5 hrs" />
+  <ResourceCard kind="course" title="Function-Calling and Data Extraction with LLMs" source="DeepLearning.AI"
+    url="https://www.deeplearning.ai/short-courses/function-calling-and-data-extraction-with-llms/" duration="1 hr" />
+</ResourceGrid>
+
+## Week 2 — RAG
+
+<ResourceGrid>
+  <ResourceCard kind="course" title="Advanced Retrieval for AI with Chroma" source="DeepLearning.AI"
+    url="https://www.deeplearning.ai/short-courses/advanced-retrieval-for-ai/" duration="1 hr" />
+  <ResourceCard kind="article" title="Vector embeddings for developers" source="Pinecone Learning Center"
+    url="https://www.pinecone.io/learn/vector-embeddings-for-developers/" duration="20 min" />
+  <ResourceCard kind="article" title="Chunking strategies for LLM applications" source="Pinecone Learning Center"
+    url="https://www.pinecone.io/learn/chunking-strategies/" duration="25 min" />
+  <ResourceCard kind="article" title="Contextual Retrieval" source="Anthropic"
+    url="https://www.anthropic.com/news/contextual-retrieval" duration="20 min" />
+  <ResourceCard kind="course" title="Building and Evaluating Advanced RAG" source="DeepLearning.AI"
+    url="https://www.deeplearning.ai/short-courses/building-evaluating-advanced-rag/" duration="1 hr" />
+  <ResourceCard kind="article" title="RAG: the pragmatic perspective" source="Hamel Husain"
+    url="https://hamel.dev/blog/posts/evals/" duration="30 min" />
+</ResourceGrid>
+
+## Week 3 — Agents from Scratch
+
+<ResourceGrid>
+  <ResourceCard kind="article" title="Building effective agents (re-read)" source="Anthropic"
+    url="https://www.anthropic.com/research/building-effective-agents" duration="30 min" />
+  <ResourceCard kind="article" title="LLM-powered autonomous agents" source="Lilian Weng"
+    url="https://lilianweng.github.io/posts/2023-06-23-agent/" duration="40 min" />
+  <ResourceCard kind="course" title="AI Agents Course (Units 1–2)" source="Hugging Face"
+    url="https://huggingface.co/learn/agents-course/unit0/introduction" duration="~6 hrs" />
+  <ResourceCard kind="course" title="Functions, Tools and Agents with LangChain" source="DeepLearning.AI"
+    url="https://www.deeplearning.ai/short-courses/functions-tools-agents-langchain/" duration="2 hrs" />
+</ResourceGrid>
+
+## Week 4 — LangGraph & MCP
+
+<ResourceGrid>
+  <ResourceCard kind="course" title="LangChain for LLM Application Development" source="DeepLearning.AI"
+    url="https://www.deeplearning.ai/short-courses/langchain-for-llm-application-development/" duration="1.5 hrs" />
+  <ResourceCard kind="course" title="AI Agents in LangGraph" source="DeepLearning.AI · Harrison Chase"
+    url="https://www.deeplearning.ai/short-courses/ai-agents-in-langgraph/" duration="2 hrs" />
+  <ResourceCard kind="course" title="Introduction to LangGraph" source="LangChain Academy"
+    url="https://academy.langchain.com/courses/intro-to-langgraph" duration="~7 hrs" />
+  <ResourceCard kind="course" title="MCP Course" source="Hugging Face × Anthropic"
+    url="https://huggingface.co/learn/mcp-course" duration="~6 hrs" />
+  <ResourceCard kind="course" title="MCP: Build Rich-Context AI Apps" source="DeepLearning.AI · Anthropic"
+    url="https://www.deeplearning.ai/short-courses/mcp-build-rich-context-ai-apps-with-anthropic/" duration="2 hrs" />
+  <ResourceCard kind="docs" title="MCP specification" source="modelcontextprotocol.io"
+    url="https://modelcontextprotocol.io/" duration="reference" />
+  <ResourceCard kind="article" title="A2A protocol announcement" source="Google"
+    url="https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/" duration="15 min" />
+</ResourceGrid>
+
+## Week 5 — Fine-Tuning
+
+<ResourceGrid>
+  <ResourceCard kind="article" title="Fine-Tuning is Probably Not For You" source="Hamel Husain"
+    url="https://hamel.dev/blog/posts/fine-tuning-is-probably-not-for-you/" duration="20 min" />
+  <ResourceCard kind="course" title="Finetuning Large Language Models" source="DeepLearning.AI"
+    url="https://www.deeplearning.ai/short-courses/finetuning-large-language-models/" duration="1.5 hrs" />
+  <ResourceCard kind="course" title="Improving LLM Accuracy with RAG and Fine-Tuning" source="DeepLearning.AI · Predibase"
+    url="https://www.deeplearning.ai/short-courses/improving-accuracy-of-llm-applications/" duration="2 hrs" />
+  <ResourceCard kind="course" title="LLM Course — fine-tuning & alignment" source="Hugging Face"
+    url="https://huggingface.co/learn/llm-course/chapter11" duration="~4 hrs" />
+  <ResourceCard kind="tool" title="unsloth (efficient LoRA / QLoRA)" source="Unsloth AI"
+    url="https://github.com/unslothai/unsloth" duration="library" />
+  <ResourceCard kind="tool" title="vLLM (production serving)" source="vLLM"
+    url="https://docs.vllm.ai/" duration="docs" />
+  <ResourceCard kind="tool" title="Ollama (local dev serving)" source="Ollama"
+    url="https://ollama.com/" duration="install" />
+  <ResourceCard kind="video" title="Neural Networks: Zero to Hero (optional)" source="Andrej Karpathy"
+    url="https://karpathy.ai/zero-to-hero.html" duration="~15 hrs" />
+</ResourceGrid>
+
+## Week 6 — Evals & Observability
+
+<ResourceGrid>
+  <ResourceCard kind="article" title="LLM Evals FAQ" source="Hamel Husain"
+    url="https://hamel.dev/blog/posts/llm-judge/" duration="~2 hrs" />
+  <ResourceCard kind="article" title="Your AI product needs evals (3-part series)" source="Hamel Husain"
+    url="https://hamel.dev/blog/posts/evals/" duration="45 min" />
+  <ResourceCard kind="article" title="Patterns for Building LLM-based Systems" source="Eugene Yan"
+    url="https://eugeneyan.com/writing/llm-patterns/" duration="40 min" />
+  <ResourceCard kind="course" title="Evaluating AI Agents" source="DeepLearning.AI"
+    url="https://www.deeplearning.ai/short-courses/evaluating-ai-agents/" duration="1.5 hrs" />
+  <ResourceCard kind="tool" title="Langfuse" source="self-hostable, MIT"
+    url="https://langfuse.com/" duration="20 min setup" />
+  <ResourceCard kind="docs" title="OWASP Top 10 for LLM Applications" source="OWASP"
+    url="https://owasp.org/www-project-top-10-for-large-language-model-applications/" duration="reference" />
+  <ResourceCard kind="tool" title="Lakera Gandalf" source="Lakera"
+    url="https://gandalf.lakera.ai/" duration="30 min" />
+  <ResourceCard kind="tool" title="NeMo Guardrails" source="NVIDIA"
+    url="https://github.com/NVIDIA/NeMo-Guardrails" duration="2 hr setup" />
+  <ResourceCard kind="paid" title="AI Evals for Engineers & PMs" source="Hamel Husain · Shreya Shankar"
+    url="https://maven.com/parlance-labs/evals" duration="cohort, ~$2k" />
+</ResourceGrid>
+
+## Capstone deployment options
+
+<ResourceGrid>
+  <ResourceCard kind="tool" title="Fly.io" source="Fly"
+    url="https://fly.io/" duration="cheap, simple" />
+  <ResourceCard kind="tool" title="Modal" source="Modal Labs"
+    url="https://modal.com/" duration="serverless GPUs" />
+</ResourceGrid>
+
+## Newsletters & feeds worth following
+
+<ResourceGrid>
+  <ResourceCard kind="article" title="Hamel Husain's blog" source="hamel.dev"
+    url="https://hamel.dev/" duration="weekly" />
+  <ResourceCard kind="article" title="Eugene Yan's blog" source="eugeneyan.com"
+    url="https://eugeneyan.com/" duration="monthly" />
+  <ResourceCard kind="article" title="Latent Space" source="Swyx & Alessio"
+    url="https://www.latent.space/" duration="weekly" />
+  <ResourceCard kind="article" title="Lenny's Newsletter" source="Lenny Rachitsky"
+    url="https://www.lennysnewsletter.com/" duration="weekly · product" />
+</ResourceGrid>
+
+## Paid courses (if reimbursed)
+
+<ResourceGrid>
+  <ResourceCard kind="paid" title="AI Evals for Engineers & PMs" source="Hamel Husain · Shreya Shankar"
+    url="https://maven.com/parlance-labs/evals" duration="~$2k">
+    The highest-ROI paid course in this space.
+  </ResourceCard>
+  <ResourceCard kind="paid" title="Mastering Agentic AI (source course)" source="Maven"
+    url="https://maven.com/" duration="$2,499">
+    The source course for this curriculum. Includes cohort and live sessions.
+  </ResourceCard>
+  <ResourceCard kind="paid" title="LLM Engineering" source="Ed Donner on Udemy"
+    url="https://www.udemy.com/" duration="~$20 on sale">
+    Eight-week path covering RAG, QLoRA and agents.
+  </ResourceCard>
+</ResourceGrid>

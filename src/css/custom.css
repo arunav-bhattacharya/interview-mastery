@@ -703,3 +703,47 @@ svg.classDiagram path.relation.note-edge {
 @media (max-width: 760px) {
   :root { --ifm-h1-font-size: 2.1rem; --ifm-h2-font-size: 1.6rem; }
 }
+
+/* === Mobile navigation tap-targets & drawer ============================== */
+/* Triggered for phones + small tablets. Pairs with autoCollapseCategories:true
+   in docusaurus.config.ts so siblings collapse on navigate. No swizzling. */
+@media (max-width: 996px) {
+  /* Bigger, easier-to-tap rows in the mobile sidebar drawer */
+  .menu__link,
+  .menu__list-item-collapsible {
+    padding-block: 0.6rem;
+    font-size: 0.95rem;
+    line-height: 1.35;
+  }
+
+  /* Reclaim horizontal space — default nested indent eats a phone screen */
+  .menu__list .menu__list {
+    padding-left: 0.5rem;
+  }
+
+  /* Active page should pop on a small screen */
+  .menu__link--active {
+    font-weight: 600;
+  }
+
+  /* Caret a little bigger so it's tappable on its own */
+  .menu__caret { padding: 0.4rem; }
+
+  /* Hamburger toggle: nudge tap area larger */
+  .navbar__toggle { padding: 0.4rem; }
+
+  /* Keep the drawer brand row sticky so the close button stays reachable
+     while scrolling a long sidebar */
+  .navbar-sidebar__brand {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--ifm-navbar-background-color);
+  }
+
+  /* Back/close header inside drilled-in mobile drawer view */
+  .navbar-sidebar__back {
+    font-weight: 600;
+    padding: 0.6rem 0.75rem;
+  }
+}

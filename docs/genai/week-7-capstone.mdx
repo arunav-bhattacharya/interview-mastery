@@ -1,0 +1,91 @@
+---
+title: 'Week 7 — Capstone Build (Part 1)'
+sidebar_label: 'Week 7 — Capstone'
+description: Pick one project. Ship it end-to-end with structured outputs, RAG, LangGraph, MCP tools, evals and observability.
+sidebar_position: 17
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+import QuickNav from '@site/src/components/QuickNav';
+import Difficulty from '@site/src/components/Difficulty';
+import { ResourceCard, ResourceGrid } from '@site/src/components/ResourceCard';
+
+# Week 7 — Capstone Build (Part 1)
+
+<Pillbar pills={[
+  { label: 'time', value: '~10 hrs' },
+  { label: 'build', value: '10 hrs' },
+  { label: 'read', value: '0 hrs' },
+  { label: 'deliverable', value: 'working agent' },
+]} />
+
+<QuickNav items={[
+  { label: 'Pick a project', href: '#pick-one-project' },
+  { label: 'Build timeline', href: '#build-timeline-monfri' },
+  { label: 'Integration checklist', href: '#integration-checklist' },
+]} />
+
+<div className="im-core-concept">
+
+**Core concept.** Capstone week is about *shipping one thing end-to-end*, integrating everything from Weeks 1–6. Hiring managers care about working systems with measurable outcomes, not about which framework you used. Pick the project where you can write the most credible architecture writeup, not the flashiest demo.
+
+</div>
+
+## Pick one project
+
+Four options, ranked by portfolio value for a JVM-background engineer. Pick *one*. Resist the urge to do two.
+
+### Option A — Billpay Ops Copilot <Difficulty>Hard</Difficulty>
+
+Diagnoses stuck Temporal workflows given a workflow ID. Tools: Temporal API query, Oracle/Postgres query, runbook RAG, mitigation suggestion. This is the strongest portfolio choice for a backend engineer: it shows you can connect agents to real infrastructure and that you understand the workflow-orchestration overlap.
+
+### Option B — Code Review Agent <Difficulty>Hard</Difficulty>
+
+Reviews Kotlin or Java PRs against a style guide + historical anti-patterns ingested as a corpus. Tools: GitHub PR fetcher, RAG over guidelines, structured comment output, optionally a "fix-suggestion" tool. Easier to demo; less depth than Option A.
+
+### Option C — India Relocation Concierge <Difficulty>Medium</Difficulty>
+
+Multi-step planning agent: schools, neighborhoods, document checklists, mover comparisons. Showcases planning + tool use over public data. Lower portfolio gravity but easiest to explain to a non-technical audience.
+
+### Option D — Wildlife Photography Assistant <Difficulty>Medium</Difficulty>
+
+Ingests EXIF + photos, RAG over field guides, suggests lens / settings / composition tweaks. Multimodal — shows breadth. Niche audience.
+
+## Build timeline (Mon–Fri)
+
+A realistic week if you have 2 hours per evening:
+
+- **Mon — Scope and design.** One-page design doc: user, problem, tools, state-machine sketch, eval criteria. Write it before any code.
+- **Tue — Happy path.** Implement the most common user query, end to end, ugly but working. Don't bother with errors yet.
+- **Wed — Tool integrations.** Add the real integrations (Temporal, GitHub, Oracle, whatever). Build any custom MCP servers needed.
+- **Thu — Error handling, retries, observability.** Wire in Langfuse. Add retry logic with exponential backoff. Add a budget cap so a bad day can't cost $200.
+- **Fri — Deployment.** Pick one: Fly.io (cheapest), Modal (best DX for serverless GPUs), or self-host with the Anthropic API + a tiny FastAPI / Next.js UI. Get a public URL.
+
+## Integration checklist
+
+A capstone is "complete" when it ticks all of these:
+
+- [ ] **Structured outputs** — at least one tool or response uses pydantic-validated JSON.
+- [ ] **RAG** — at least one query goes through retrieval before reaching the model.
+- [ ] **LangGraph** (or equivalent state machine) — the agent's control flow is a typed graph, not a `while True` loop.
+- [ ] **MCP tools** — at least one tool is exposed via a custom MCP server, not in-process.
+- [ ] **Evals** — the golden dataset from Week 6 runs as a CI gate; PRs that drop accuracy below threshold fail.
+- [ ] **Observability** — every LLM call shows up in Langfuse with cost, latency, and trace.
+- [ ] **Guardrails** — at least three of the OWASP-LLM-Top-10 mitigations applied (prompt injection scrub, output filter, budget cap).
+- [ ] **Public demo URL** — anyone with the link can poke at it.
+- [ ] **README** — explains what it does, who it's for, and the architecture in 500 words or fewer.
+
+## Deliverable
+
+A working agent system at a public URL, with the source in `week-07-capstone/`, all eight checklist items ticked. Don't worry about polish — that's next week.
+
+## What to bring forward
+
+Carry over from earlier weeks:
+
+- The RAG pipeline from Week 2 (re-use the chromadb collection).
+- The LangGraph skeleton from Week 4.
+- The MCP server from Week 4.
+- The eval suite and Langfuse setup from Week 6.
+
+That's most of the heavy lifting. Capstone week is more integration than new code.

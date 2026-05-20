@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
-import { getCheckedSet, subscribe, resetAll } from './problemStore';
+import { problemStore } from './problemStore';
+import type { ChecklistStore } from './checklistStore';
 import styles from './ChecklistSummary.module.css';
 
 export interface PatternTarget {
@@ -11,23 +12,28 @@ export interface PatternTarget {
 
 interface Props {
   patterns: PatternTarget[];
+  store?: ChecklistStore; // optional override; defaults to DSA problemStore
+  resetLabel?: string;    // confirm-dialog text override
+  itemLabel?: string;     // word used in the totals row (e.g. 'solved', 'done')
 }
 
-function SummaryInner({ patterns }: Props) {
+function SummaryInner({ patterns, store, resetLabel, itemLabel }: Props) {
+  const s = store ?? problemStore;
   const [version, setVersion] = useState(0);
 
-  useEffect(() => subscribe(() => setVersion((v) => v + 1)), []);
+  useEffect(() => s.subscribe(() => setVersion((v) => v + 1)), [s]);
 
   // Recompute on every change.
-  const checkedSet = getCheckedSet();
+  const checkedSet = s.getCheckedSet();
 
   // We count by reading data-problem-pattern on rendered <Problem> elements in
-  // the DOM. This couples to live page state, but is the simplest way to get
-  // per-pattern counts without duplicating the problem list inside the
-  // summary component.
+  // the DOM, scoped to this store's namespace via data-store-key so two
+  // trackers on the same page don't cross-count.
   const counts: Record<string, number> = {};
   if (typeof document !== 'undefined') {
-    const rows = document.querySelectorAll<HTMLElement>('[data-problem-id][data-problem-pattern]');
+    const rows = document.querySelectorAll<HTMLElement>(
+      `[data-problem-id][data-problem-pattern][data-store-key="${s.storageKey}"]`,
+    );
     rows.forEach((r) => {
       const id = r.getAttribute('data-problem-id');
       const pat = r.getAttribute('data-problem-pattern');
@@ -36,12 +42,12 @@ function SummaryInner({ patterns }: Props) {
     });
   }
 
-  const totalTarget = patterns.reduce((s, p) => s + p.target, 0);
-  const totalDone = patterns.reduce((s, p) => s + (counts[p.name] || 0), 0);
+  const totalTarget = patterns.reduce((sum, p) => sum + p.target, 0);
+  const totalDone = patterns.reduce((sum, p) => sum + (counts[p.name] || 0), 0);
   const pct = totalTarget ? Math.round((totalDone / totalTarget) * 100) : 0;
 
   const reset = () => {
-    if (window.confirm('Reset all problem progress?')) resetAll();
+    if (window.confirm(resetLabel || 'Reset all progress?')) s.resetAll();
   };
 
   return (
@@ -51,7 +57,7 @@ function SummaryInner({ patterns }: Props) {
           <span className={styles.totalsNumber}>{totalDone}</span>
           <span className={styles.totalsSlash}>/</span>
           <span className={styles.totalsTarget}>{totalTarget}</span>
-          <span className={styles.totalsLabel}>solved</span>
+          <span className={styles.totalsLabel}>{itemLabel || 'solved'}</span>
         </div>
         <div className={styles.pctWrap}>
           <div className={styles.pctBarOuter}>

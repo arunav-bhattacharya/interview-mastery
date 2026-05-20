@@ -1,0 +1,222 @@
+---
+title: 'Week 4 — LangChain, LangGraph & MCP'
+sidebar_label: 'Week 4 — LangGraph & MCP'
+description: LangChain primer, LangGraph state machines with checkpointing, Model Context Protocol servers, and a glance at A2A.
+sidebar_position: 14
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Difficulty from '@site/src/components/Difficulty';
+import { ResourceCard, ResourceGrid } from '@site/src/components/ResourceCard';
+
+# Week 4 — LangChain, LangGraph & MCP
+
+<Pillbar pills={[
+  { label: 'time', value: '~10 hrs' },
+  { label: 'build', value: '6 hrs' },
+  { label: 'read', value: '4 hrs' },
+  { label: 'deliverable', value: 'week-04-langgraph-mcp' },
+]} />
+
+<QuickNav items={[
+  { label: '4.1 LangChain & LangGraph', href: '#41-langchain--langgraph' },
+  { label: '4.2 Model Context Protocol', href: '#42-model-context-protocol' },
+  { label: '4.3 Agent-to-Agent (A2A)', href: '#43-agent-to-agent-protocols' },
+]} />
+
+<div className="im-core-concept">
+
+**Core concept.** Now that you've felt the shape of agents by hand, frameworks become legible. **LangChain** standardises LLM I/O (prompts, parsers, retrievers). **LangGraph** layers a stateful graph on top — nodes, edges, checkpointing — which will feel familiar if you've used Temporal or Airflow. **MCP** (Model Context Protocol) is the USB-C for tools: any compliant client (Claude Desktop, Cursor, your own agent) can plug into any compliant server (Postgres, Oracle, GitHub, filesystem).
+
+</div>
+
+## 4.1 LangChain & LangGraph
+
+LangChain at its core: a typed pipeline of `Runnable` components — prompt templates, models, parsers, retrievers — composed with the `|` operator (LCEL, "LangChain Expression Language"). It feels like Java streams or Kotlin sequences if you squint.
+
+<CodeTabs python={`from langchain_anthropic import ChatAnthropic
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are a senior {role}."),
+    ("user", "Explain {topic} in two sentences."),
+])
+chain = prompt | ChatAnthropic(model="claude-sonnet-4-6") | StrOutputParser()
+print(chain.invoke({"role": "backend engineer", "topic": "RAG"}))`} />
+
+**LangGraph** is where it gets interesting for backend engineers. Instead of a linear pipeline, you define a *state graph*: typed shared state, nodes that read/write that state, edges (deterministic or conditional) that route between nodes, and a checkpointer that persists state across runs.
+
+```
+        ┌────────────┐
+        │  classify  │──┐
+        └─────┬──────┘  │
+              │         │
+       ┌──────┴─────┐   │ conditional edges
+       ▼            ▼   │
+  ┌─────────┐  ┌─────────┐
+  │ refund  │  │ research│
+  └────┬────┘  └────┬────┘
+       └──────┬─────┘
+              ▼
+        ┌──────────┐
+        │ respond  │
+        └──────────┘
+```
+
+The checkpointing model is the part that should hit a JVM engineer hard: a `SqliteSaver` or `PostgresSaver` snapshots state after every node. You can resume, fork, audit, replay — same primitives a Temporal workflow gives you. The mental connection is "LangGraph is durable execution for LLM tool loops." That's a useful framing to bring into senior interviews.
+
+<CodeTabs python={`from langgraph.graph import StateGraph, END
+from typing import TypedDict
+from langgraph.checkpoint.sqlite import SqliteSaver
+
+class State(TypedDict):
+    question: str
+    category: str
+    answer: str
+
+def classify(s: State) -> State:
+    # ... call LLM to set s["category"]
+    return s
+
+def refund_path(s: State)   -> State: ...
+def research_path(s: State) -> State: ...
+def respond(s: State)       -> State: ...
+
+g = StateGraph(State)
+g.add_node("classify",  classify)
+g.add_node("refund",    refund_path)
+g.add_node("research",  research_path)
+g.add_node("respond",   respond)
+g.set_entry_point("classify")
+g.add_conditional_edges("classify", lambda s: s["category"],
+                        {"refund": "refund", "research": "research"})
+g.add_edge("refund",   "respond")
+g.add_edge("research", "respond")
+g.add_edge("respond",  END)
+
+app = g.compile(checkpointer=SqliteSaver.from_conn_string("checkpoints.db"))
+result = app.invoke({"question": "Why was I charged twice?"},
+                    config={"configurable": {"thread_id": "user-42"}})`} />
+
+<ResourceGrid>
+  <ResourceCard
+    kind="course"
+    title="LangChain for LLM Application Development"
+    source="DeepLearning.AI"
+    url="https://www.deeplearning.ai/short-courses/langchain-for-llm-application-development/"
+    duration="1.5 hrs" />
+  <ResourceCard
+    kind="course"
+    title="AI Agents in LangGraph"
+    source="DeepLearning.AI · Harrison Chase"
+    url="https://www.deeplearning.ai/short-courses/ai-agents-in-langgraph/"
+    duration="2 hrs" />
+  <ResourceCard
+    kind="course"
+    title="Introduction to LangGraph"
+    source="LangChain Academy"
+    url="https://academy.langchain.com/courses/intro-to-langgraph"
+    duration="~7 hrs">
+    The deep dive. State, nodes, conditional edges, human-in-the-loop, checkpointing, sub-graphs.
+  </ResourceCard>
+  <ResourceCard
+    kind="course"
+    title="Hugging Face Agents Course — Unit 3 (LangGraph)"
+    source="Hugging Face"
+    url="https://huggingface.co/learn/agents-course"
+    duration="~3 hrs" />
+</ResourceGrid>
+
+## 4.2 Model Context Protocol
+
+MCP is an open protocol (announced by Anthropic, now multi-vendor) that standardises how AI clients connect to data and tools. Mental model: an *MCP server* exposes a set of tools (and optionally resources / prompts) over JSON-RPC; an *MCP client* (Claude Desktop, Cursor, your agent) discovers and calls them. Like HTTP for APIs or LSP for editors — once both sides speak it, integration is plug-and-play.
+
+What this changes operationally:
+
+- A Postgres MCP server lets *any* MCP-aware client query your database with the same tool surface, without each client writing its own SQL plumbing.
+- You can self-host an MCP server inside your VPC that proxies internal APIs and have an LLM in a sandbox talk to it through one well-defined boundary.
+- Tool definitions live with the server, not the agent — so updating a tool's schema doesn't require redeploying every agent that uses it.
+
+<CodeTabs python={`# Minimal MCP server exposing one tool: read-only Oracle query.
+# Uses the official Python SDK: pip install mcp
+from mcp.server import Server
+from mcp.types import Tool, TextContent
+import oracledb
+
+app = Server("oracle-readonly")
+
+@app.list_tools()
+async def tools() -> list[Tool]:
+    return [Tool(
+        name="query_oracle",
+        description="Execute a SELECT against the billing schema.",
+        inputSchema={"type": "object",
+                     "properties": {"sql": {"type": "string"}},
+                     "required": ["sql"]},
+    )]
+
+@app.call_tool()
+async def call(name: str, args: dict) -> list[TextContent]:
+    if name != "query_oracle":
+        raise ValueError(name)
+    sql = args["sql"].strip()
+    if not sql.lower().startswith("select"):
+        return [TextContent(type="text", text="ERROR: only SELECT allowed")]
+    with oracledb.connect(...) as conn, conn.cursor() as cur:
+        cur.execute(sql)
+        rows = cur.fetchmany(50)
+    return [TextContent(type="text", text=str(rows))]
+
+if __name__ == "__main__":
+    import asyncio; asyncio.run(app.run_stdio())`} />
+
+<ResourceGrid>
+  <ResourceCard
+    kind="course"
+    title="MCP Course"
+    source="Hugging Face × Anthropic"
+    url="https://huggingface.co/learn/mcp-course"
+    duration="~6 hrs">
+    The full picture — protocol, servers, clients, security.
+  </ResourceCard>
+  <ResourceCard
+    kind="course"
+    title="MCP: Build Rich-Context AI Apps"
+    source="DeepLearning.AI · Anthropic"
+    url="https://www.deeplearning.ai/short-courses/mcp-build-rich-context-ai-apps-with-anthropic/"
+    duration="2 hrs" />
+  <ResourceCard
+    kind="docs"
+    title="MCP specification"
+    source="modelcontextprotocol.io"
+    url="https://modelcontextprotocol.io/"
+    duration="reference">
+    Bookmark for when you write your own server.
+  </ResourceCard>
+</ResourceGrid>
+
+**Build activity** <Difficulty>Hard</Difficulty> — Stand up an MCP server that exposes a read-only Oracle (or Postgres) tool. Hook it into Claude Desktop *and* a LangGraph agent so the same server serves both. Also add the public `filesystem` and `fetch` MCP servers to your agent.
+
+## 4.3 Agent-to-Agent protocols
+
+A2A (Agent-to-Agent) is Google's proposed protocol for inter-agent communication — different agents from different vendors negotiating tasks. It's early. Skim it once, note that it exists, but don't build on it yet for production. The dominant pattern in 2025–2026 is still "one orchestrator LLM dispatches to workers in the same process."
+
+<ResourceGrid>
+  <ResourceCard
+    kind="article"
+    title="A2A protocol announcement"
+    source="Google"
+    url="https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/"
+    duration="15 min" />
+</ResourceGrid>
+
+## Deliverable
+
+A repo `week-04-langgraph-mcp/` containing:
+- A LangGraph state machine ≥ 4 nodes with conditional edges and persistent checkpointing.
+- A custom MCP server (Oracle / Postgres / your domain) integrated into the agent.
+- Two public MCP servers (filesystem + fetch) wired in alongside.
+- A short comparison doc *LangGraph vs Temporal as Workflow Engine* — your JVM-engineer differentiator.

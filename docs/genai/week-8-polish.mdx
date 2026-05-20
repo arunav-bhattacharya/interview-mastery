@@ -1,0 +1,87 @@
+---
+title: 'Week 8 — Polish & Career'
+sidebar_label: 'Week 8 — Polish & Career'
+description: Finish the capstone, write the architecture document, build a portfolio that lands interviews, set up AI-native productivity.
+sidebar_position: 18
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+import QuickNav from '@site/src/components/QuickNav';
+import Difficulty from '@site/src/components/Difficulty';
+import { ResourceCard, ResourceGrid } from '@site/src/components/ResourceCard';
+
+# Week 8 — Polish & Career
+
+<Pillbar pills={[
+  { label: 'time', value: '~10 hrs' },
+  { label: 'build', value: '7 hrs' },
+  { label: 'write', value: '3 hrs' },
+  { label: 'deliverable', value: 'portfolio package' },
+]} />
+
+<QuickNav items={[
+  { label: 'Days 1–3: finish build', href: '#days-13--finish-the-build' },
+  { label: 'Day 4: portfolio polish', href: '#day-4--portfolio-polish' },
+  { label: 'Day 5: AI-native productivity', href: '#day-5--ai-native-productivity' },
+]} />
+
+<div className="im-core-concept">
+
+**Core concept.** A capstone that nobody can see is a capstone that doesn't exist. This week the work is making the system *findable* and *credible*: ten golden evals committed, a real architecture writeup, a pinned GitHub repo, a Loom video, one blog post, and resume bullets that survive a senior interview's "tell me about a tradeoff" question.
+
+</div>
+
+## Days 1–3 — Finish the build
+
+Three things to lock in before you stop touching code:
+
+- **Add at least 10 golden eval examples** to the suite from Week 6. These are your regression net forever.
+- **Write the architecture document — ~1500 words.** Sections:
+  1. *Problem* — who, what, why.
+  2. *Architecture* — diagram + walkthrough.
+  3. *Key tradeoffs* — at least three (model choice, RAG vs fine-tune, sync vs streaming, in-process vs MCP). Show you considered alternatives.
+  4. *Failure modes observed* — concrete things that went wrong and what you did about them.
+  5. *What 10× scale would change* — bottlenecks, what becomes async, what becomes streamed, what needs a real vector DB.
+- **Tag a `v1.0` release** in the repo. Lock the demo URL to that tag.
+
+## Day 4 — Portfolio polish
+
+The goal: make it so a hiring manager who clicks one link in your LinkedIn DM gets the full picture in under five minutes.
+
+- **Pin the capstone repo on GitHub.** README opens with a one-line pitch, a screenshot or GIF, a "try it" link, and architecture in the first scroll.
+- **Write one blog post** — Substack, dev.to, your own site, doesn't matter. Length: 1500–2500 words. Title is action-oriented ("How I built X in 8 weeks"). The post links to the repo, the demo, and the architecture doc.
+- **Record a Loom demo, 3–5 minutes.** Walk the agent through one realistic query end-to-end. Show the Langfuse trace. Show the evals passing. Talk over it like you're showing a colleague.
+- **Update the resume.** The rule: *measurable outcomes over technologies*. Compare:
+  - Bad: *Built an agent system using LangChain, LangGraph, MCP, Langfuse.*
+  - Good: *Built a Temporal workflow-debugging agent that resolves 40% of stuck-workflow tickets without human intervention; reduced p95 latency from 800ms to 180ms via hybrid search + reranking.*
+
+For a JVM-background senior, your specific differentiator is **workflow orchestration intuition** — Temporal, idempotency, retries, transactions, distributed state. Write a piece titled something like *What Agent Frameworks Get Wrong About Workflow Orchestration*. Position yourself as "the rare AI engineer who actually understands durable execution."
+
+## Day 5 — AI-native productivity
+
+Habits that compound for the next year:
+
+- **Set up Claude Code (or Cursor)** for your daily JVM work. Use it on a real ticket; document one thing it did surprisingly well and one thing it did badly.
+- **Commit to one personal automation per month.** A script, a CLI, a Slack bot — something tiny that uses the techniques from this curriculum. The compounding from a year of these is more than any single course.
+- **Pick three feeds to follow** — not thirty. The artifact's picks:
+  - Hamel Husain's blog
+  - Eugene Yan's blog
+  - Latent Space podcast / newsletter
+  - Lenny's Newsletter (if you also care about product)
+
+That's enough signal. Resist the urge to subscribe to every newsletter; the field moves fast but the *useful* ideas move slowly.
+
+## Deliverable
+
+Public proof points, in this order:
+
+- A pinned GitHub repo at `v1.0`.
+- A public demo URL still working at the end of the week.
+- One published blog post linking to both.
+- A Loom video linked from the repo README.
+- Three updated resume bullets with measurable outcomes.
+- One LinkedIn post announcing the project (this is the marketing step most engineers skip).
+
+## What's next
+
+Pick a real problem at work that you previously thought "an AI would never be good enough for that." Try it with the tools from this curriculum. The fastest way to keep growing past Week 8 is to ship something that runs on Monday-morning traffic.

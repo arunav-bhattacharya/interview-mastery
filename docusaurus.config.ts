@@ -64,7 +64,7 @@ const config: Config = {
     docs: {
       sidebar: {
         hideable: true,
-        autoCollapseCategories: false,
+        autoCollapseCategories: true,
       },
     },
     navbar: {
@@ -100,6 +100,7 @@ const config: Config = {
             { label: 'Quarkus', to: '/learn/quarkus/' },
             { label: 'Microservices', to: '/learn/microservices/' },
             { label: 'SQL', to: '/learn/sql/practice' },
+            { label: 'GenAI', to: '/learn/genai' },
             { label: 'Cloud', to: '/learn/cloud/aws-architecture' },
             { label: 'Behavioral', to: '/learn/behavioral/prep' },
           ],

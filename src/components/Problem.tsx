@@ -2,30 +2,33 @@ import React, { useEffect, useState } from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import Link from '@docusaurus/Link';
 import Difficulty from './Difficulty';
-import { isChecked, setChecked, subscribe } from './problemStore';
+import { problemStore } from './problemStore';
+import type { ChecklistStore } from './checklistStore';
 import styles from './Problem.module.css';
 
 type Level = 'easy' | 'medium' | 'hard' | 'Easy' | 'Medium' | 'Hard';
 
-interface Props {
+export interface ProblemProps {
   id: string;
   url: string;
   difficulty: Level;
   children: React.ReactNode;
   pattern?: string; // optional grouping key for ChecklistSummary
+  store?: ChecklistStore; // optional override; defaults to DSA problemStore
 }
 
-function ProblemInner({ id, url, difficulty, children, pattern }: Props) {
-  const [checked, setLocal] = useState<boolean>(() => isChecked(id));
+function ProblemInner({ id, url, difficulty, children, pattern, store }: ProblemProps) {
+  const s = store ?? problemStore;
+  const [checked, setLocal] = useState<boolean>(() => s.isChecked(id));
 
   useEffect(() => {
-    const unsub = subscribe(() => setLocal(isChecked(id)));
+    const unsub = s.subscribe(() => setLocal(s.isChecked(id)));
     return unsub;
-  }, [id]);
+  }, [id, s]);
 
   const toggle = () => {
     const next = !checked;
-    setChecked(id, next);
+    s.setChecked(id, next);
     setLocal(next);
   };
 
@@ -34,6 +37,7 @@ function ProblemInner({ id, url, difficulty, children, pattern }: Props) {
       className={`${styles.row} ${checked ? styles.checked : ''}`}
       data-problem-id={id}
       data-problem-pattern={pattern || ''}
+      data-store-key={s.storageKey}
     >
       <input
         type="checkbox"
@@ -50,7 +54,7 @@ function ProblemInner({ id, url, difficulty, children, pattern }: Props) {
   );
 }
 
-export default function Problem(props: Props): React.ReactElement {
+export default function Problem(props: ProblemProps): React.ReactElement {
   // SSR can't read localStorage; render the unchecked shell, hydrate on client.
   return (
     <BrowserOnly fallback={<ProblemFallback {...props} />}>
@@ -59,9 +63,15 @@ export default function Problem(props: Props): React.ReactElement {
   );
 }
 
-function ProblemFallback({ id, url, difficulty, children, pattern }: Props) {
+function ProblemFallback({ id, url, difficulty, children, pattern, store }: ProblemProps) {
+  const key = (store ?? problemStore).storageKey;
   return (
-    <div className={styles.row} data-problem-id={id} data-problem-pattern={pattern || ''}>
+    <div
+      className={styles.row}
+      data-problem-id={id}
+      data-problem-pattern={pattern || ''}
+      data-store-key={key}
+    >
       <input type="checkbox" className={styles.checkbox} disabled />
       <Link to={url} className={styles.link} target="_blank" rel="noopener noreferrer">
         {children}

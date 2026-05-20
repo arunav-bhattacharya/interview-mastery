@@ -1,0 +1,131 @@
+---
+title: Day-1 Setup
+sidebar_label: Day-1 setup
+description: Editor, package manager, API keys, local models, vector DB and observability — get the environment ready before Week 1.
+sidebar_position: 3
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+import CodeTabs from '@site/src/components/CodeTabs';
+import { ResourceCard, ResourceGrid } from '@site/src/components/ResourceCard';
+
+# Day-1 Setup
+
+<Pillbar pills={[
+  { label: 'time', value: '2–3 hours' },
+  { label: 'one-time', value: 'yes' },
+  { label: 'cost', value: '$0–10' },
+]} />
+
+A single, repeatable environment so each weekly chapter doesn't open with "install something." Set it up once, then forget about it.
+
+## Editor and Python tooling
+
+- **Editor**: VS Code with the Python and Pylance extensions, or PyCharm. Either is fine — pick the one whose JVM equivalent you already use.
+- **Package manager**: [`uv`](https://docs.astral.sh/uv/). Drop-in replacement for `pip` + `virtualenv` + `pip-tools` that feels closer to Gradle: lockfiles, deterministic installs, fast resolves.
+
+<CodeTabs python={`# Install uv (one-time)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# In a fresh project
+uv init ai-learning-lab
+cd ai-learning-lab
+uv add anthropic openai chromadb sentence-transformers
+uv run python -c "import anthropic; print(anthropic.__version__)"`} />
+
+## API keys
+
+You need three keys to follow every example. All three have free tiers, and the courses' usage fits inside them.
+
+- **Anthropic** — primary model provider. [console.anthropic.com](https://console.anthropic.com)
+- **OpenAI** — secondary, useful for comparison and for some libraries that default to it. [platform.openai.com](https://platform.openai.com)
+- **Groq** — extremely fast inference of open-weights models. Great for prototyping latency-sensitive code without local GPUs. [console.groq.com](https://console.groq.com)
+
+Stick the keys in a `.env` file at the repo root and `gitignore` it. Use `python-dotenv` (or `uv run --env-file .env`) to load them — never hardcode.
+
+## Local models with Ollama
+
+When you don't want to spend tokens and don't need frontier quality, run a small model locally.
+
+```bash
+# macOS / Linux
+brew install ollama   # or download from ollama.com
+ollama pull llama3.2:3b
+ollama pull qwen2.5:7b
+ollama run llama3.2:3b "summarize the OSI model in 30 words"
+```
+
+The 3B model fits comfortably in 8 GB of RAM. The 7B model wants 16 GB. Both are dramatically slower than hosted APIs but cost nothing per token, which matters when you're iterating on prompts.
+
+## Vector database
+
+Start with **Chroma** — runs as a Python library, no separate server, great for the first month. Switch to **Pinecone** or **Qdrant** in Week 7 when capstone needs cloud persistence.
+
+```python
+import chromadb
+client = chromadb.PersistentClient(path="./chroma-db")
+coll = client.get_or_create_collection("temporal-docs")
+coll.add(documents=["..."], ids=["doc-1"])
+```
+
+## Observability
+
+Pick one and stick with it. Both are good; **Langfuse** wins on self-hostability.
+
+<ResourceGrid>
+  <ResourceCard
+    kind="tool"
+    title="Langfuse"
+    source="self-hostable, MIT"
+    url="https://langfuse.com/"
+    duration="20 min setup">
+    Docker-compose for local dev, cloud free tier available. Traces every LLM call with cost, latency and tool calls.
+  </ResourceCard>
+  <ResourceCard
+    kind="tool"
+    title="LangSmith"
+    source="LangChain"
+    url="https://smith.langchain.com/"
+    duration="10 min setup">
+    First-party for LangChain users. Cloud-only, but lowest friction if you're going all-in on LangGraph.
+  </ResourceCard>
+</ResourceGrid>
+
+## Repo layout
+
+One `ai-learning-lab` repo, weekly folders. Keeps history linear and makes the capstone easy to assemble from earlier weeks.
+
+```
+ai-learning-lab/
+├── pyproject.toml
+├── uv.lock
+├── .env                  # gitignored
+├── README.md
+├── week-01-basics/
+├── week-02-rag/
+├── week-03-agents-from-scratch/
+├── week-04-langgraph-mcp/
+├── week-05-finetuning/
+├── week-06-evals/
+├── week-07-capstone/
+└── week-08-polish/
+```
+
+## Quick smoke test
+
+Once everything is installed, this script should print a sentence and a cost in cents:
+
+<CodeTabs python={`import os, anthropic
+from dotenv import load_dotenv
+load_dotenv()
+
+client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+resp = client.messages.create(
+    model="claude-haiku-4-5-20251001",
+    max_tokens=80,
+    messages=[{"role": "user", "content": "In one sentence: what's an LLM token?"}],
+)
+print(resp.content[0].text)
+print("input tokens:", resp.usage.input_tokens, "output tokens:", resp.usage.output_tokens)`} />
+
+If that prints, you're done. Head to **[Week 1 — Python & GenAI Building Blocks](./week-1-basics.mdx)**.

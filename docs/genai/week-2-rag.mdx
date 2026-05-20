@@ -1,0 +1,190 @@
+---
+title: 'Week 2 — Context Engineering & RAG'
+sidebar_label: 'Week 2 — RAG'
+description: Build RAG from scratch with chromadb, then add advanced patterns — hybrid search, HyDE, re-ranking, chunking strategies.
+sidebar_position: 12
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Difficulty from '@site/src/components/Difficulty';
+import { ResourceCard, ResourceGrid } from '@site/src/components/ResourceCard';
+
+# Week 2 — Context Engineering & RAG
+
+<Pillbar pills={[
+  { label: 'time', value: '~10 hrs' },
+  { label: 'build', value: '7 hrs' },
+  { label: 'read', value: '3 hrs' },
+  { label: 'deliverable', value: 'week-02-rag repo' },
+]} />
+
+<QuickNav items={[
+  { label: '2.1 Theory', href: '#21-theory' },
+  { label: '2.2 RAG from scratch', href: '#22-build-rag-from-scratch' },
+  { label: '2.3 Advanced patterns', href: '#23-advanced-rag-patterns' },
+  { label: '2.4 Production', href: '#24-production-considerations' },
+]} />
+
+<div className="im-core-concept">
+
+**Core concept.** RAG (Retrieval-Augmented Generation) is what you reach for when the answer depends on facts the model wasn't trained on — your docs, your wiki, last week's tickets. The trick isn't "stuff documents into the prompt." It's *retrieval engineering*: chunk so each piece carries its own meaning, embed so semantically similar things land near each other, and rank so the model sees the best evidence first.
+
+</div>
+
+## 2.1 Theory
+
+A vector embedding is a fixed-length array of floats — typically 384, 768 or 1536 dimensions — produced by an embedding model. Two pieces of text that mean similar things land at similar coordinates; cosine similarity tells you "near." That's the whole geometric trick.
+
+**Chunking** is the highest-leverage decision in a RAG pipeline. Five strategies, increasing sophistication:
+
+| Strategy | What it does | When to use |
+|---|---|---|
+| Fixed-size | Split every *N* characters | Quick baseline; loses sentence boundaries |
+| Sentence-split | Split on `.`/`!`/`?` | Better semantic units; bad on code |
+| Recursive | Try paragraph → sentence → word | Default for prose; well-supported by frameworks |
+| Semantic | Split where embedding similarity drops | Best quality; slowest to compute |
+| Parent-child | Embed small chunks, retrieve their bigger parents | Best precision/context tradeoff; doubles storage |
+
+For most domains, start with recursive splitting at ~500 tokens with ~50 tokens of overlap and only escalate if recall is bad.
+
+<ResourceGrid>
+  <ResourceCard
+    kind="course"
+    title="Advanced Retrieval for AI with Chroma"
+    source="DeepLearning.AI"
+    url="https://www.deeplearning.ai/short-courses/advanced-retrieval-for-ai/"
+    duration="1 hr" />
+  <ResourceCard
+    kind="article"
+    title="Vector embeddings for developers"
+    source="Pinecone Learning Center"
+    url="https://www.pinecone.io/learn/vector-embeddings-for-developers/"
+    duration="20 min" />
+  <ResourceCard
+    kind="article"
+    title="Chunking strategies for LLM applications"
+    source="Pinecone Learning Center"
+    url="https://www.pinecone.io/learn/chunking-strategies/"
+    duration="25 min" />
+  <ResourceCard
+    kind="article"
+    title="Contextual Retrieval"
+    source="Anthropic"
+    url="https://www.anthropic.com/news/contextual-retrieval"
+    duration="20 min">
+    A 49% retrieval-failure reduction by prepending chunk-specific context. Read after you've shipped your baseline.
+  </ResourceCard>
+</ResourceGrid>
+
+## 2.2 Build RAG from scratch
+
+The stack: raw `anthropic` SDK + `chromadb` for the vector store + `sentence-transformers` for free local embeddings. No LangChain yet — the whole thing fits in ~80 lines.
+
+The pipeline has two halves, ingest and query:
+
+```
+INGEST:   docs → split into chunks → embed each chunk → store (vector, text, metadata)
+QUERY:    question → embed question → top-K nearest chunks → build prompt → LLM → answer
+```
+
+<CodeTabs python={`# rag.py
+import chromadb
+from sentence_transformers import SentenceTransformer
+import anthropic
+
+embedder = SentenceTransformer("all-MiniLM-L6-v2")     # 384-d, free, local
+client   = chromadb.PersistentClient(path="./db")
+coll     = client.get_or_create_collection("docs")
+llm      = anthropic.Anthropic()
+
+def chunk_recursive(text: str, size=500, overlap=50) -> list[str]:
+    # paragraphs first, then sentences if a paragraph is too big
+    chunks, current = [], ""
+    for para in text.split("\\n\\n"):
+        if len(current) + len(para) <= size:
+            current += "\\n\\n" + para
+        else:
+            chunks.append(current.strip()); current = para
+    if current: chunks.append(current.strip())
+    return [c for c in chunks if c]
+
+def ingest(doc_id: str, text: str):
+    chunks = chunk_recursive(text)
+    vectors = embedder.encode(chunks).tolist()
+    coll.add(ids=[f"{doc_id}-{i}" for i in range(len(chunks))],
+             documents=chunks, embeddings=vectors,
+             metadatas=[{"doc": doc_id} for _ in chunks])
+
+def ask(question: str, k=5) -> str:
+    qv = embedder.encode([question]).tolist()
+    hits = coll.query(query_embeddings=qv, n_results=k)
+    context = "\\n\\n---\\n\\n".join(hits["documents"][0])
+    prompt = f"Use ONLY this context. Cite chunk numbers.\\n\\n{context}\\n\\nQuestion: {question}"
+    resp = llm.messages.create(model="claude-sonnet-4-6", max_tokens=400,
+                               messages=[{"role": "user", "content": prompt}])
+    return resp.content[0].text`} />
+
+Run this on a corpus you actually use — the [Temporal documentation](https://docs.temporal.io/) is the artifact's suggestion because workflow concepts come up later in the curriculum. Ask it real questions ("how do I retry only on a specific exception?") and watch the citations.
+
+**Build activity** <Difficulty>Medium</Difficulty> — Implement three chunking strategies (fixed-size, sentence-split, recursive). For 10 evaluation questions, manually mark recall@5 and MRR for each. Write up which won and why.
+
+## 2.3 Advanced RAG patterns
+
+Once the baseline works, three upgrades move the needle:
+
+**Hybrid search** — combine dense (semantic, embedding-based) with sparse (BM25, keyword-based). Dense finds *meaning*; sparse finds *exact strings* — names, error codes, version numbers. Implement BM25 with `rank_bm25` and merge the two ranked lists with reciprocal rank fusion (RRF).
+
+**HyDE** (Hypothetical Document Embeddings) — at query time, ask the LLM to draft a *hypothetical answer* to the question, embed *that*, and use it for retrieval. Counterintuitive but works: the hypothetical answer is closer in embedding space to real documents than the question is.
+
+**Re-ranking** — retrieve top-50 with the cheap vector method, then re-score them with a heavier cross-encoder (`cohere/rerank` API or BAAI's `bge-reranker` locally) and keep the top-5. Massive quality bump for modest cost.
+
+<CodeTabs python={`# Cross-encoder rerank
+from sentence_transformers import CrossEncoder
+reranker = CrossEncoder("BAAI/bge-reranker-base")
+
+def ask_with_rerank(question: str):
+    qv = embedder.encode([question]).tolist()
+    candidates = coll.query(query_embeddings=qv, n_results=50)["documents"][0]
+    scores = reranker.predict([(question, c) for c in candidates])
+    top = [c for _, c in sorted(zip(scores, candidates), reverse=True)[:5]]
+    # ... build prompt with top, call LLM`} />
+
+<ResourceGrid>
+  <ResourceCard
+    kind="course"
+    title="Building and Evaluating Advanced RAG"
+    source="DeepLearning.AI"
+    url="https://www.deeplearning.ai/short-courses/building-evaluating-advanced-rag/"
+    duration="1 hr">
+    Covers sentence-window retrieval and auto-merging. Worth the time.
+  </ResourceCard>
+</ResourceGrid>
+
+## 2.4 Production considerations
+
+Hamel Husain's pragmatic take: **the retrieval pipeline is rarely your bottleneck**. The model's reasoning on bad context, missing evals, and prompt drift account for most production failures. Don't spend Week 2 chasing 2% recall improvements when your eval suite doesn't exist yet (Week 6).
+
+That said, two things to wire in early:
+
+- **Always include source citations** in the answer. Forcing the model to point at a chunk catches half of hallucinations on its own.
+- **Log every retrieval** — query, top-K with scores, final answer. You'll need these traces in Week 6 to build evals.
+
+<ResourceGrid>
+  <ResourceCard
+    kind="article"
+    title="RAG: the pragmatic perspective"
+    source="Hamel Husain"
+    url="https://hamel.dev/blog/posts/evals/"
+    duration="30 min">
+    Read alongside his evals series. Same thesis: stop polishing the pipeline, start measuring.
+  </ResourceCard>
+</ResourceGrid>
+
+## Deliverable
+
+A repo `week-02-rag/` that:
+- Answers Temporal-doc questions with citations.
+- Includes a `compare.md` with recall@5 / MRR scores for at least two chunking strategies.
+- Has a `traces/` directory with logged queries + top-K + answers (you'll reuse these in Week 6).

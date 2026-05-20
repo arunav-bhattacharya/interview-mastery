@@ -1,0 +1,198 @@
+---
+title: 'Week 5 — Fine-Tuning & Local Models'
+sidebar_label: 'Week 5 — Fine-Tuning'
+description: When fine-tuning pays off, LoRA / QLoRA / PEFT mechanics, running models locally with Ollama and vLLM, quantization tradeoffs.
+sidebar_position: 15
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Difficulty from '@site/src/components/Difficulty';
+import { ResourceCard, ResourceGrid } from '@site/src/components/ResourceCard';
+
+# Week 5 — Fine-Tuning & Local Models
+
+<Pillbar pills={[
+  { label: 'time', value: '~10 hrs' },
+  { label: 'build', value: '6 hrs' },
+  { label: 'read', value: '4 hrs' },
+  { label: 'deliverable', value: 'week-05-finetuning' },
+]} />
+
+<QuickNav items={[
+  { label: '5.1 When fine-tuning pays', href: '#51-when-fine-tuning-pays-off' },
+  { label: '5.2 LoRA / QLoRA / PEFT', href: '#52-lora--qlora--peft' },
+  { label: '5.3 Local models', href: '#53-running-models-locally' },
+  { label: '5.4 Optional deep dive', href: '#54-optional-deep-transformer-understanding' },
+]} />
+
+<div className="im-core-concept">
+
+**Core concept.** Fine-tuning is the *last* lever you reach for, not the first. The escalation order is prompt → few-shot → RAG → fine-tune. Each step costs more to build, run and maintain. Most teams that "need" fine-tuning actually have an evals problem — they can't tell whether prompting got them there because they don't measure it.
+
+</div>
+
+## 5.1 When fine-tuning pays off
+
+Hamel Husain's piece title says most of it: *Fine-Tuning is Probably Not For You*. The signals that you genuinely need it:
+
+- Prompting and RAG plateau on a task you've measured with real evals (Week 6).
+- The behaviour you need is *style* / *format* / *tone* and instructions aren't enough — model keeps reverting to its default voice.
+- You need a small open model to match a much larger frontier model's quality on your *narrow* domain (cost or latency reasons).
+
+The signals that you *don't* need it:
+
+- You haven't built evals yet.
+- The bug is "hallucinations on facts" — that's RAG, not fine-tuning.
+- The frontier model "just doesn't know our domain" — also RAG.
+- A 200-example dataset feels achievable — almost always too few.
+
+<ResourceGrid>
+  <ResourceCard
+    kind="article"
+    title="Fine-Tuning is Probably Not For You"
+    source="Hamel Husain"
+    url="https://hamel.dev/blog/posts/fine-tuning-is-probably-not-for-you/"
+    duration="20 min">
+    Read first. The decision tree in here is the one to apply at work.
+  </ResourceCard>
+</ResourceGrid>
+
+## 5.2 LoRA / QLoRA / PEFT
+
+Full fine-tuning updates every weight in the model — billions of parameters. **PEFT** (Parameter-Efficient Fine-Tuning) updates only a small fraction. The dominant flavour is **LoRA**: instead of changing `W`, you learn a low-rank update `ΔW = A·B` where `A` and `B` are tiny (rank 8–64). At inference, you sum `W + α·A·B`. Trainable parameters drop by 100–1000×; quality stays close to full fine-tune for most tasks.
+
+**QLoRA** adds 4-bit quantization on top: load the base model in 4-bit so it fits in consumer GPU memory, then train the LoRA adapters in 16-bit on top. This is what lets you fine-tune a 7B model on a free Colab T4.
+
+The hyperparameters you'll touch:
+
+| Knob | Typical range | What it controls |
+|---|---|---|
+| `r` (rank) | 8 / 16 / 32 / 64 | Capacity of the adapter. Higher = more expressive, more params |
+| `lora_alpha` | 16 / 32 | Scaling factor; effective learning rate of the adapter |
+| `target_modules` | `q_proj, v_proj` (min) or all linear | Which weight matrices get adapters |
+| `learning_rate` | `1e-4` to `3e-4` | Higher than full fine-tuning because params are fewer |
+| `epochs` | 1–3 | More than 3 usually overfits on small datasets |
+
+<CodeTabs python={`# Minimal QLoRA fine-tune with unsloth (Colab T4-friendly)
+from unsloth import FastLanguageModel
+from datasets import Dataset
+from trl import SFTTrainer
+from transformers import TrainingArguments
+
+model, tok = FastLanguageModel.from_pretrained(
+    model_name="unsloth/Qwen2.5-3B-Instruct",
+    load_in_4bit=True, max_seq_length=2048,
+)
+model = FastLanguageModel.get_peft_model(
+    model, r=16, lora_alpha=16,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+)
+
+# Toy dataset — SQL generation for billpay schema
+data = Dataset.from_list([
+    {"text": "### Question: total refunds last month?\\n### SQL: SELECT SUM(amount) FROM refunds WHERE created_at >= DATE_TRUNC('month', NOW() - INTERVAL '1 month');"},
+    # ... 500–2000 examples in real life
+])
+
+trainer = SFTTrainer(
+    model=model, train_dataset=data, tokenizer=tok,
+    args=TrainingArguments(output_dir="lora-billpay-sql",
+        per_device_train_batch_size=2, num_train_epochs=2,
+        learning_rate=2e-4, logging_steps=10),
+)
+trainer.train()
+model.save_pretrained("lora-billpay-sql")`} />
+
+<ResourceGrid>
+  <ResourceCard
+    kind="course"
+    title="Finetuning Large Language Models"
+    source="DeepLearning.AI"
+    url="https://www.deeplearning.ai/short-courses/finetuning-large-language-models/"
+    duration="1.5 hrs" />
+  <ResourceCard
+    kind="course"
+    title="Improving LLM Accuracy with RAG and Fine-Tuning"
+    source="DeepLearning.AI · Predibase"
+    url="https://www.deeplearning.ai/short-courses/improving-accuracy-of-llm-applications/"
+    duration="2 hrs" />
+  <ResourceCard
+    kind="course"
+    title="LLM Course — fine-tuning & alignment chapters"
+    source="Hugging Face"
+    url="https://huggingface.co/learn/llm-course/chapter11"
+    duration="~4 hrs" />
+</ResourceGrid>
+
+**Build activity** <Difficulty>Hard</Difficulty> — Fine-tune `Qwen2.5-3B` with QLoRA on a small (≥ 200 examples) dataset you care about — SQL generation for a schema you know, classification of internal tickets, code-review comments in your team's style. Use `unsloth` on a free Colab T4.
+
+## 5.3 Running models locally
+
+Two tools, two purposes:
+
+- **Ollama** — developer experience tool. `ollama pull`, `ollama run`, REST API on `localhost:11434`. Perfect for prototyping, demoing, never paying per token while iterating.
+- **vLLM** — production-leaning serving engine. Higher throughput via PagedAttention, batching, supports LoRA adapters loaded at runtime. Use when you have a GPU and want to actually serve traffic.
+
+```bash
+# Ollama (developer)
+ollama serve &
+ollama run qwen2.5:7b "translate this to SQL: total revenue this quarter"
+
+# vLLM (production-leaning)
+pip install vllm
+python -m vllm.entrypoints.openai.api_server \
+   --model Qwen/Qwen2.5-7B-Instruct \
+   --enable-lora --lora-modules billpay=./lora-billpay-sql
+```
+
+**Quantization** matters because the base 7B model is ~14 GB in FP16. The common formats:
+
+| Format | Size (7B) | Speed | Quality vs FP16 |
+|---|---|---|---|
+| FP16 | ~14 GB | reference | reference |
+| Q5_K_M | ~5.0 GB | +faster | ~99% |
+| Q4_K_M | ~4.4 GB | +faster | ~97–98% |
+| Q4_0 | ~4.0 GB | fastest | ~95% |
+
+Q4_K_M is the sweet spot for most laptops. Quality loss is real but small; ship it for local dev, validate quality on cloud FP16 before deploying.
+
+<ResourceGrid>
+  <ResourceCard
+    kind="article"
+    title="llama.cpp quantization explainer"
+    source="llama.cpp wiki"
+    url="https://github.com/ggerganov/llama.cpp/blob/master/examples/quantize/README.md"
+    duration="15 min" />
+  <ResourceCard
+    kind="tool"
+    title="vLLM docs"
+    source="vLLM"
+    url="https://docs.vllm.ai/"
+    duration="reference" />
+</ResourceGrid>
+
+**Build activity** <Difficulty>Medium</Difficulty> — Serve your fine-tuned model with vLLM locally. Benchmark tokens/sec on a single GPU vs Ollama's quantized version. Write up the numbers.
+
+## 5.4 Optional — deep transformer understanding
+
+If you want to understand the gears, not just operate them, Karpathy's *Zero to Hero* series is the best path. You'll train a small GPT on Tiny Shakespeare from scratch, in Python, with every line explained. Allocate a whole weekend; you don't need it for the rest of the curriculum, but it's the most satisfying optional content here.
+
+<ResourceGrid>
+  <ResourceCard
+    kind="video"
+    title="Neural Networks: Zero to Hero"
+    source="Andrej Karpathy"
+    url="https://karpathy.ai/zero-to-hero.html"
+    duration="~15 hrs">
+    The full series. Pre-train a tiny GPT on Tiny Shakespeare; understand attention from the matrix up.
+  </ResourceCard>
+</ResourceGrid>
+
+## Deliverable
+
+A repo `week-05-finetuning/` containing:
+- One LoRA-tuned 3B model checkpoint (committed via Git LFS or linked from a HF hub repo).
+- A `benchmarks.md` with tokens/sec, latency p50/p95, and quality-vs-base comparisons.
+- A short `decision.md` writeup: *When would I actually reach for fine-tuning at work?*

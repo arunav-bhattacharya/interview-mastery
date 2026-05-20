@@ -39,11 +39,18 @@ const pillars: Pillar[] = [
     accent: 'mint',
   },
   {
+    key: 'genai',
+    title: 'GenAI',
+    hours: '~80 hours · 8 weeks',
+    description: 'Hands-on AI engineering curriculum · Python · RAG · Agents · LangGraph · MCP · Fine-tuning · Evals · Capstone.',
+    accent: 'iris',
+  },
+  {
     key: 'cloud',
     title: 'Cloud',
-    hours: '5–6 hours',
-    description: 'AWS & Cloud Architecture · GenAI & LLM Engineering.',
-    accent: 'iris',
+    hours: '3–4 hours',
+    description: 'AWS & Cloud Architecture — VPC · IAM · Compute · Storage · Messaging · HA/DR.',
+    accent: 'cyan',
   },
   {
     key: 'beh',
@@ -55,8 +62,8 @@ const pillars: Pillar[] = [
 ];
 
 const stats = [
-  { value: '6', label: 'pillars' },
-  { value: '20', label: 'lesson hubs' },
+  { value: '7', label: 'pillars' },
+  { value: '25+', label: 'lesson hubs' },
   { value: '4', label: 'languages' },
   { value: '100+', label: 'practice problems' },
 ];

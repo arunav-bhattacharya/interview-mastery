@@ -1,0 +1,230 @@
+---
+title: 'Week 1 — Python & GenAI Building Blocks'
+sidebar_label: 'Week 1 — Basics'
+description: Python for JVM devs, how LLMs actually work, three raw-API scripts using the Anthropic SDK with no frameworks.
+sidebar_position: 11
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Difficulty from '@site/src/components/Difficulty';
+import { ResourceCard, ResourceGrid } from '@site/src/components/ResourceCard';
+
+# Week 1 — Python & GenAI Building Blocks
+
+<Pillbar pills={[
+  { label: 'time', value: '~10 hrs' },
+  { label: 'build', value: '6 hrs' },
+  { label: 'read', value: '4 hrs' },
+  { label: 'deliverable', value: 'week-01-basics repo' },
+]} />
+
+<QuickNav items={[
+  { label: '1.1 Python for JVM devs', href: '#11-python-for-javakotlin-developers' },
+  { label: '1.2 How LLMs work', href: '#12-how-llms-actually-work' },
+  { label: '1.3 Raw APIs', href: '#13-hands-on-with-raw-apis' },
+]} />
+
+<div className="im-core-concept">
+
+**Core concept.** An LLM is a function: text in, text out, billed by the token. Before you reach for any framework, internalise four things — what a token *is*, what a context window *is*, why the model occasionally hallucinates, and how the bill grows. Once those are intuitive, every later abstraction (RAG, agents, fine-tuning) makes sense as a way to shape the input or constrain the output.
+
+</div>
+
+## 1.1 Python for Java/Kotlin developers
+
+You're not learning programming. You're learning enough Python to read other people's AI code and write your own without fighting the syntax.
+
+The high-impact differences from a JVM background:
+
+- **Type hints** look like Kotlin but are advisory — `mypy` enforces them, the runtime doesn't. Use them everywhere anyway; the IDE catches mistakes.
+- **`dataclass`** is the Python-stdlib `data class`. **`pydantic.BaseModel`** is the same idea but with runtime validation and JSON serialization — essential for structured LLM output.
+- **`asyncio`** is cooperative concurrency. `async def` declares a coroutine; `await` is the only place control can switch. Don't confuse it with Java executors.
+- **List / dict comprehensions** replace `stream().filter().map().toList()`.
+- **Context managers** (`with open(...) as f:`) are the `try-with-resources` equivalent.
+
+<CodeTabs python={`from dataclasses import dataclass
+from pydantic import BaseModel
+import asyncio
+
+@dataclass
+class Token:
+    text: str
+    index: int
+
+class JobPosting(BaseModel):       # pydantic, validates on construct
+    title: str
+    company: str
+    remote: bool
+    salary_min: int | None = None  # | None == nullable, like Kotlin's String?
+
+async def fetch_all(urls: list[str]) -> list[str]:
+    # asyncio.gather is roughly CompletableFuture.allOf
+    return await asyncio.gather(*(fetch(u) for u in urls))`} />
+
+<ResourceGrid>
+  <ResourceCard
+    kind="article"
+    title="Switching to Python: cheat sheet for Java devs"
+    source="Real Python"
+    url="https://realpython.com/switching-to-python/"
+    duration="30 min" />
+  <ResourceCard
+    kind="docs"
+    title="uv quickstart"
+    source="Astral"
+    url="https://docs.astral.sh/uv/"
+    duration="15 min" />
+</ResourceGrid>
+
+**Build activity** <Difficulty>Easy</Difficulty> — Rewrite a small Kotlin or Java utility you've written before (date parser, file scanner, JSON munger) as a Python script with type hints, a `pyproject.toml` and a `uv` lockfile.
+
+## 1.2 How LLMs actually work
+
+You don't need to derive backpropagation. You need a mental model of *what the model is doing when you call it*.
+
+A modern LLM reads your prompt as a sequence of **tokens** (sub-word chunks, ~4 characters each in English), runs that sequence through a **transformer** that pays selective **attention** to earlier tokens, and emits one token at a time. The **context window** is the maximum sequence length it can consider — current frontier models do 200K to 1M tokens, but cost and latency scale with context.
+
+A few facts that matter operationally:
+
+- **Tokenization is not character splitting.** "ChatGPT" might be one token; "antidisestablishmentarianism" might be six. Always count tokens with the model's own tokenizer when budgeting.
+- **The KV cache** stores intermediate attention state during generation. It's why streaming is fast after the first token and why prompt caching can cut bills 50–90%.
+- **Hallucinations are statistical fluency, not lying.** The model emits the *plausibly next token* given context. When facts aren't in context, it fabricates a fluent answer. Ground answers in retrieval (Week 2) or function calls (this week) to control this.
+- **Latency has three regimes**: time-to-first-token (network + prompt encoding), tokens-per-second (the steady-state generation rate), and tail latency (the slow tokens). All three matter; tokens/sec alone is misleading.
+
+<ResourceGrid>
+  <ResourceCard
+    kind="video"
+    title="Intro to Large Language Models"
+    source="Andrej Karpathy"
+    url="https://www.youtube.com/watch?v=zjkBMFhNj_g"
+    duration="1 hr">
+    The single best one-hour orientation. Watch at 1× — it deserves your attention.
+  </ResourceCard>
+  <ResourceCard
+    kind="video"
+    title="Let's build the GPT tokenizer"
+    source="Andrej Karpathy"
+    url="https://www.youtube.com/watch?v=zduSFxRajkE"
+    duration="2 hrs">
+    Deep dive on tokenization. Makes "why is 3.14 three tokens?" stop feeling magical.
+  </ResourceCard>
+  <ResourceCard
+    kind="article"
+    title="Building effective agents"
+    source="Anthropic"
+    url="https://www.anthropic.com/research/building-effective-agents"
+    duration="30 min">
+    Bookmark for re-reading in Week 4. The whole curriculum is shaped by this piece.
+  </ResourceCard>
+</ResourceGrid>
+
+## 1.3 Hands-on with raw APIs
+
+Three small scripts, no frameworks. The point is to feel the shape of the API before LangChain hides it.
+
+### Script A — Markdown summariser
+
+A CLI that reads a directory of `.md` files and produces a one-paragraph executive summary of each.
+
+<CodeTabs python={`import os, sys, pathlib, anthropic
+
+client = anthropic.Anthropic()
+for md in pathlib.Path(sys.argv[1]).glob("*.md"):
+    text = md.read_text()
+    resp = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=200,
+        messages=[{"role": "user", "content": f"Summarise in one paragraph:\\n\\n{text}"}],
+    )
+    print(f"## {md.name}\\n{resp.content[0].text}\\n")`} />
+
+### Script B — Structured output extractor
+
+Job description → typed `JobPosting`. The key technique is forcing JSON output that matches a pydantic schema, then validating.
+
+<CodeTabs python={`from pydantic import BaseModel
+import anthropic, json
+
+class JobPosting(BaseModel):
+    title: str
+    company: str
+    remote: bool
+    salary_min_usd: int | None = None
+    must_have_skills: list[str]
+
+prompt = f'''Extract structured data from the job description below.
+Return ONLY valid JSON matching this schema:
+{JobPosting.model_json_schema()}
+
+Job description:
+{job_text}'''
+
+resp = anthropic.Anthropic().messages.create(
+    model="claude-sonnet-4-6",
+    max_tokens=400,
+    messages=[{"role": "user", "content": prompt}],
+)
+parsed = JobPosting.model_validate_json(resp.content[0].text)
+print(parsed)`} />
+
+Two refinements worth knowing: **few-shot** the model with one or two correct examples in the prompt; and **retry once** if `model_validate_json` raises — frontier models slip into "Sure! Here's the JSON:" prefixes sometimes.
+
+### Script C — Function calling
+
+A toy assistant with three tools: `get_weather(city)`, `search_files(query)`, `run_sql(query)`. The model picks which tool to call; your code executes it; you feed the result back.
+
+<CodeTabs python={`tools = [
+  {"name": "get_weather", "description": "Current weather for a city",
+   "input_schema": {"type": "object", "properties": {"city": {"type": "string"}},
+                    "required": ["city"]}},
+  # ... search_files, run_sql similarly
+]
+
+messages = [{"role": "user", "content": "What's the weather in Bangalore?"}]
+resp = client.messages.create(model="claude-sonnet-4-6", max_tokens=500,
+                              tools=tools, messages=messages)
+
+while resp.stop_reason == "tool_use":
+    tool_use = next(b for b in resp.content if b.type == "tool_use")
+    result = dispatch(tool_use.name, tool_use.input)  # your code
+    messages.append({"role": "assistant", "content": resp.content})
+    messages.append({"role": "user", "content": [
+        {"type": "tool_result", "tool_use_id": tool_use.id, "content": str(result)},
+    ]})
+    resp = client.messages.create(model="claude-sonnet-4-6", max_tokens=500,
+                                  tools=tools, messages=messages)
+
+print(resp.content[0].text)`} />
+
+That loop — "call model, dispatch tool, append result, loop until done" — *is* an agent. You'll build a more sophisticated version in Week 3.
+
+<ResourceGrid>
+  <ResourceCard
+    kind="course"
+    title="Prompt Engineering Interactive Tutorial"
+    source="Anthropic"
+    url="https://github.com/anthropics/prompt-eng-interactive-tutorial"
+    duration="~6 hrs" />
+  <ResourceCard
+    kind="course"
+    title="ChatGPT Prompt Engineering for Developers"
+    source="DeepLearning.AI"
+    url="https://www.deeplearning.ai/short-courses/chatgpt-prompt-engineering-for-developers/"
+    duration="1.5 hrs" />
+  <ResourceCard
+    kind="course"
+    title="Function-Calling and Data Extraction with LLMs"
+    source="DeepLearning.AI"
+    url="https://www.deeplearning.ai/short-courses/function-calling-and-data-extraction-with-llms/"
+    duration="1 hr" />
+</ResourceGrid>
+
+**Build activity** <Difficulty>Medium</Difficulty> — Ship all three scripts. Compare your structured-extractor's accuracy with and without a one-shot example. Note the token cost of each call.
+
+## Deliverable
+
+A repo `week-01-basics/` containing:
+- The three scripts above with READMEs.
+- A `notes.md` explaining tokens, context windows, the cost math on your three runs, and three things you found surprising.

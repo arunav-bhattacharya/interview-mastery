@@ -1,0 +1,172 @@
+---
+title: 'Week 3 — Agents from Scratch'
+sidebar_label: 'Week 3 — Agents'
+description: Understand agents by building a ReAct loop in ~100 lines of Python. Implement Anthropic's five agentic patterns end-to-end.
+sidebar_position: 13
+---
+
+import Pillbar from '@site/src/components/Pillbar';
+import QuickNav from '@site/src/components/QuickNav';
+import CodeTabs from '@site/src/components/CodeTabs';
+import Difficulty from '@site/src/components/Difficulty';
+import { ResourceCard, ResourceGrid } from '@site/src/components/ResourceCard';
+
+# Week 3 — Agents from Scratch
+
+<Pillbar pills={[
+  { label: 'time', value: '~10 hrs' },
+  { label: 'build', value: '7 hrs' },
+  { label: 'read', value: '3 hrs' },
+  { label: 'deliverable', value: 'week-03-agents-from-scratch' },
+]} />
+
+<QuickNav items={[
+  { label: '3.1 What an agent is', href: '#31-conceptual-foundation' },
+  { label: '3.2 ReAct from scratch', href: '#32-build-a-react-agent' },
+  { label: '3.3 Five agentic patterns', href: '#33-agentic-patterns' },
+]} />
+
+<div className="im-core-concept">
+
+**Core concept.** An agent is just a loop: the model reasons, decides on an action, your code runs the action, the result goes back into the prompt, the model reasons again. Frameworks dress this up, but if you can write the 100-line version, every framework will feel like a thin wrapper. That's the whole insight of this week.
+
+</div>
+
+## 3.1 Conceptual foundation
+
+A useful working definition: an *agent* is an LLM in a loop, with access to *tools* (functions your code exposes), iterating until a goal is reached or it gives up. Three properties distinguish an agent from a single LLM call:
+
+- **It chooses its actions.** You expose tools; the model picks which to use and when.
+- **It uses intermediate results.** Tool outputs feed back into the context for the next decision.
+- **It terminates on its own.** The loop ends when the model says "done" or hits a budget cap.
+
+Re-read Anthropic's [Building effective agents](https://www.anthropic.com/research/building-effective-agents) — the whole curriculum is downstream of this piece. Their core distinction is between **workflows** (composed, fixed paths of LLM calls) and **agents** (LLMs choosing their own path). Most production "agents" are actually workflows in disguise, and that's usually correct.
+
+<ResourceGrid>
+  <ResourceCard
+    kind="article"
+    title="Building effective agents"
+    source="Anthropic"
+    url="https://www.anthropic.com/research/building-effective-agents"
+    duration="30 min">
+    Mandatory re-read. The five patterns in §3.3 are from this piece.
+  </ResourceCard>
+  <ResourceCard
+    kind="article"
+    title="LLM-powered autonomous agents"
+    source="Lilian Weng"
+    url="https://lilianweng.github.io/posts/2023-06-23-agent/"
+    duration="40 min">
+    The canonical survey: planning, memory, tool use, the failure modes.
+  </ResourceCard>
+  <ResourceCard
+    kind="video"
+    title="What is an Agent?"
+    source="Harrison Chase (LangChain)"
+    url="https://www.youtube.com/results?search_query=harrison+chase+what+is+an+agent"
+    duration="45 min" />
+</ResourceGrid>
+
+## 3.2 Build a ReAct agent
+
+ReAct ("Reason + Act") is the simplest useful agent pattern: at each step, the model emits a *Thought* (reasoning), then chooses an *Action* (tool call), and gets an *Observation* (result). Repeat until *Final Answer*.
+
+The skeleton — every framework's agent is this with bells:
+
+<CodeTabs python={`import anthropic, json, datetime
+
+client = anthropic.Anthropic()
+
+# 1. Define tools as JSON schema
+tools = [
+  {"name": "search_web", "description": "Search the web for current info",
+   "input_schema": {"type": "object",
+       "properties": {"query": {"type": "string"}}, "required": ["query"]}},
+  {"name": "read_file", "description": "Read a file from local disk",
+   "input_schema": {"type": "object",
+       "properties": {"path": {"type": "string"}}, "required": ["path"]}},
+  {"name": "python_repl", "description": "Execute Python and return stdout",
+   "input_schema": {"type": "object",
+       "properties": {"code": {"type": "string"}}, "required": ["code"]}},
+  {"name": "calc",  "description": "Evaluate a numeric expression",
+   "input_schema": {"type": "object",
+       "properties": {"expr": {"type": "string"}}, "required": ["expr"]}},
+  {"name": "now",   "description": "Current ISO timestamp",
+   "input_schema": {"type": "object", "properties": {}}},
+]
+
+# 2. Dispatch table — real implementations
+def search_web(query):  ...   # use Tavily, SerpAPI, etc.
+def read_file(path):    return open(path).read()
+def python_repl(code):  ...   # subprocess, sandbox in real life
+def calc(expr):         return eval(expr, {"__builtins__": {}}, {})
+def now():              return datetime.datetime.utcnow().isoformat()
+DISPATCH = {"search_web": search_web, "read_file": read_file,
+            "python_repl": python_repl, "calc": calc, "now": now}
+
+# 3. The loop
+def run_agent(goal: str, max_steps: int = 8) -> str:
+    messages = [{"role": "user", "content": goal}]
+    for step in range(max_steps):
+        resp = client.messages.create(
+            model="claude-sonnet-4-6", max_tokens=1024,
+            tools=tools, messages=messages,
+            system="You are a helpful agent. Use tools to gather facts, "
+                   "then answer concisely. Stop when you have the answer.",
+        )
+        if resp.stop_reason == "end_turn":
+            return next(b.text for b in resp.content if b.type == "text")
+
+        # Tool use → dispatch and append
+        messages.append({"role": "assistant", "content": resp.content})
+        tool_results = []
+        for block in resp.content:
+            if block.type == "tool_use":
+                result = DISPATCH[block.name](**block.input)
+                tool_results.append({"type": "tool_result",
+                                     "tool_use_id": block.id,
+                                     "content": str(result)})
+        messages.append({"role": "user", "content": tool_results})
+    return "Agent ran out of steps."`} />
+
+That's the whole pattern. ~100 lines including tool implementations and error handling. Read it three times.
+
+**Build activity** <Difficulty>Medium</Difficulty> — Implement the above. Add five tools: Tavily web search (free tier), file I/O, a sandboxed Python REPL, a calculator and current-date. Then ask it questions like "what's the current Bitcoin price in INR?" or "summarise the latest commits in this repo." Note where it loops, where it gives up, where it fabricates.
+
+## 3.3 Agentic patterns
+
+From Anthropic's piece, five composable patterns you'll see in every production system. Each gets its own standalone example in this week's repo.
+
+**1. Prompt chaining.** Sequential LLM calls, each consuming the previous output. Use when the task decomposes into clear steps (outline → draft → polish). Cheap and predictable.
+
+**2. Routing.** One LLM call classifies the input; downstream branches handle each class differently. Use for support triage, query categorisation, model selection by complexity.
+
+**3. Parallelisation.** Fan out N independent calls, gather results. Two flavours: *sectioning* (different subtasks in parallel) and *voting* (same task N times, take majority). Great for evaluation, content moderation, brainstorming.
+
+**4. Orchestrator-workers.** A central LLM plans the work, then dispatches sub-tasks to worker LLMs whose results it synthesises. Use when sub-tasks aren't knowable up front — debugging across multiple files, complex research questions.
+
+**5. Evaluator-optimiser.** A generator LLM produces output; a critic LLM scores it; loop until quality threshold or budget cap. Use when there's a clear quality signal — translation, code generation against tests, structured extraction.
+
+**Build activity** <Difficulty>Medium</Difficulty> — Implement all five as standalone Python files. Each ≤ 60 lines. Each should run end-to-end on a real task you care about.
+
+<ResourceGrid>
+  <ResourceCard
+    kind="course"
+    title="AI Agents Course (Units 1–2)"
+    source="Hugging Face"
+    url="https://huggingface.co/learn/agents-course/unit0/introduction"
+    duration="~6 hrs" />
+  <ResourceCard
+    kind="course"
+    title="Functions, Tools and Agents with LangChain"
+    source="DeepLearning.AI"
+    url="https://www.deeplearning.ai/short-courses/functions-tools-agents-langchain/"
+    duration="2 hrs" />
+</ResourceGrid>
+
+## Deliverable
+
+A repo `week-03-agents-from-scratch/` with:
+- The 100-line ReAct implementation.
+- Five standalone files, one per agentic pattern, each running on a real task.
+- A `compare.md` discussing where you'd reach for each in a workflow-orchestration context (the connection to Temporal-style systems is the differentiator for JVM engineers).

@@ -1,0 +1,91 @@
+---
+title: GenAI Topic Tracker
+sidebar_label: Topic tracker
+description: Interactive progress tracker for the 8-week GenAI curriculum. Persists in localStorage, separate namespace from the DSA tracker.
+sidebar_position: 80
+---
+
+import GenAITopic from '@site/src/components/GenAITopic';
+import GenAISummary from '@site/src/components/GenAISummary';
+
+# GenAI Topic Tracker
+
+Check items off as you complete them. Progress persists in your browser's localStorage under the key `im-genai-checklist-v1`, separate from the DSA Problem Checklist — clearing one doesn't affect the other.
+
+Difficulty is reused as an effort hint: **Easy** = ≤ 1 hr task · **Medium** = half-day build · **Hard** = multi-day build or capstone milestone.
+
+<GenAISummary patterns={[
+  { name: 'Week 1 — Python & GenAI Basics', target: 6, anchor: 'week-1' },
+  { name: 'Week 2 — RAG',                   target: 6, anchor: 'week-2' },
+  { name: 'Week 3 — Agents from Scratch',   target: 5, anchor: 'week-3' },
+  { name: 'Week 4 — LangGraph & MCP',       target: 5, anchor: 'week-4' },
+  { name: 'Week 5 — Fine-Tuning',           target: 5, anchor: 'week-5' },
+  { name: 'Week 6 — Evals & Observability', target: 6, anchor: 'week-6' },
+  { name: 'Week 7 — Capstone Build',        target: 4, anchor: 'week-7' },
+  { name: 'Week 8 — Polish & Career',       target: 4, anchor: 'week-8' },
+]} />
+
+## Week 1 — Python & GenAI Basics  \{#week-1}
+
+<GenAITopic id="g-1-1" url="https://realpython.com/switching-to-python/" difficulty="Easy" pattern="Week 1 — Python & GenAI Basics">Read: Python for Java developers cheat sheet</GenAITopic>
+<GenAITopic id="g-1-2" url="https://docs.astral.sh/uv/" difficulty="Easy" pattern="Week 1 — Python & GenAI Basics">Set up uv + pyproject.toml + .env workflow</GenAITopic>
+<GenAITopic id="g-1-3" url="https://www.youtube.com/watch?v=zjkBMFhNj_g" difficulty="Easy" pattern="Week 1 — Python & GenAI Basics">Watch: Karpathy "Intro to LLMs"</GenAITopic>
+<GenAITopic id="g-1-4" url="https://github.com/anthropics/prompt-eng-interactive-tutorial" difficulty="Medium" pattern="Week 1 — Python & GenAI Basics">Complete Anthropic Prompt Engineering Tutorial</GenAITopic>
+<GenAITopic id="g-1-5" url="https://docs.anthropic.com/" difficulty="Medium" pattern="Week 1 — Python & GenAI Basics">Build: markdown summariser CLI (raw Anthropic SDK)</GenAITopic>
+<GenAITopic id="g-1-6" url="https://docs.pydantic.dev/" difficulty="Medium" pattern="Week 1 — Python & GenAI Basics">Build: structured output extractor with pydantic validation</GenAITopic>
+
+## Week 2 — RAG  \{#week-2}
+
+<GenAITopic id="g-2-1" url="https://www.pinecone.io/learn/vector-embeddings-for-developers/" difficulty="Easy" pattern="Week 2 — RAG">Read: vector embeddings for developers</GenAITopic>
+<GenAITopic id="g-2-2" url="https://www.pinecone.io/learn/chunking-strategies/" difficulty="Easy" pattern="Week 2 — RAG">Read: chunking strategies guide</GenAITopic>
+<GenAITopic id="g-2-3" url="https://www.deeplearning.ai/short-courses/advanced-retrieval-for-ai/" difficulty="Easy" pattern="Week 2 — RAG">Course: Advanced Retrieval for AI with Chroma</GenAITopic>
+<GenAITopic id="g-2-4" url="https://www.trychroma.com/" difficulty="Medium" pattern="Week 2 — RAG">Build: RAG from scratch (chromadb + sentence-transformers)</GenAITopic>
+<GenAITopic id="g-2-5" url="https://www.deeplearning.ai/short-courses/building-evaluating-advanced-rag/" difficulty="Medium" pattern="Week 2 — RAG">Build: hybrid search (BM25 + dense) with RRF</GenAITopic>
+<GenAITopic id="g-2-6" url="https://www.anthropic.com/news/contextual-retrieval" difficulty="Hard" pattern="Week 2 — RAG">Build: re-ranker on top-50 candidates → top-5</GenAITopic>
+
+## Week 3 — Agents from Scratch  \{#week-3}
+
+<GenAITopic id="g-3-1" url="https://www.anthropic.com/research/building-effective-agents" difficulty="Easy" pattern="Week 3 — Agents from Scratch">Read: Anthropic "Building Effective Agents" (re-read with comprehension)</GenAITopic>
+<GenAITopic id="g-3-2" url="https://lilianweng.github.io/posts/2023-06-23-agent/" difficulty="Easy" pattern="Week 3 — Agents from Scratch">Read: Lilian Weng "LLM-powered autonomous agents"</GenAITopic>
+<GenAITopic id="g-3-3" url="https://huggingface.co/learn/agents-course" difficulty="Medium" pattern="Week 3 — Agents from Scratch">Course: HF AI Agents Course (Units 1–2)</GenAITopic>
+<GenAITopic id="g-3-4" url="https://docs.anthropic.com/en/docs/build-with-claude/tool-use" difficulty="Hard" pattern="Week 3 — Agents from Scratch">Build: ~100-line ReAct agent with 5 tools</GenAITopic>
+<GenAITopic id="g-3-5" url="https://www.anthropic.com/research/building-effective-agents" difficulty="Hard" pattern="Week 3 — Agents from Scratch">Build: implement all 5 agentic patterns as standalone files</GenAITopic>
+
+## Week 4 — LangGraph & MCP  \{#week-4}
+
+<GenAITopic id="g-4-1" url="https://www.deeplearning.ai/short-courses/langchain-for-llm-application-development/" difficulty="Easy" pattern="Week 4 — LangGraph & MCP">Course: LangChain for LLM Application Development</GenAITopic>
+<GenAITopic id="g-4-2" url="https://academy.langchain.com/courses/intro-to-langgraph" difficulty="Medium" pattern="Week 4 — LangGraph & MCP">Course: Intro to LangGraph (LangChain Academy)</GenAITopic>
+<GenAITopic id="g-4-3" url="https://huggingface.co/learn/mcp-course" difficulty="Medium" pattern="Week 4 — LangGraph & MCP">Course: HF MCP Course</GenAITopic>
+<GenAITopic id="g-4-4" url="https://modelcontextprotocol.io/" difficulty="Hard" pattern="Week 4 — LangGraph & MCP">Build: custom MCP server (Oracle/Postgres read-only)</GenAITopic>
+<GenAITopic id="g-4-5" url="https://langchain-ai.github.io/langgraph/" difficulty="Hard" pattern="Week 4 — LangGraph & MCP">Build: LangGraph state machine ≥ 4 nodes + checkpointing</GenAITopic>
+
+## Week 5 — Fine-Tuning  \{#week-5}
+
+<GenAITopic id="g-5-1" url="https://hamel.dev/blog/posts/fine-tuning-is-probably-not-for-you/" difficulty="Easy" pattern="Week 5 — Fine-Tuning">Read: Hamel "Fine-Tuning is Probably Not For You"</GenAITopic>
+<GenAITopic id="g-5-2" url="https://www.deeplearning.ai/short-courses/finetuning-large-language-models/" difficulty="Medium" pattern="Week 5 — Fine-Tuning">Course: Finetuning Large Language Models</GenAITopic>
+<GenAITopic id="g-5-3" url="https://github.com/unslothai/unsloth" difficulty="Hard" pattern="Week 5 — Fine-Tuning">Build: QLoRA fine-tune Qwen2.5-3B on a domain task</GenAITopic>
+<GenAITopic id="g-5-4" url="https://docs.vllm.ai/" difficulty="Medium" pattern="Week 5 — Fine-Tuning">Build: serve fine-tuned model with vLLM, benchmark tokens/sec</GenAITopic>
+<GenAITopic id="g-5-5" url="https://ollama.com/" difficulty="Easy" pattern="Week 5 — Fine-Tuning">Run a quantized local model with Ollama (Q4_K_M vs FP16)</GenAITopic>
+
+## Week 6 — Evals & Observability  \{#week-6}
+
+<GenAITopic id="g-6-1" url="https://hamel.dev/blog/posts/llm-judge/" difficulty="Easy" pattern="Week 6 — Evals & Observability">Read: Hamel "LLM Evals FAQ" (cover to cover)</GenAITopic>
+<GenAITopic id="g-6-2" url="https://hamel.dev/blog/posts/evals/" difficulty="Easy" pattern="Week 6 — Evals & Observability">Read: Hamel "Your AI product needs evals" (3-part series)</GenAITopic>
+<GenAITopic id="g-6-3" url="https://www.deeplearning.ai/short-courses/evaluating-ai-agents/" difficulty="Medium" pattern="Week 6 — Evals & Observability">Course: Evaluating AI Agents</GenAITopic>
+<GenAITopic id="g-6-4" url="https://langfuse.com/" difficulty="Medium" pattern="Week 6 — Evals & Observability">Build: instrument Week-4 agent with Langfuse</GenAITopic>
+<GenAITopic id="g-6-5" url="https://hamel.dev/blog/posts/llm-judge/" difficulty="Hard" pattern="Week 6 — Evals & Observability">Build: 3+ LLM judges with measured TPR/TNR + golden dataset</GenAITopic>
+<GenAITopic id="g-6-6" url="https://gandalf.lakera.ai/" difficulty="Medium" pattern="Week 6 — Evals & Observability">Run: 10 prompt-injection attacks + mitigations red-team writeup</GenAITopic>
+
+## Week 7 — Capstone Build  \{#week-7}
+
+<GenAITopic id="g-7-1" url="https://github.com/" difficulty="Easy" pattern="Week 7 — Capstone Build">Write capstone design doc (problem, tools, state machine, evals)</GenAITopic>
+<GenAITopic id="g-7-2" url="https://github.com/" difficulty="Hard" pattern="Week 7 — Capstone Build">Ship happy path end-to-end (Mon–Wed)</GenAITopic>
+<GenAITopic id="g-7-3" url="https://langfuse.com/" difficulty="Medium" pattern="Week 7 — Capstone Build">Wire error handling + retries + observability + budget cap</GenAITopic>
+<GenAITopic id="g-7-4" url="https://fly.io/" difficulty="Medium" pattern="Week 7 — Capstone Build">Deploy to a public URL (Fly.io / Modal / self-host)</GenAITopic>
+
+## Week 8 — Polish & Career  \{#week-8}
+
+<GenAITopic id="g-8-1" url="https://github.com/" difficulty="Medium" pattern="Week 8 — Polish & Career">Write ~1500-word architecture document with tradeoffs</GenAITopic>
+<GenAITopic id="g-8-2" url="https://github.com/" difficulty="Easy" pattern="Week 8 — Polish & Career">Pin repo, polish README, record 3–5 min Loom demo</GenAITopic>
+<GenAITopic id="g-8-3" url="https://substack.com/" difficulty="Medium" pattern="Week 8 — Polish & Career">Publish one blog post linking to repo + demo</GenAITopic>
+<GenAITopic id="g-8-4" url="https://claude.com/product/claude-code" difficulty="Easy" pattern="Week 8 — Polish & Career">Set up Claude Code / Cursor for daily JVM work + 3 feeds</GenAITopic>

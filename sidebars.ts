@@ -13,7 +13,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'DSA',
       collapsible: true,
-      collapsed: false,
+      collapsed: true,
       items: [
         {
           type: 'category',
@@ -86,7 +86,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'System Design',
       collapsible: true,
-      collapsed: false,
+      collapsed: true,
       items: [
         'system-design/fundamentals',
         'system-design/building-blocks',
@@ -101,13 +101,13 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Skills',
       collapsible: true,
-      collapsed: false,
+      collapsed: true,
       items: [
         {
           type: 'category',
           label: 'Java',
           collapsible: true,
-          collapsed: false,
+          collapsed: true,
           link: { type: 'doc', id: 'java/index' },
           items: [
             'java/core',
@@ -255,12 +255,33 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: 'category',
+          label: 'GenAI',
+          collapsible: true,
+          collapsed: true,
+          link: { type: 'doc', id: 'genai/index' },
+          items: [
+            'genai/overview',
+            'genai/setup',
+            'genai/week-1-basics',
+            'genai/week-2-rag',
+            'genai/week-3-agents',
+            'genai/week-4-langgraph-mcp',
+            'genai/week-5-finetuning',
+            'genai/week-6-evals',
+            'genai/week-7-capstone',
+            'genai/week-8-polish',
+            'genai/checklist',
+            'genai/resources',
+            'genai/reference',
+          ],
+        },
+        {
+          type: 'category',
           label: 'Cloud',
           collapsible: true,
           collapsed: true,
           items: [
             'cloud/aws-architecture',
-            'cloud/genai-llm-engineering',
           ],
         },
       ],
@@ -269,7 +290,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Behavioral',
       collapsible: true,
-      collapsed: false,
+      collapsed: true,
       items: ['behavioral/prep'],
     },
   ],
