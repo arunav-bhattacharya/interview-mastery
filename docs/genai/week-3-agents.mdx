@@ -40,14 +40,14 @@ A useful working definition: an *agent* is an LLM in a loop, with access to *too
 - **It uses intermediate results.** Tool outputs feed back into the context for the next decision.
 - **It terminates on its own.** The loop ends when the model says "done" or hits a budget cap.
 
-Re-read Anthropic's [Building effective agents](https://www.anthropic.com/research/building-effective-agents) — the whole curriculum is downstream of this piece. Their core distinction is between **workflows** (composed, fixed paths of LLM calls) and **agents** (LLMs choosing their own path). Most production "agents" are actually workflows in disguise, and that's usually correct.
+Re-read Anthropic's [Building effective agents](https://www.anthropic.com/engineering/building-effective-agents) — the whole curriculum is downstream of this piece. Their core distinction is between **workflows** (composed, fixed paths of LLM calls) and **agents** (LLMs choosing their own path). Most production "agents" are actually workflows in disguise, and that's usually correct.
 
 <ResourceGrid>
   <ResourceCard
     kind="article"
     title="Building effective agents"
     source="Anthropic"
-    url="https://www.anthropic.com/research/building-effective-agents"
+    url="https://www.anthropic.com/engineering/building-effective-agents"
     duration="30 min">
     Mandatory re-read. The five patterns in §3.3 are from this piece.
   </ResourceCard>
