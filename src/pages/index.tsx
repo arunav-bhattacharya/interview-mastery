@@ -74,10 +74,10 @@ export default function Home() {
             <TopicCard
               accent="amber"
 
-              title="Java &amp; JVM"
-              summary="Java Core, Concurrency, Modern Java, Design Patterns. Plus Kotlin, Spring, Quarkus, Microservices."
+              title="Core JVM Skills"
+              summary="Java Core, Concurrency, Modern Java, Design Patterns — plus Kotlin, Spring, Quarkus, Microservices."
               href="/learn/java/core"
-              meta="4 sections"
+              meta="6 sections"
             />
             <TopicCard
               accent="mint"
@@ -88,12 +88,20 @@ export default function Home() {
               meta="1 hub"
             />
             <TopicCard
+              accent="cyan"
+
+              title="Gen AI"
+              summary="Hands-on 8-week AI engineering curriculum — Python, RAG, Agents, LangGraph, MCP, fine-tuning, evals, capstone."
+              href="/learn/genai"
+              meta="8 weeks"
+            />
+            <TopicCard
               accent="iris"
 
               title="Cloud"
-              summary="AWS &amp; Cloud Architecture, plus GenAI &amp; LLM Engineering for production."
+              summary="AWS &amp; Cloud Architecture — VPC, IAM, compute, storage, databases, messaging, HA/DR."
               href="/learn/cloud/aws-architecture"
-              meta="2 pages"
+              meta="1 hub"
             />
             <TopicCard
               accent="rose"
@@ -102,14 +110,6 @@ export default function Home() {
               summary="STAR method, common questions, story bank, interview tips, day-of checklist."
               href="/learn/behavioral/prep"
               meta="1 hub"
-            />
-            <TopicCard
-              accent="mint"
-
-              title="Master Guide"
-              summary="Program overview, study plan summary, daily schedule, flexible pacing, resources, success metrics."
-              href="/learn/guide/master-guide"
-              meta="hub"
             />
           </div>
         </section>

@@ -8,7 +8,7 @@ export interface TopicCardProps {
   summary?: string;
   icon?: React.ReactNode;
   href?: string;
-  accent?: 'amber' | 'iris' | 'mint' | 'rose';
+  accent?: 'amber' | 'iris' | 'mint' | 'rose' | 'cyan';
   meta?: string;
   className?: string;
   children?: React.ReactNode;

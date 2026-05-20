@@ -35,6 +35,7 @@
 .iris  .rail  { background: linear-gradient(180deg, #a5b4fc, #6366f1); }
 .mint  .rail  { background: linear-gradient(180deg, #6ee7b7, #10b981); }
 .rose  .rail  { background: linear-gradient(180deg, #fda4af, #e11d48); }
+.cyan  .rail  { background: linear-gradient(180deg, #67e8f9, #0891b2); }
 
 .body { flex: 1; display: flex; flex-direction: column; gap: 6px; }
 
