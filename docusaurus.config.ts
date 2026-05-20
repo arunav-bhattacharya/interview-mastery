@@ -75,12 +75,7 @@ const config: Config = {
       },
       items: [
         { to: '/learn/guide/master-guide', label: 'Master Guide', position: 'left' },
-        {
-          type: 'docSidebar',
-          sidebarId: 'learnSidebar',
-          position: 'left',
-          label: 'Learn',
-        },
+        { to: '/learn/dsa/arrays-strings', label: 'Learn', position: 'left' },
         { to: '/study-plan', label: 'Study Plan', position: 'left' },
         { to: '/progress', label: 'Progress', position: 'right' },
       ],

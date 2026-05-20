@@ -4,13 +4,6 @@ const sidebars: SidebarsConfig = {
   learnSidebar: [
     {
       type: 'category',
-      label: 'Guide',
-      collapsible: true,
-      collapsed: false,
-      items: ['guide/master-guide'],
-    },
-    {
-      type: 'category',
       label: 'DSA',
       collapsible: true,
       collapsed: true,
