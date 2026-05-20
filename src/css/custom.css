@@ -738,3 +738,35 @@ svg.classDiagram path.relation.note-edge {
     padding: 0.6rem 0.75rem;
   }
 }
+
+/* === Swizzled mobile drawer: stack primary + secondary panels vertically ===
+   These selectors are written against the global classes our swizzled
+   Layout component applies (im-msb*) so cascade order is predictable on every
+   browser including iOS Safari (CSS-module hashed classes can lose specificity
+   races on WebKit when loaded in unexpected order). */
+.navbar-sidebar.im-msb .navbar-sidebar__items.im-msb-stack {
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transform: none !important;
+  -webkit-transform: none !important;
+  height: calc(100% - var(--ifm-navbar-height));
+}
+
+.navbar-sidebar.im-msb .im-msb-primary,
+.navbar-sidebar.im-msb .im-msb-secondary {
+  width: 100% !important;
+  flex-shrink: 0;
+}
+
+.navbar-sidebar.im-msb .im-msb-secondary {
+  border-top: 1px solid var(--ifm-toc-border-color, rgba(0, 0, 0, 0.1));
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+}
+
+/* Hide the secondary panel entirely on pages where it has no content
+   (e.g. the homepage) so the divider doesn't appear by itself. */
+.navbar-sidebar.im-msb .im-msb-secondary:empty {
+  display: none;
+}
