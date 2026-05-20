@@ -8,6 +8,12 @@
 .docusaurus
 .cache-loader
 
+# tsc emit sidecars — sources are TypeScript only; .js next to .ts/.tsx is a
+# stale compile artifact (tsconfig sets noEmit:true but older sessions left some).
+/docusaurus.config.js
+/sidebars.js
+/src/**/*.js
+
 # Misc
 .DS_Store
 .env.local
