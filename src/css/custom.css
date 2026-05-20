@@ -737,13 +737,4 @@ svg.classDiagram path.relation.note-edge {
     font-weight: 600;
     padding: 0.6rem 0.75rem;
   }
-
-  /* The mobile drawer's primary menu must always show on pages without a doc
-     sidebar (e.g. the homepage). The `navbar-sidebar__items--show-secondary`
-     class is added by Docusaurus but only meaningful when secondary has
-     content; we explicitly anchor the primary panel into view so any stale
-     translateX from the secondary state can't hide our 4 nav links. */
-  .navbar-sidebar__items:not(.navbar-sidebar__items--show-secondary) {
-    transform: translate3d(0, 0, 0) !important;
-  }
 }

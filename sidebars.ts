@@ -98,6 +98,12 @@ const sidebars: SidebarsConfig = {
       items: [
         {
           type: 'category',
+          label: 'Core JVM SE',
+          collapsible: true,
+          collapsed: true,
+          items: [
+        {
+          type: 'category',
           label: 'Java',
           collapsible: true,
           collapsed: true,
@@ -227,6 +233,8 @@ const sidebars: SidebarsConfig = {
           link: { type: 'doc', id: 'microservices/index' },
           items: [
             'microservices/fundamentals',
+          ],
+        },
           ],
         },
         {
