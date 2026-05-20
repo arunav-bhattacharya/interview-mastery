@@ -31,7 +31,6 @@ const config: Config = {
 
   clientModules: [
     require.resolve('./src/clientModules/mermaidDarkPalette.ts'),
-    require.resolve('./src/clientModules/mobileBottomNav.ts'),
   ],
 
   i18n: {

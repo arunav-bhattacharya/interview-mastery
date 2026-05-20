@@ -51,43 +51,6 @@
   flex-wrap: wrap;
 }
 
-/* Mobile-only quick-links row. Hidden by default (desktop has the full navbar);
-   revealed below 996px so phones always have a visible way into the main
-   sections — no dependency on the hamburger drawer rendering correctly. */
-.mobileQuickNav {
-  display: none;
-}
-
-@media (max-width: 996px) {
-  .mobileQuickNav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 18px;
-  }
-  .mobileQuickNav a {
-    flex: 1 1 auto;
-    min-width: 130px;
-    text-align: center;
-    padding: 10px 14px;
-    border-radius: 999px;
-    border: 1px solid var(--im-border);
-    background: var(--im-surface);
-    color: var(--im-fg);
-    font-size: 0.92rem;
-    font-weight: 600;
-    text-decoration: none;
-    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
-  }
-  .mobileQuickNav a:hover,
-  .mobileQuickNav a:active {
-    border-color: var(--im-accent);
-    color: var(--im-accent);
-    background: var(--im-accent-soft);
-    text-decoration: none;
-  }
-}
-
 .primaryBtn,
 .ghostBtn {
   display: inline-flex;

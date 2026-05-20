@@ -1,11 +1,16 @@
 // Swizzled NavbarMobileSidebar/Layout
 //
-// Stacks primary nav items + secondary doc sidebar vertically so the 4 navbar
-// links are always visible in the mobile drawer (including on the homepage).
+// Renders the mobile drawer as a simple vertically-scrolling block. The
+// upstream version places primary + secondary panels side-by-side and uses a
+// transform-based horizontal slide to switch between them, which:
+//   - hides the primary navbar items by default on doc pages
+//   - leaves the homepage drawer looking empty on some real mobile browsers
+//     (notably Safari)
 //
-// Layout-critical styles are applied INLINE rather than via a stylesheet,
-// because external CSS module/global rules can lose specificity races on some
-// mobile browsers (iOS Safari WebKit in particular). Inline styles always win.
+// We sidestep all of that: drop the flex/slide and let the panels stack as
+// normal block elements. Inline styles are used for the layout-critical bits
+// so no external stylesheet can override them on any browser, and key
+// properties are restated with -webkit- prefixes for older WebKit.
 
 import React, {version, type ReactNode, type CSSProperties} from 'react';
 import clsx from 'clsx';
@@ -21,25 +26,31 @@ function inertProps(inert: boolean): Record<string, string | boolean | undefined
 }
 
 const itemsStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
+  display: 'block',
+  width: '100%',
+  height: 'calc(100% - var(--ifm-navbar-height, 60px))',
   overflowY: 'auto',
   overflowX: 'hidden',
   transform: 'none',
   WebkitTransform: 'none',
-  height: 'calc(100% - var(--ifm-navbar-height, 60px))',
+  WebkitOverflowScrolling: 'touch',
 };
 
-const panelStyle: CSSProperties = {
+const primaryPanelStyle: CSSProperties = {
+  display: 'block',
   width: '100%',
-  flexShrink: 0,
+  padding: '0.5rem',
+  boxSizing: 'border-box',
 };
 
 const secondaryPanelStyle: CSSProperties = {
-  ...panelStyle,
+  display: 'block',
+  width: '100%',
+  padding: '0.5rem',
+  boxSizing: 'border-box',
   borderTop: '1px solid var(--ifm-toc-border-color, rgba(0, 0, 0, 0.1))',
   marginTop: '0.25rem',
-  paddingTop: '0.25rem',
+  paddingTop: '0.5rem',
 };
 
 interface PanelProps {
@@ -87,7 +98,7 @@ export default function NavbarMobileSidebarLayout({
       )}>
       {header}
       <div className={clsx('navbar-sidebar__items', 'im-msb-stack')} style={itemsStyle}>
-        <MobilePanel className="im-msb-primary" style={panelStyle}>
+        <MobilePanel className="im-msb-primary" style={primaryPanelStyle}>
           {primaryMenu}
         </MobilePanel>
         <MobilePanel className="im-msb-secondary" style={secondaryPanelStyle}>
